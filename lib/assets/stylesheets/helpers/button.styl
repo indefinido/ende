@@ -1,0 +1,61 @@
+@import 'nib'
+
+primary-color ?= purple
+success-color ?= green
+danger-color  ?= red
+
+button-default-color  ?= primary-color
+button-success-color  ?= success-color
+button-danger-color   ?= danger-color
+button-disabled-color ?= grey
+
+
+button-gradient-background(color, reverse = false)
+  if reverse
+    background-image linear-gradient(top, lighten(color,10%) 100%, darken(color,10%) 0%)
+    up-light                   = 0 2px 6px 0px rgba(#FFF,0.15) inset
+  else
+    background-image linear-gradient(top, lighten(color,10%) 0%, darken(color,10%) 100%)
+    up-light                   = 0 2px 6px 0px rgba(#FFF,0.25) inset
+
+  bevel                      = 0 3px 0px 0px darken(color,50%)
+  soft-drop-shadow           = 0 4px 2px 0px rgba(#000,1)
+  engrave-light              = 0 4px 0px 2px rgba(#FFF,0.25)
+  hard-drop-shadow           = 0 3px 0px 2px rgba(#000,1)
+
+  box-shadow up-light, bevel, soft-drop-shadow, engrave-light, hard-drop-shadow
+
+
+button-is-light(color)
+  return (lightness(color) > 30%)
+
+button-text(button-color)
+  if button-is-light(button-color)
+    color darken(button-color,60%)
+    text-shadow 0 1px 1px rgba(#FFF,0.3)
+  else
+    color lighten(button-color,70%)
+    text-shadow 0 -1px 1px rgba(#000,0.9)
+
+default-button-hover-state(background-color)
+  button-gradient-background(lighten(background-color,10%))
+  button-text(background-color)
+
+default-button-active-state(background-color)
+  button-gradient-background(darken(background-color,10%), true)
+  button-text(background-color)
+
+default-button-disabled-state(background-color)
+  button-gradient-background(darken(background-color,10%))
+  button-text(background-color)
+
+
+default-button-states(background-color)
+  button-gradient-background(background-color)
+  button-text(background-color)
+  &:hover
+    default-button-hover-state(background-color)
+  &:active
+    default-button-active-state(background-color)
+  &[disabled]
+    default-button-disabled-state(background-color)

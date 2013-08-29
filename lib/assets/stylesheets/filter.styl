@@ -1,0 +1,10 @@
+@import 'nib/config'
+
+
+filter(filters)
+  for prefix in vendor-prefixes
+    unless prefix == 'official'
+      property = '-%s-filter' % prefix
+      add-property property, filters
+
+  add-property 'filter', filters

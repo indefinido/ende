@@ -1,0 +1,40 @@
+@import "sprites"
+
+get(hash, key)
+  for pair in hash
+    return pair[1] if pair[0] == key
+
+
+
+sprites ?= ()
+
+
+
+sprite(image, widget = 'default', hash = sprites)
+
+  // test widget
+  error("Widget '" + widget + "' does not exist!") unless get(hash,widget)
+
+
+  // get default properties
+  props = get(get(hash,widget), default)
+
+  for pair in props
+    add-property pair[0], unquote(pair[1]) unless pair[0] is null
+
+
+  // get widget properties
+  props = get(get(get(hash,widget),images),image)
+
+  // test widget image
+  error("Image '" + image + "' does not exist for '" + widget + "' widget!") unless props
+
+  for pair in props
+
+    value    = pair[1]
+    property = pair[0]
+    value    = unquote(value) if typeof(value) is 'string'
+    add-property property, value unless value is null
+
+  // add some other properties
+  add-property display, block

@@ -1,0 +1,42 @@
+@import 'application/theme'
+@import 'helpers/button'
+@import 'nib'
+
+
+
+button, .button
+  border none
+  border-radius 10px
+  button-gradient-background(button-default-color)
+  cursor pointer
+  font-family button-font-family
+  font-size 1em
+  font-weight bold
+  padding 0.6em
+  text-align center
+  text-decoration none
+  // text-shadow 0 1px 1px rgba(255,255,255,0.3)
+
+  default-button-states button-default-color
+
+  &:active
+    // padding-bottom 0.55em
+    // padding-top    0.65em
+
+  &[disabled], &.disabled
+    cursor default
+    default-button-states button-disabled-color
+
+  &.success
+    default-button-states button-success-color
+
+  &.danger
+    default-button-states button-danger-color
+
+  &.cancel
+    default-button-states #222
+
+
+  small
+    font-size 0.8em
+    font-weight normal

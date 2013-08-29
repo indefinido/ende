@@ -1,0 +1,31 @@
+{
+  "name": "ened",
+  "repo": "indefinido/ened",
+  "description": "Core web application functionality",
+  "version": "0.0.1",
+  "keywords": [],
+  "dependencies": {
+    "mikeric/rivets": "*",
+    "bestiejs/lodash": "*",
+    "KapIT/observe-utils": "*",
+    "segmentio/extend": "*",
+    "pluma/assimilate": "*",
+    "paulmillr/es6-shim": "*",
+    "component/type": "*",
+    "component/bind": "*",
+    "component/jquery": "*",
+    "indefinido/indemma": "*",
+    "indefinido/observable": "*",
+    "indefinido/advisable": "*"
+  },
+  "scripts": [
+    "vendor/assets/javascripts/stampit/stampit.js"
+  ],
+  "development": {},
+  "paths": [
+    "lib/components",
+    "vendor/components",
+    "vendor/assets/javascripts"
+  ],
+  "license": "MIT"
+}

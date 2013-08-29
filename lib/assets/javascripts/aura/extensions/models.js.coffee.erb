@@ -1,0 +1,56 @@
+<% # TODO mover para helper %>
+<% base_path        = Rails.root.join('app', 'assets', 'javascripts', 'models') %>
+<% models_list      = Dir.glob(Rails.root.join(base_path, '**', '*.js*')) %>
+<% models_list.map! do |file|
+   file.sub! base_path.to_s + '/', ''
+
+   # Ignore Emacs temporary files
+   next nil if file =~ /~/
+
+   entries         = file.split /\// || []
+   entries.unshift 'models'
+   entries.push    File.basename entries.pop, '.js.coffee'
+   File.join *entries
+
+end.compact!
+%>
+
+root = exports ? this
+
+define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
+
+  'use strict'
+
+  # TODO better require api for indemma
+  indemma = require 'indemma'
+  require 'indefinido-indemma/lib/extensions/rivets'
+  require 'indefinido-indemma/lib/record/rest'
+  require 'indefinido-indemma/lib/record/associable'
+  require 'indefinido-indemma/lib/record/scopable'
+  require 'indefinido-indemma/lib/record/restfulable'
+  require 'indefinido-indemma/lib/record/resource'
+  require 'indefinido-indemma/lib/record/maid'
+  require 'indefinido-indemma/lib/record/validatable'
+
+
+  # Extension definition
+  initialize: (application) ->
+    core                = application.core
+    sandbox             = application.sandbox
+    core.util.inflector =
+      cssify: (sentence) ->  sentence.replace /\//, '-'
+
+    # TODO rename core.models to core.domain, completely
+    core.domain = core.models   = sandbox.models = indemma.model
+
+    core.model  = sandbox.model = (name) ->
+      # TODO use a Map internally in indemma
+      model = indemma.model[name]
+      throw new Error "Model '#{name}' not found!" unless model?
+      model
+
+    # TODO rename core.models to core.domain, completely
+    core.domain.record = core.models.record = sandbox.models.record = indemma.record
+
+    # build all model definitions
+    core.util._.map models, (model) -> indemma.model.call model
