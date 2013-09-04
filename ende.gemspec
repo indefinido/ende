@@ -7,8 +7,8 @@ Gem::Specification.new do |spec|
   spec.name          = "ende"
   spec.version       = Ende::VERSION
   spec.authors       = ["Heitor Salazar"]
-  spec.email         = ["heitorsalazar@gmail.com"]
-  spec.description   = %q{A modular web application engine for rails. Using aurajs and indemma by default. the goal is to provideseamlessly integrstion with rails and popular rails engines,  such as devise.}
+  spec.email         = ["heitor@indefini.do"]
+  spec.description   = %q{A modular web application engine for rails. Using aurajs and indemma by default. The goal is tbbbo provibde seamlessly integration with rails and popular rails engines,  such as devise.}
   spec.summary       = %q{Endë (core,  middle) a web application engine for rails with aurajs.}
   spec.homepage      = ""
   spec.license       = "WTFPL"

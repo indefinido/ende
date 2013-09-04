@@ -49,6 +49,7 @@ define 'aura/extensions/devise', () ->
           sandbox.current_user = null
           mediator.emit 'user.unauthorized', @ unless session.restoring
           sandbox.signed_in ||= false
+
         .always ->
           mediator.emit 'session.restore.tried', @ if session.restoring
           session.restoring  = false
@@ -60,10 +61,9 @@ define 'aura/extensions/devise', () ->
   #                    PUT    /users/password(.:format)                 devise/passwords#updaet
   password =
     build: (user = {}) ->
-      core.models.record.call
-        resource: 'user'
-        route   : '/users/password'
-        email   : user.email
+
+      core.models.password
+        email:    user.email
         password: user.password
 
     create: (user) ->
@@ -102,9 +102,29 @@ define 'aura/extensions/devise', () ->
 
     sandbox.session = session
 
+  define_resources: (model) ->
 
+    # TODO define user session as a record too!
+    # model
+    #   resource: 'user'
+    #   route   : '/users/sessions'
+    #   email   : user.email
+    #   password: user.password
 
-  afterAppStart: () ->
+    model.call
+      resource:
+        scope     : 'users'
+        name      : 'password'
+        param_name: 'user'
+        singular  : true
+
+      email: String
+
+  afterAppStart: (application) ->
+    @define_resources application.core.models
+
     # Restore session if not already
     # TODO Restore only when application is ready
     session.restore()
+
+

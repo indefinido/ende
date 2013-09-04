@@ -16,7 +16,15 @@ define 'aura/extensions/widget/lifecycleable', ->
         if $.type(suboptions) == 'object'
 
           for name, suboption of suboptions
-            options["#{subwidget_name}#{@capitalize name}"] = suboption
+
+            if $.type(suboption) == 'object'
+
+              for subname, subsuboption of suboption
+                options["#{subwidget_name}#{@capitalize name}#{@capitalize subname}"] = subsuboption
+
+            else
+
+              options["#{subwidget_name}#{@capitalize name}"] = suboption
 
           # TODO delete options[subwidget_name]
 

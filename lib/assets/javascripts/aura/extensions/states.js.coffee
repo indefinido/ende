@@ -43,6 +43,7 @@ define 'aura/extensions/states', ['application/states'], (states) ->
 
             delete options.name
 
+          # TODO update aura and use native start method
           core.inject(widgets).fail flow.failed
 
           delete states[transition.to]
