@@ -69,7 +69,6 @@ define 'aura/extensions/widget/lifecycleable', ->
       lifecycleable.decamelize = core.util.decamelize
       lifecycleable.capitalize = core.util.capitalize
 
-
       # Add injection functiono for widgets
       core.inject = (name = options.name, options) ->
         if jQuery.isArray name

@@ -8,7 +8,6 @@ define 'aura/extensions/states', ['application/states'], (states) ->
     mediator = core.mediator
     _        = core.util._
 
-
     state =
       current: 'default'
       list: []
@@ -57,6 +56,9 @@ define 'aura/extensions/states', ['application/states'], (states) ->
 
       # TODO load widgets before state.changed, load on state.change
       mediator.on 'state.changed', flow.changed
+
+      # TODO store meta information about application states
+      # application.states = Object.keys states
 
       Object.defineProperty core, 'state',
         set: (to) -> state.change to: to
