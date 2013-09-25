@@ -50,6 +50,8 @@ define 'aura/extensions/states', ['application/states'], (states) ->
         logger.error "states.flow.failed: Failed autostarting widget #{@} \n Message: #{exception.message}", exception
 
 
+    version: '0.2.0'
+
     initialize: (application) ->
       mediator.on 'state.change' , state.change
       mediator.on 'state.changed', state.changed
@@ -61,5 +63,13 @@ define 'aura/extensions/states', ['application/states'], (states) ->
       # application.states = Object.keys states
 
       Object.defineProperty core, 'state',
+        set: (to) ->
+          console.warn 'Changing state through the core object is no longer supported. Use application.state = \"other_state\" instead.'
+          state.change to: to
+        get: ->
+          console.warn 'Getting state through the core object is no longer supported. Use application.state instead.'
+          state.current
+
+      Object.defineProperty application, 'state',
         set: (to) -> state.change to: to
         get: -> state.current

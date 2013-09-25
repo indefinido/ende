@@ -8,15 +8,20 @@ define 'aura/extensions/devise', () ->
   mediator = null
   core     = null
 
-  # TODO create an indemma model
+  # TODO create an indemma model, or use apps default
   session  =
     build: (user = {}) ->
+      model = core.models.user || core.models.record
 
-      core.models.record.call
-        resource: 'user'
-        route   : '/users/sessions'
+      user_session = model.call
+        resource:
+          name  : 'user'
         email   : user.email
         password: user.password
+
+      user_session.route = '/users/sessions'
+
+      user_session
 
     # TODO better and more formal way to restore
     restore: ->

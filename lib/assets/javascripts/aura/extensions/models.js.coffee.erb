@@ -1,7 +1,7 @@
-<% # TODO mover para helper %>
-<% base_path        = Rails.root.join('app', 'assets', 'javascripts', 'models') %>
-<% models_list      = Dir.glob(Rails.root.join(base_path, '**', '*.js*')) %>
-<% models_list.map! do |file|
+<% # TODO mover para helper
+base_path        = Rails.root.join('app', 'assets', 'javascripts', 'models')
+models_list      = Dir.glob(Rails.root.join(base_path, '**', '*.js*'))
+models_list.map! do |file|
    file.sub! base_path.to_s + '/', ''
 
    # Ignore Emacs temporary files
@@ -13,13 +13,19 @@
    File.join *entries
 
 end.compact!
+
+models_list.each do |model_file|
+  require_asset model_file
+end
+
 %>
+
+
+'use strict'
 
 root = exports ? this
 
 define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
-
-  'use strict'
 
   # TODO better require api for indemma
   indemma = require 'indemma'
