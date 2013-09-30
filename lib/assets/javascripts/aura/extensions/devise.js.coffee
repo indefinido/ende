@@ -8,16 +8,26 @@ define 'aura/extensions/devise', () ->
   mediator = null
   core     = null
 
-  # TODO create an indemma model, or use apps default
+  # TODO create an indemma session model, or use apps default session
+  # model, or the configured one
   session  =
     build: (user = {}) ->
-      model = core.models.user || core.models.record
+      if core.models.user
 
-      user_session = model.call
-        resource:
-          name  : 'user'
-        email   : user.email
-        password: user.password
+        user_session = core.models.user
+          email   : user.email
+          password: user.password
+
+      else
+
+        # TODO create an indemma model
+        # TODO deprecate this usage and always use app default model
+        # TODO after that create a configuration for using a custom model
+        user_session = core.models.record.call
+          resource:
+            name  : 'user'
+          email   : user.email
+          password: user.password
 
       user_session.route = '/users/sessions'
 
@@ -88,6 +98,7 @@ define 'aura/extensions/devise', () ->
 
   # Extension definition
   name: 'devise'
+  version: '0.1.0'
   initialize: (application) ->
 
     core     = application.core
