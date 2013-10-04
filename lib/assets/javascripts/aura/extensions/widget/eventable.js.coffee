@@ -19,19 +19,33 @@ define 'aura/extensions/widget/eventable', ->
   translations.set 'animation.start',
     'webkitAnimationStart oanimationstart oAnimationStart msAnimationStart animationstart'
 
-
   create_handler = (widget, event_name) ->
     (event) ->
       widget.sandbox.emit "#{widget.name}.#{widget.identifier}.#{event_name}ed", @
       event.preventDefault()
       false
 
+  eventable =
+    # TODO pass this extensions to the identifiable extension
+    # TODO use widget.extend with the constructor property
+    constructor: (options) ->
+      matches     = extractor.exec options._ref
+      @name       = matches[1]
+      @identifier = options.resource ? matches[2]
+
+      eventable.super.constructor.call @, options
+
+      @sandbox.identifier = @identifier
+
+      @
+
 
   (application) ->
 
     initialize: (application) ->
+      Widgets = application.core.Widgets
 
-      extend application.core.Widgets.Base.prototype,
+      extend Widgets.Base.prototype,
       # TODO implement rivets compatibility, instead of generic binding events, alter html
         handles: (event_name, widget_event_name = event_name, selector = @$el) ->
           unless @name
@@ -45,22 +59,6 @@ define 'aura/extensions/widget/eventable', ->
 
           @sandbox.dom.find(selector, context).on event_name, create_handler(@, widget_event_name || event_name)
 
-      parent = application.core.Widgets.Base
-
-      # TODO pass this extensions to the identifiable extension
-      eventableize = (options) ->
-        matches     = extractor.exec options._ref
-        @name       = matches[1]
-        @identifier = options.resource ? matches[2]
-
-        parent.call @, options
-
-        @sandbox.identifier = @identifier
-
-        @
-
-      eventableize.prototype        = new parent _ref: ''
-      extend eventableize, parent
-      application.core.Widgets.Base = eventableize
-
-
+      # TODO replace Base.extend inheritance to stampit composition
+      Widgets.Base = Widgets.Base.extend eventable
+      eventable.super = Widgets.Base.__super__

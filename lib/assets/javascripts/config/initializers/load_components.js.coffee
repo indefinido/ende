@@ -1,7 +1,20 @@
 #= require require/require
 #= require build
+#= require ./jquery
+# TODO Move this file outside the initializers folder
 
 root = exports ? this
+
+# if jQuery is already included in the default build, we need to load
+# it and globalize it, because aurajs does not know we are using
+# component.io loader and thinks jquery must be shipped within it
+# TODO think in away to not use a global jquery
+try
+  root.jQuery = root.$ = require 'component-jquery'
+catch e
+  # jQuery was not included in the component build, soo the application will fallback to the
+  # jquery builded in aurajs
+
 
 # Little object class to merge component require and requirejs require
 loader =

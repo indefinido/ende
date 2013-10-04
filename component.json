@@ -20,6 +20,7 @@
   },
   "scripts": [
     "vendor/assets/javascripts/stampit/stampit.js"
+    "vendor/assets/javascripts/jquery/inview.js"
   ],
   "development": {},
   "paths": [

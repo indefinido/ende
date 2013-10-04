@@ -52,6 +52,17 @@ define 'aura/extensions/widget/lifecycleable', ->
 
       definition
 
+  recyclable =
+    constructor: (options) ->
+      recyclable.super.constructor.call @, options
+
+      # TODO only listen to this specific sandbox stop
+      @sandbox.on 'aura.sandbox.stop', (sandbox) =>
+        @stopped() if @sandbox.ref == sandbox.ref
+
+    stopped: ->
+      @$el.remove()
+
   (application) ->
 
     initialize: (application) ->
@@ -80,3 +91,8 @@ define 'aura/extensions/widget/lifecycleable', ->
           throw new TypeError "app.core.inject: No widget name provided" unless name?
 
         core.start = lifecycleable.injection options
+
+      # Add support for element removal after stoping widget
+      # TODO replace Base.extend inheritance to stampit composition
+      core.Widgets.Base = core.Widgets.Base.extend recyclable
+      recyclable.super  = core.Widgets.Base.__super__
