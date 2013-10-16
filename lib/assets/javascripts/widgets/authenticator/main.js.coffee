@@ -66,9 +66,9 @@ define ['./states/index', './presenter'], (templates, presenter) ->
 
 
     # Bind and unbind events depending on state
-    sandbox.on 'user.signed_in'          , authenticator.authenticated
-    sandbox.on 'user.unauthorized'       , authenticator.unauthorized
-    sandbox.on 'user.password_recovered' , recoverer.recovered
+    sandbox.on 'user.signed_in'                , authenticator.authenticated
+    sandbox.on 'session.creation_unauthorized' , authenticator.unauthorized
+    sandbox.on 'user.password_recovered'       , recoverer.recovered
 
 
     # Will also initialize sandbox!

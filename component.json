@@ -6,7 +6,6 @@
   "keywords": [],
   "dependencies": {
     "mikeric/rivets": "*",
-    "bestiejs/lodash": "*",
     "KapIT/observe-utils": "*",
     "segmentio/extend": "*",
     "pluma/assimilate": "*",
@@ -14,12 +13,14 @@
     "component/type": "*",
     "component/bind": "*",
     "component/jquery": "*",
+    "component/link-delegate": "*",
     "indefinido/indemma": "*",
     "indefinido/observable": "*",
     "indefinido/advisable": "*"
   },
   "scripts": [
-    "vendor/assets/javascripts/stampit/stampit.js"
+    "vendor/assets/javascripts/lennon/lennon.js",
+    "vendor/assets/javascripts/stampit/stampit.js",
     "vendor/assets/javascripts/jquery/inview.js"
   ],
   "development": {},

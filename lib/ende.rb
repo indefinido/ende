@@ -12,6 +12,11 @@ module Ende
       # assets.paths << current_dir.join('vendor', 'assets', 'stylesheets').to_s uncomment if you use
     end
 
+# Check if devise exists and extend devise controllers to send
+#    authenticity (csrf) token
+#    config.initializer :blah do
+    #      UsersController.send :include, UsersControllerExtensions if devise
+#    end
   end
 
   def Ende.assets

@@ -9,7 +9,7 @@ define 'aura/extensions/states', ['application/states'], (states) ->
     _        = core.util._
 
     state =
-      current: 'default'
+      current: 'initializing'
       list: []
       previous: null
       change: (transition) ->
@@ -73,3 +73,5 @@ define 'aura/extensions/states', ['application/states'], (states) ->
       Object.defineProperty application, 'state',
         set: (to) -> state.change to: to
         get: -> state.current
+
+    afterAppStart: (application) -> application.state = "default"

@@ -15,6 +15,12 @@ catch e
   # jQuery was not included in the component build, soo the application will fallback to the
   # jquery builded in aurajs
 
+# This may be included in build, and loaded before aurajs requires for them
+# TODO also preload underscorejs
+# TODO also preload eventemitter2
+# TODO also preload require-jstext
+
+  # TODO!! Try to improve requirejs and components require integrationod
 
 # Little object class to merge component require and requirejs require
 loader =
