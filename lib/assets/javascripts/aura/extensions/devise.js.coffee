@@ -162,7 +162,7 @@ define 'aura/extensions/devise', () ->
 
   # Extension definition
   name: 'devise'
-  version: '0.2.1'
+  version: '0.3.0'
   initialize: (application) ->
 
     core     = application.core
@@ -192,7 +192,9 @@ define 'aura/extensions/devise', () ->
     sandbox.session = session
 
   define_routes: (router) ->
-    router.route '/users/sessions', 'session.new'
+    # TODO pass authenticable resource as a parameter to extension
+    router.define '/users/sign_in' , 'session.new'
+    router.define '/users/sign_out', 'session.destroy'
 
   define_resources: (model) ->
 
@@ -213,10 +215,11 @@ define 'aura/extensions/devise', () ->
       email: String
 
   afterAppStart: (application) ->
-    @define_resources application.core.models
+    {router, models} = application.core
+    @define_resources models
 
     # TODO move to an external module
-    @define_routes application if application.router?
+    @define_routes router if router?
 
     # Restore session if not already
     # TODO Restore only when application is ready

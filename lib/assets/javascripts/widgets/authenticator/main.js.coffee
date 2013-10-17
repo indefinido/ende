@@ -20,9 +20,9 @@ define ['./states/index', './presenter'], (templates, presenter) ->
     sandbox.logger.log "initialized!"
 
     base =
-      status: null
+      status: 'idle'
       classes: =>
-        "#{@state} #{@status} authenticator"
+        "widget #{@state} #{base.status} authenticator"
       toggle_state: (event) =>
         @state = if @state == 'default' then 'passwords' else 'default'
         false
@@ -32,8 +32,7 @@ define ['./states/index', './presenter'], (templates, presenter) ->
       message: null
       email: null
       password: null
-      # TODO copiar do modacad
-      # button_label: 'Entrar'
+      button_label: 'Authenticate!'
 
       # Authentication state
       authenticate: (event) ->
@@ -53,8 +52,7 @@ define ['./states/index', './presenter'], (templates, presenter) ->
       email: null
       message: null
 
-      # TODO copiar do modacad
-      # button_label: 'Entrar'
+      button_label: 'Recuperar senha'
 
       # Recovery state
       recover: (event, models) ->
@@ -64,12 +62,10 @@ define ['./states/index', './presenter'], (templates, presenter) ->
       recovered: (password) ->
         base.status = 'success'
 
-
     # Bind and unbind events depending on state
     sandbox.on 'user.signed_in'                , authenticator.authenticated
     sandbox.on 'session.creation_unauthorized' , authenticator.unauthorized
     sandbox.on 'user.password_recovered'       , recoverer.recovered
-
 
     # Will also initialize sandbox!
     @$el.attr 'data-class', 'base.classes < base.status'

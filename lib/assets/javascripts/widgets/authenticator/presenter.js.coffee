@@ -13,14 +13,14 @@ define ->
         configurable: true
         get: -> authenticator.message
         set: (message) -> authenticator.message = message
-      classes:
-        configurable: true
-        value: ->
-          "widget authenticator #{authenticator.status}"
       email:
         configurable: true
         set: (email) -> authenticator.email = email
         get: -> authenticator.email
+      button_label:
+        configurable: true
+        set: (button_label) -> authenticator.button_label = button_label
+        get: -> authenticator.button_label
       password:
         configurable: true
         set: (password) -> authenticator.password = password

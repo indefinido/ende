@@ -57,7 +57,7 @@ COMPONENT
   end
 
   desc "build [PATH]", "Build components to PATH, defaulted to ./vendor/assets/components"
-  def build path="vendor/assets/components"
+  def build path="vendor/assets/javascripts/ende"
     run "component build --out #{path}"
   end
 end

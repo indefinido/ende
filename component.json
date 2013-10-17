@@ -13,7 +13,7 @@
     "component/type": "*",
     "component/bind": "*",
     "component/jquery": "*",
-    "component/link-delegate": "*",
+    "components/modernizr": "*",
     "indefinido/indemma": "*",
     "indefinido/observable": "*",
     "indefinido/advisable": "*"
