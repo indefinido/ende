@@ -4,6 +4,7 @@ define 'aura/extensions/widget/lifecycleable', ->
 
   # TODO Remove jquery and use core dependencies
   jQuery = require 'jquery'
+  core   = null
 
   lifecycleable =
     injection: (definition) ->
@@ -13,11 +14,11 @@ define 'aura/extensions/widget/lifecycleable', ->
       # not only if type is object
       for subwidget_name, suboptions of options
         # TODO if isWidget subwidget_name
-        if $.type(suboptions) == 'object'
+        if $.type(suboptions) == 'object' and not suboptions instanceof jQuery
 
           for name, suboption of suboptions
 
-            if $.type(suboption) == 'object'
+            if $.type(suboption) == 'object' and not suboption instanceof jQuery
 
               for subname, subsuboption of suboption
                 options["#{subwidget_name}#{@capitalize name}#{@capitalize subname}"] = subsuboption
@@ -60,6 +61,8 @@ define 'aura/extensions/widget/lifecycleable', ->
       @sandbox.on 'aura.sandbox.stop', (sandbox) =>
         @stopped() if @sandbox.ref == sandbox.ref
 
+    inject: (name, options) -> core.inject name, options
+
     stopped: ->
       @$el.remove()
 
@@ -87,10 +90,12 @@ define 'aura/extensions/widget/lifecycleable', ->
           injections = core.util._.map widgets, lifecycleable.injection, lifecycleable
           return core.start injections
 
-        else if not name
-          throw new TypeError "app.core.inject: No widget name provided" unless name?
+        if not name
+          throw new TypeError "app.core.inject: No widget name provided"
 
-        core.start = lifecycleable.injection options
+        options.name = name
+
+        core.start [lifecycleable.injection name: name, options: options]
 
       # Add support for element removal after stoping widget
       # TODO replace Base.extend inheritance to stampit composition
