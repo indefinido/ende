@@ -193,8 +193,11 @@ define 'aura/extensions/devise', () ->
 
   define_routes: (router) ->
     # TODO pass authenticable resource as a parameter to extension
-    router.define '/users/sign_in' , 'session.new'
-    router.define '/users/sign_out', 'session.destroy'
+    router.define '/users/sign_in'     , 'session.new'
+    router.define '/users/sign_out'    , 'session.destroy'
+
+    # TODO get devise configuration for password recovery
+    router.define '/users/password/new', 'password.new'
 
   define_resources: (model) ->
 
@@ -220,6 +223,8 @@ define 'aura/extensions/devise', () ->
 
     # TODO move to an external module
     @define_routes router if router?
+
+    @define_handlers
 
     # Restore session if not already
     # TODO Restore only when application is ready
