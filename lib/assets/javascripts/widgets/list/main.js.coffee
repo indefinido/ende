@@ -10,17 +10,17 @@ define ['./states/index', './presenter'], (templates, presenter) ->
     sandbox:
       search:
        index: lunr
-    initialize: (models) ->
-      throw 'no models provided' unless models?
+    initialize: (records) ->
+      throw 'no records provided' unless records?
 
-      @sample = models[0]
+      @sample = records[0]
       @index  = @sandbox.search.index(@indexate)
 
-      for model in models
-        @index.add model
-        @store.set model._id, model
+      for record in records
+        @index.add record
+        @store.set record._id, record
 
-      @store.all = models
+      @store.all = records
 
     # TODO put bold face on matched texts
     search: (params...) ->
@@ -41,27 +41,16 @@ define ['./states/index', './presenter'], (templates, presenter) ->
       true
 
 
-  # If some extension provides you can use the type defineda in there
-  # to extend your widget. Defaults to Base constructor.
-  #
-  # type: 'Base'
+  # Widget Prototype
 
-  # Default values for the options passed to this widget
-  #
-  # Note: the options are passed thorught the html element data
-  # attributes for this widget: <div data-aura-amount="3"></div>
-  #
-  # options: {}
+  type: 'Base'
 
-
-  # Widget initialization method, will be called upon loading, options
-  # are already filled with defaults
   initialize: (options) ->
     widget  = @
     sandbox = @sandbox
     sandbox.logger.log "initialized!"
 
-    model = sandbox.models[options.model]
+    record = sandbox.models[options.model]
 
     # Will also initialize sandbox!
     @html templates.default

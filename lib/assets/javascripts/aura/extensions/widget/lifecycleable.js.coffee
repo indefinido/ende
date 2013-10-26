@@ -12,22 +12,25 @@ define 'aura/extensions/widget/lifecycleable', ->
 
       # TODO check for existing widgets before convert options, and
       # not only if type is object
-      for subwidget_name, suboptions of options
-        # TODO if isWidget subwidget_name
-        if $.type(suboptions) == 'object' and not suboptions instanceof jQuery
+      unless options.nested
+        for subwidget_name, suboptions of options
+          # TODO if isWidget subwidget_name
+          if $.type(suboptions) == 'object' and not (suboptions instanceof jQuery)
 
-          for name, suboption of suboptions
+            for name, suboption of suboptions
 
-            if $.type(suboption) == 'object' and not suboption instanceof jQuery
+              if $.type(suboption) == 'object' and not (suboption instanceof jQuery)
 
-              for subname, subsuboption of suboption
-                options["#{subwidget_name}#{@capitalize name}#{@capitalize subname}"] = subsuboption
+                for subname, subsuboption of suboption
+                  options["#{subwidget_name}#{@capitalize name}#{@capitalize subname}"] = subsuboption
 
-            else
+              else
 
-              options["#{subwidget_name}#{@capitalize name}"] = suboption
+                options["#{subwidget_name}#{@capitalize name}"] = suboption
 
-          # TODO delete options[subwidget_name]
+            # TODO delete options[subwidget_name]
+
+      delete options.nested
 
       ref               = definition.name.split "@"
       widgetName        = @decamelize ref[0]
@@ -68,13 +71,14 @@ define 'aura/extensions/widget/lifecycleable', ->
 
   (application) ->
 
+    version: '0.1.0'
+
     initialize: (application) ->
-      core = application.core
+      {core} = application
 
       # TODO use indemma inflections module instead
       core.util.capitalize = (string) ->
         string.charAt(0).toUpperCase() + string.slice(1);
-
 
       # Cache usefull methods
       lifecycleable.sources    = application.config.widgets.sources

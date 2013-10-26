@@ -86,19 +86,12 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (
 
   populate: (handlers) ->
     # Initialize dependencies
-    list   = ''
-    if @options.listModel
-      list = "<div data-aura-widget=\"list\" data-model=\"#{@options.listModel}\"></div>"
-      @sandbox.on 'list.stabilized'  , handlers.list.stabilized
-      @sandbox.on 'list.selection.incremented' , handlers.list.changed
-      @sandbox.on 'list.selection.decremented' , handlers.list.changed
-
     @scope.all (records) =>
       @load.stop()
 
       @presentation = @presenter records
 
-      @html list + templates[@options.resource]
+      @html templates[@options.resource]
       boo.initialize @$el.find '.results .items'
 
       sandbox = @sandbox
@@ -107,7 +100,7 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (
       @bind @presentation,
          binders:
            unfolding: (element) ->
-             drawing = sandbox.modacad.drawing $(element), @model[@keypath]
+             drawing = sandbox.modacad.drawing $(element), @model.model
              setTimeout ->
                drawing.redisplay
                  doll:
@@ -128,10 +121,9 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (
   initialize: (options) ->
     # TODO rename all options model to options.resource
     options.model     ||= options.resource
-    options.listModel ||= options.listResource
 
     # TODO import core extensions in another place
-    @scope = model = @sandbox.models[options.model]
+    @scope = model = @sandbox.models[options.resource]
     cssify         = @sandbox.util.inflector.cssify
     loader         = @sandbox.ui.loader
     @sandbox.on "viewer.#{@identifier}.scope", @scope_to, @

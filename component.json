@@ -13,6 +13,7 @@
     "component/type": "*",
     "component/bind": "*",
     "component/jquery": "*",
+    "component/querystring": "*",
     "components/modernizr": "*",
     "indefinido/indemma": "*",
     "indefinido/observable": "*",

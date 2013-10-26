@@ -112,7 +112,7 @@ define 'aura/extensions/devise', () ->
 
   #      user_password POST   /users/password(.:format)                 devise/passwords#create
   #  new_user_password GET    /users/password/new(.:format)             devise/passwords#new
-  # edit_user_password GET    /userss/password/edit(.:format)            devise/passwords#edit
+  # edit_user_password GET    /users/password/edit(.:format)            devise/passwords#edit
   #                    PATCH  /users/password(.:format)                 devise/passwords#update
   #                    PUT    /users/password(.:format)                 devise/passwords#updaet
   password =
@@ -123,7 +123,7 @@ define 'aura/extensions/devise', () ->
         password: user.password
 
     create: (user) ->
-
+      event_name        = @event
       user_password     = password.build user
       password.instance = user_password
 
@@ -131,7 +131,18 @@ define 'aura/extensions/devise', () ->
 
       user_password
         .save ->
-          mediator.emit 'user.password_recovered', @
+          # TODO add models event emission to the models extension
+          # TODO detect model event emission need based on
+          # subscriptions to resource events
+          mediator.emit 'password.created', @
+
+          switch(event_name)
+            when 'user.create_password'
+              mediator.emit 'user.password_created'  , user
+            when 'user.recover_password'
+              mediator.emit 'user.password_recovered', user
+            else
+              console.warn "devise password created: no corresponding confirmation event found for #{event_name}"
         .fail ->
           # TODO improve event naming
           mediator.emit 'user.unauthorized', @
@@ -168,17 +179,6 @@ define 'aura/extensions/devise', () ->
     core     = application.core
     sandbox  = application.sandbox
     mediator = core.mediator
-
-    # Define callbacks
-    # TODO get json with features info from devise
-    # gem and only use apropriated listeners
-    mediator.on 'user.sign_in' , session.create
-    mediator.on 'user.sign_out', session.destroy
-    mediator.on 'user.recover_password', password.create
-
-
-    mediator.on 'action.unauthorized', domain.action_unauthorized
-
     # TODO add ajax control into an extension and stop using jquery directly
     jQuery(document).ajaxError (event, xhr) ->
       if xhr.status == 401
@@ -197,7 +197,11 @@ define 'aura/extensions/devise', () ->
     router.define '/users/sign_out'    , 'session.destroy'
 
     # TODO get devise configuration for password recovery
-    router.define '/users/password/new', 'password.new'
+    router.define '/users/password/new' , 'password.new'
+    router.define '/users/password/edit', 'password.edit'
+
+    # TODO get devise configuration for user registry
+    router.define '/users/new'         , 'registration.new'
 
   define_resources: (model) ->
 
@@ -217,14 +221,27 @@ define 'aura/extensions/devise', () ->
 
       email: String
 
+  define_handlers: ->
+    # TODO get json with features info from devise
+    # gem and only use apropriated listeners
+    mediator.on 'user.sign_in' , session.create
+    mediator.on 'user.sign_out', session.destroy
+    mediator.on 'user.create_password' , password.create
+    mediator.on 'user.recover_password', password.create
+
+    mediator.on 'action.unauthorized', domain.action_unauthorized
+
+
   afterAppStart: (application) ->
     {router, models} = application.core
     @define_resources models
 
+    # We must define handlers only after resources have been
+    # acknowledged
+    @define_handlers()
+
     # TODO move to an external module
     @define_routes router if router?
-
-    @define_handlers
 
     # Restore session if not already
     # TODO Restore only when application is ready

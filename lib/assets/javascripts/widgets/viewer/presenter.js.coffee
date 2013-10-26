@@ -46,7 +46,6 @@ define () ->
       for item in items
         unless item.normalized
           index = @items.indexOf item
-          console.debug item, item.code, item.name, index
           @observed.items[index] = normalizer.normalize item
 
       normalizer.drawings()
