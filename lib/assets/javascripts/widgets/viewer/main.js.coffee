@@ -52,7 +52,7 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (
     viewed: (event, in_view, horizontal, vertical) ->
       boo[if in_view then 'pride' else 'shame'] event.target
 
-  version: '0.1.1'
+  version: '0.1.2'
 
   # TODO better separation of concerns
   # TODO Current remote page that is beign displayed
@@ -113,7 +113,7 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (
         for record in records
           viewer.items.push record if presented_ids.indexOf(record._id) == -1
 
-          presented_ids = _.union presented_ids, _.pluck(records, '_id')
+        presented_ids = _.union presented_ids, _.pluck(records, '_id')
 
     $.when(presented...).then =>
       boo.initialize @$el.find '.results .items'
