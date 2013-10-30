@@ -52,7 +52,7 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (
     viewed: (event, in_view, horizontal, vertical) ->
       boo[if in_view then 'pride' else 'shame'] event.target
 
-  version: '0.1.0'
+  version: '0.1.1'
 
   # TODO better separation of concerns
   # TODO Current remote page that is beign displayed
@@ -84,6 +84,46 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (
     for { _widget: widget } in @sandbox._children
       widget.scope_to? child_scope
 
+    @repopulate()
+    @sandbox.emit "viewer.#{@identifier}.scope_changed", @scope
+
+  repopulate: ->
+    if @load?
+      @load.stop()
+      @load = null
+
+    # TODO store spinner instance, instead of creating a new one every time
+    @load = @sandbox.ui.loader @$el.find '.results .items' unless @load?
+
+    viewer        = @presentation.viewer
+    viewer.items  = []
+    presented_ids = []
+
+    # TODO generalise this filtering option
+    presented = #for item in selected
+      # if @scope?.scope.data.by_type_id
+      #   querier = item.models.by_type_id.apply item.models, @scope.scope.data.by_type_id
+      # else
+      #   querier = item.models
+
+      # TODO make scope.all method use scope too!
+      @scope.fetch null, (records) ->
+        _.map records, @       # TODO make scope.all method use scope too!
+
+        for record in records
+          viewer.items.push record if presented_ids.indexOf(record._id) == -1
+
+          presented_ids = _.union presented_ids, _.pluck(records, '_id')
+
+    $.when(presented...).then =>
+      boo.initialize @$el.find '.results .items'
+      presented_ids = []
+
+      if @load?
+        @load.stop()
+        @load = null
+
+
   populate: (handlers) ->
     # Initialize dependencies
     @scope.all (records) =>
@@ -109,13 +149,6 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (
                  unfolding:
                    back : 'hide'
 
-               drawing.style (i, node) ->
-                 value = node.getAttribute 'style'
-                 value = value.replace /fill:(.*?);/, 'fill: black;'
-                 value = value.replace /stroke:(.*?);/, 'stroke: white;'
-                 node.setAttribute 'style', value
-             , 100
-
       @handles 'click', 'back', '.back'
 
   initialize: (options) ->
@@ -125,7 +158,6 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (
     # TODO import core extensions in another place
     @scope = model = @sandbox.models[options.resource]
     cssify         = @sandbox.util.inflector.cssify
-    loader         = @sandbox.ui.loader
     @sandbox.on "viewer.#{@identifier}.scope", @scope_to, @
 
     # Extend presentation
@@ -149,37 +181,6 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (
           clicked: (event, models) =>
             @select models.item
 
-        list:
-          changed: (change, selection) =>
-            # TODO store spinner instance, instead of creating a new one every time
-            @load = loader @$el.find '.results .items' unless @load?
-
-          stabilized: (selected) =>
-            if @load
-              @load.stop()
-              @load = null
-
-            viewer        = @presentation.viewer
-            viewer.items  = []
-            presented_ids = []
-
-            # TODO generalise this filtering option
-            presented = for item in selected
-              if @scope?.scope.data.by_type_id
-                querier = item.models.by_type_id.apply item.models, @scope.scope.data.by_type_id
-              else
-                querier = item.models
-
-              querier.all (records) =>
-                for record in records
-                  viewer.items.push record if presented_ids.indexOf(record._id) == -1
-
-                presented_ids = _.union presented_ids, _.pluck(records, '_id')
-
-            $.when(presented...).then =>
-              boo.initialize @$el.find '.results .items'
-              presented_ids = []
-
       presenter.handlers = handlers
 
       custom_default_template and templates[options.model] = custom_default_template
@@ -190,7 +191,7 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (
       @$results = @$el.find '.results .items'
 
       # Fetch default data
-      @load = loader @results
+      @load = @sandbox.ui.loader @results
       # TODO better scoping support by viewer
 
       @populate handlers
