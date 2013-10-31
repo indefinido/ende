@@ -1,11 +1,12 @@
 'use strict'
+
+# TODO implement default viewer presenteer
 define () ->
 
   observable = require('observable').mixin
   extend     = require 'segmentio-extend'
   self       = null
   view       = null
-
 
   normalizer =
     normalize: (model) ->
@@ -31,8 +32,6 @@ define () ->
         drawing        = self.drawing $(image_binding.el), image_binding.model.model
         drawing.width  = (parseInt(drawing.width ) / 4) + 'px'
         drawing.height = (parseInt(drawing.height) / 4) + 'px'
-
-
 
   self = (items) ->
 

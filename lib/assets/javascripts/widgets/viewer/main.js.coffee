@@ -1,6 +1,6 @@
 'use strict';
 
-define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (templates, presenter) ->
+define ['./states/index', './presenters/default', '/assets/jquery/inview'], (templates, presenter) ->
 
   observable = require('indefinido-observable').mixin
 
@@ -14,7 +14,7 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (
     identify: (index, element) ->
       element  = $ element
       identity = _.uniqueId()
-      element.data('boo', identity)
+      element.data 'boo', identity
       boo.cache[identity] = element
 
     shame: (element) ->
@@ -29,7 +29,6 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (
         shamed: true
 
       boo.cache[identity] = ghost
-
 
       element.css
         width: element.width()
@@ -52,12 +51,13 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (
     viewed: (event, in_view, horizontal, vertical) ->
       boo[if in_view then 'pride' else 'shame'] event.target
 
-  version: '0.1.2'
+  version: '0.1.3'
 
   # TODO better separation of concerns
   # TODO Current remote page that is beign displayed
   options:
     resource: 'default'
+    records: null
   #   page:
   #     current: 1
   #     per    : 5
@@ -73,7 +73,7 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (
 
     # We extend presentation.selected just to assign all values of the item model
     # TODO call presenter to do this job
-    @sandbox.util.extend @presentation.selected, item.model
+    @sandbox.util.extend @presentation.selected   , item.model
     @sandbox.emit "viewer.#{@identifier}.selected", item.model
 
   scope_to: (scope, child_scope) ->
@@ -97,27 +97,26 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (
 
     viewer        = @presentation.viewer
     viewer.items  = []
-    presented_ids = []
 
-    # TODO generalise this filtering option
-    presented = #for item in selected
-      # if @scope?.scope.data.by_type_id
-      #   querier = item.models.by_type_id.apply item.models, @scope.scope.data.by_type_id
-      # else
-      #   querier = item.models
+    # ✔ Generalize this filtering option
+    # TODO make scope.all method use scope too, and replace @scope.fetch by it
+    presented = @scope.fetch null, (records) ->
+      records = _.map records, @, @
 
-      # TODO make scope.all method use scope too!
-      @scope.fetch null, (records) ->
-        _.map records, @       # TODO make scope.all method use scope too!
+      # TODO implement Array.concat ou Array.merge in observer, and
+      # use it here instead of pushing each record
+      viewer.items.push record for record in records
 
-        for record in records
-          viewer.items.push record if presented_ids.indexOf(record._id) == -1
 
-        presented_ids = _.union presented_ids, _.pluck(records, '_id')
-
-    $.when(presented...).then =>
-      boo.initialize @$el.find '.results .items'
-      presented_ids = []
+    presented.then =>
+      if viewer.items.length
+        boo.initialize @$el.find '.results .items'
+        @$el.addClass 'filled'
+        @$el.removeClass 'empty'
+      else
+        # TODO implement state support for viewer widget
+        @$el.addClass 'empty'
+        @$el.removeClass 'filled'
 
       if @load?
         @load.stop()
@@ -125,16 +124,28 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (
 
 
   populate: (handlers) ->
+    sandbox = @sandbox
+
+    @load   = @sandbox.ui.loader @results
+
     # Initialize dependencies
     @scope.all (records) =>
+
       @load.stop()
+
+      # TODO do not fetch for records instead of just rendering an
+      # empty viewer
+      records       = @options.records if @options.records?
 
       @presentation = @presenter records
 
       @html templates[@options.resource]
-      boo.initialize @$el.find '.results .items'
 
-      sandbox = @sandbox
+      if records.length
+        boo.initialize @$el.find '.results .items'
+        @$el.addClass 'filled'
+      else
+        @$el.addClass 'empty'
 
       # TODO move binders to application
       @bind @presentation,
@@ -191,9 +202,6 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview.js'], (
       @$results = @$el.find '.results .items'
 
       # Fetch default data
-      @load = @sandbox.ui.loader @results
-      # TODO better scoping support by viewer
-
       @populate handlers
 
     @sandbox.logger.log "initialized!"
