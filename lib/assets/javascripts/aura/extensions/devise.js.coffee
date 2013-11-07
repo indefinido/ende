@@ -12,6 +12,7 @@ define 'aura/extensions/devise', () ->
   # model, or the configured one
   session  =
     build: (user = {}) ->
+
       if core.models.user
 
         user_session = core.models.user
@@ -29,7 +30,7 @@ define 'aura/extensions/devise', () ->
           email   : user.email
           password: user.password
 
-      user_session.route = '/users/sessions'
+      user_session.route = "/#{user_session.resource}s/sessions"
 
       user_session
 
@@ -101,6 +102,9 @@ define 'aura/extensions/devise', () ->
 
     destroy: ->
       # TODO update the csrf token with the new one!
+      # TODO better resource deletion control, create interface to
+      # make delete requests
+      session.instance.id = 0
       session.instance.destroy()
         .done ->
           sandbox.current_user = null
@@ -114,16 +118,22 @@ define 'aura/extensions/devise', () ->
   #  new_user_password GET    /users/password/new(.:format)             devise/passwords#new
   # edit_user_password GET    /users/password/edit(.:format)            devise/passwords#edit
   #                    PATCH  /users/password(.:format)                 devise/passwords#update
-  #                    PUT    /users/password(.:format)                 devise/passwords#updaet
+  #                    PUT    /users/password(.:format)                 devise/passwords#update
+  # Command handlers
   password =
+    model: null
     build: (user = {}) ->
 
-      core.models.password
+      # TODO change to user model
+      password.model
         email:    user.email
+
         password: user.password
+        password_confirmation: user.password_confirmation
+
+        reset_password_token: user.reset_password_token
 
     create: (user) ->
-      event_name        = @event
       user_password     = password.build user
       password.instance = user_password
 
@@ -135,17 +145,61 @@ define 'aura/extensions/devise', () ->
           # TODO detect model event emission need based on
           # subscriptions to resource events
           mediator.emit 'password.created', @
+          mediator.emit 'user.password_created' , user
 
-          switch(event_name)
-            when 'user.create_password'
-              mediator.emit 'user.password_created'  , user
-            when 'user.recover_password'
-              mediator.emit 'user.password_recovered', user
-            else
-              console.warn "devise password created: no corresponding confirmation event found for #{event_name}"
         .fail ->
           # TODO improve event naming
-          mediator.emit 'user.unauthorized', @
+          # TODO treat other failure cases
+          # TODO auto publish events
+          switch xhr.status
+            when 401
+              mediator.emit 'password.creation_unauthorized', @
+            when 422
+              mediator.emit 'password.creation_unprocessable', @
+            else
+              # TODO move session.restoring check outside this method
+              mediator.emit 'session.creation_failed', @
+
+
+    update: (user) ->
+      user_password  = password.build(user)
+      update = {}
+      param = user_password.resource.param_name || user_password.resource.toString()
+      password.instance = user_password
+
+      update[param] = user_password.json()
+      update.reset_password_token = user.reset_password_token
+
+      password.model
+        .put.call(user_password)
+        .done ->
+          # TODO add models event emission to the models extension
+          # TODO detect model event emission need based on
+          # subscriptions to resource events
+          mediator.emit 'password.updated', @
+          mediator.emit 'user.password_updated', user
+
+          session.restore()
+
+        .fail (xhr) ->
+          # TODO actually implement automatic put restful support on indemma
+          # Calling manualy the put request, so forward the failure to
+          # the default handler
+          xhr.fail @failed
+
+          # TODO improve event naming
+          # TODO treat other failure cases
+          # TODO insert indemma hook for autopublishing this events
+          switch xhr.status
+            when 401
+              mediator.emit 'password.update_unauthorized' , @
+            when 422
+              mediator.emit 'password.update_unprocessable', @
+            else
+              # TODO move session.restoring check outside this method
+              mediator.emit 'password.update_failed'       , @
+
+
 
   domain =
     action_unauthorized: ->
@@ -169,16 +223,13 @@ define 'aura/extensions/devise', () ->
 
 
 
-
-
   # Extension definition
   name: 'devise'
-  version: '0.3.0'
+  version: '1.0.0'
   initialize: (application) ->
+    {core, sandbox} = application
+    {mediator} = core
 
-    core     = application.core
-    sandbox  = application.sandbox
-    mediator = core.mediator
     # TODO add ajax control into an extension and stop using jquery directly
     jQuery(document).ajaxError (event, xhr) ->
       if xhr.status == 401
@@ -212,7 +263,7 @@ define 'aura/extensions/devise', () ->
     #   email   : user.email
     #   password: user.password
 
-    model.call
+    password.model = model.call
       resource:
         scope     : 'users'
         name      : 'password'
@@ -221,13 +272,18 @@ define 'aura/extensions/devise', () ->
 
       email: String
 
+      password: String
+      password_confirmation: String
+
   define_handlers: ->
     # TODO get json with features info from devise
     # gem and only use apropriated listeners
+    mediator.on 'user.restore_session' , session.restore
     mediator.on 'user.sign_in' , session.create
     mediator.on 'user.sign_out', session.destroy
-    mediator.on 'user.create_password' , password.create
-    mediator.on 'user.recover_password', password.create
+
+    mediator.on 'user.create_password', password.create
+    mediator.on 'user.update_password', password.update
 
     mediator.on 'action.unauthorized', domain.action_unauthorized
 
