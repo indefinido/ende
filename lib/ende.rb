@@ -2,6 +2,7 @@ require "ende/version"
 
 module Ende
   class Railtie < Rails::Railtie
+
     config.to_prepare do
       current_dir = Pathname.new(__FILE__).parent.parent
       assets      = Ende.assets
@@ -14,9 +15,18 @@ module Ende
 
 # Check if devise exists and extend devise controllers to send
 #    authenticity (csrf) token
-#    config.initializer :blah do
-    #      UsersController.send :include, UsersControllerExtensions if devise
+#    initializer :user_controller_extensions do |config|
+#      UsersController.class_eval do
+#         include, UsersControllerExtensions if devise_controller?
+#      end
 #    end
+  end
+
+  def Ende.load_widget_extensions
+    current_dir = Pathname.new(__FILE__).parent.parent
+    Dir.glob(current_dir.join 'lib', 'assets', '**', '*.rb').each do |extension|
+      require extension
+    end
   end
 
   def Ende.assets
@@ -24,3 +34,5 @@ module Ende
     assets or Rails.application.config.assets
   end
 end
+
+Ende.load_widget_extensions

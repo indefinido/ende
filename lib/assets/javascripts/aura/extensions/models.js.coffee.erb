@@ -45,6 +45,8 @@ define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
     sandbox             = application.sandbox
     core.util.inflector =
       cssify: (sentence) ->  sentence.replace /\//, '-'
+      pluralize: indemma.model.pluralize
+      singularize: indemma.model.singularize
 
     # TODO rename core.models to core.domain, completely
     core.domain = core.models   = sandbox.models = indemma.model

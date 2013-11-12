@@ -11,6 +11,7 @@ define 'aura/extensions/devise', () ->
   # TODO create an indemma session model, or use apps default session
   # model, or the configured one
   session  =
+    # TODO add support for authentication keys
     build: (user = {}) ->
 
       if core.models.user
@@ -147,7 +148,7 @@ define 'aura/extensions/devise', () ->
           mediator.emit 'password.created', @
           mediator.emit 'user.password_created' , user
 
-        .fail ->
+        .fail (xhr) ->
           # TODO improve event naming
           # TODO treat other failure cases
           # TODO auto publish events

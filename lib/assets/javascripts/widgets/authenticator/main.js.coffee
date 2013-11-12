@@ -5,12 +5,11 @@ define ['./states/index', './presenter'], (templates, presenter) ->
   #
   # type: 'Base'
 
-  # Default values for the options passed to this widget
-  #
-  # Note: the options are passed thorught the html element data
-  # attributes for this widget: <div data-aura-amount="3"></div>
-  #
-  # options: {}
+
+  # TODO add support for authentication keys
+  # TODO get authentication keys from server side
+  # options:
+  #   authentication_keys: ['email']
 
 
   # Widget initialization method, will be called upon loading, options
@@ -88,4 +87,6 @@ define ['./states/index', './presenter'], (templates, presenter) ->
   transition: (to) ->
     @html templates[to]
     @bind @presentation
+
+    @sandbox.emit 'authenticator.state_changed', target: @, to: to
     @observed.state = to

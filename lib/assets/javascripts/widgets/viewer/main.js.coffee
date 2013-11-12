@@ -128,14 +128,16 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
 
     @load   = @sandbox.ui.loader @results
 
+    if @options.records?
+      deferred = jQuery.Deferred()
+      deferred.resolveWith @scope, [@options.records]
+    else
+      deferred = @scope.all()
+
     # Initialize dependencies
-    @scope.all (records) =>
+    deferred.done (records) =>
 
       @load.stop()
-
-      # TODO do not fetch for records instead of just rendering an
-      # empty viewer
-      records       = @options.records if @options.records?
 
       @presentation = @presenter records
 
