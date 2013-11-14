@@ -107,10 +107,20 @@ define 'aura/extensions/devise', () ->
       # make delete requests
       session.instance.id = 0
       session.instance.destroy()
-        .done ->
+        .done (response, status, xhr) ->
           sandbox.current_user = null
           sandbox.signed_in    = false
           mediator.emit 'user.signed_out', @
+
+          # When the user logs in, the csrf token changes, so we need
+          # to update it too! The ende gem extends the controller when
+          # devise is included to send it to us
+          # TODO implement as a indemma extension
+          token = xhr.getResponseHeader 'X-CSRF-Token'
+          console.warn "Server did not send the new csrf token.\n User may not be able to log in again!" unless token
+          $('meta[name="csrf-token"]').attr 'content', token
+
+
         .fail (xhr) ->
           mediator.emit 'session.destruction_failed', @
 
@@ -200,8 +210,6 @@ define 'aura/extensions/devise', () ->
               # TODO move session.restoring check outside this method
               mediator.emit 'password.update_failed'       , @
 
-
-
   domain =
     action_unauthorized: ->
       # Try to restore session in case of forbindness
@@ -226,7 +234,7 @@ define 'aura/extensions/devise', () ->
 
   # Extension definition
   name: 'devise'
-  version: '1.0.0'
+  version: '1.0.1'
   initialize: (application) ->
     {core, sandbox} = application
     {mediator} = core

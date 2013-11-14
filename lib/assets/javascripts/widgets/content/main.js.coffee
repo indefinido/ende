@@ -27,6 +27,8 @@ define ->
     else
       @sandbox.once "content.#{@identifier}.load", @, @load
 
+    @$el.addClass "content"
+    @$el.attr 'id', @identifier
   load: ->
     options = @sandbox.util._.omit @options, 'el', 'ref', '_ref', 'name', 'require', 'baseUrl'
     options = $.extend {}, defaults, options
@@ -39,6 +41,13 @@ define ->
     # Will also initialize sandbox!
     @html response
 
-  failed: ->
+  failed: (xhr) ->
+    if @sandbox.debug.enabled
+      html  = "<h2>Content Widget: Failed to load Content</h2>"
+      html += xhr.responseText
+      html  = html.replace /\n/g, '<br/>'
+      @html html
 
-    @html 'Failed to load content'
+    else
+      # TODO prettier message
+      html  = "Failed to load content."
