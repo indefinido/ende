@@ -7,7 +7,7 @@ define 'aura/extensions/states', ['application/states'], (states) ->
     {dom, mediator} = core
 
     state =
-      current: 'initializing'
+      current: 'initialization'
       list: []
       previous: null
       change: (transition) ->
@@ -63,7 +63,7 @@ define 'aura/extensions/states', ['application/states'], (states) ->
         logger.error "states.flow.failed: Failed autostarting widget! \n Message: #{exception.message}", exception
 
 
-    version: '0.2.1'
+    version: '0.2.2'
 
     initialize: (application) ->
       mediator.on 'state.change' , state.change
