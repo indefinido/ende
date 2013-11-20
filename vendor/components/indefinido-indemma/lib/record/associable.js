@@ -50,13 +50,13 @@ plural = {
   },
   push: Array.prototype.push,
   length: 0,
-  json: function() {
+  json: function(methods, omissions) {
     var record, _i, _len, _results;
 
     _results = [];
     for (_i = 0, _len = this.length; _i < _len; _i++) {
       record = this[_i];
-      _results.push(record.json());
+      _results.push(record.json(methods, omissions));
     }
     return _results;
   }
@@ -109,21 +109,21 @@ associable = {
         update_association: function(data) {
           var associated, association, association_name, id, pluralized_association, _i, _j, _len, _len1, _ref;
 
-          id = this._id || data._id || data.id;
+          id = this._id || data && (data._id || data.id);
           if (!id) {
             return;
           }
-          _ref = model[this.resource].has_many;
+          _ref = model[this.resource.toString()].has_many;
           for (_i = 0, _len = _ref.length; _i < _len; _i++) {
             association_name = _ref[_i];
             pluralized_association = model.pluralize(association_name);
             association = this[pluralized_association];
             if (!association.route) {
-              association.route = "/" + (model.pluralize(this.resource)) + "/" + id + "/" + (model.pluralize(association.resource));
+              association.route = "/" + (model.pluralize(this.resource.toString())) + "/" + id + "/" + (model.pluralize(association.resource));
               for (_j = 0, _len1 = association.length; _j < _len1; _j++) {
                 associated = association[_j];
                 if (!associated.route && (associated.parent != null)) {
-                  associated.route = "/" + (model.pluralize(this.resource)) + "/" + id + "/" + (model.pluralize(association.resource));
+                  associated.route = "/" + (model.pluralize(this.resource.toString())) + "/" + id + "/" + (model.pluralize(association.resource));
                 }
               }
             }

@@ -21,12 +21,18 @@ define 'value_objects/phone', ->
     validate: -> @area_code && @number
 
     toString: ->
-      formatted_number = @number.substr(0, 4) + '-' + @number.substr(4) if @number?
+      striped_number = @number.replace /\-/g, ''
+
+      if striped_number
+        if striped_number.length > 4
+          formatted_number = striped_number.substr(0, 4) + '-' + striped_number.substr(4)
+        else
+          formatted_number = striped_number
 
       if @area_code?
         "(#{@area_code}) #{formatted_number}"
       else
-        formatted_number
+        formatted_number or ''
 
     toJSON: ->
       area_code: @area_code

@@ -2,6 +2,8 @@ var model, resource, resourceable, stampit;
 
 stampit = require('../../vendor/stampit');
 
+require('../../vendor/owl/pluralize');
+
 resource = stampit({
   toString: function() {
     return this.name;
@@ -11,17 +13,25 @@ resource = stampit({
   scope: null,
   singular: false
 }, function() {
+  var _base;
+
+  if (this.original_reference) {
+    stampit.mixIn(this.original_reference, this);
+    this.original_reference.toString = this.toString;
+    (_base = this.original_reference).param_name || (_base.param_name = this.name);
+    return this.original_reference;
+  }
   this.param_name || (this.param_name = this.name);
   return this;
 });
 
 resourceable = {
-  pluralize: function(word) {
+  pluralize: function(word, count, plural) {
     if (!(word && word.length)) {
       throw new TypeError("Invalid string passed to pluralize '" + word + "'");
     }
     if (word.indexOf('s') !== word.length - 1) {
-      return word + 's';
+      return owl.pluralize(word, count, plural);
     } else {
       return word;
     }
@@ -30,7 +40,7 @@ resourceable = {
     if (!(word && word.length)) {
       throw new TypeError("Invalid string passed to singularize '" + word + "'");
     }
-    if (word.indexOf('s') === word.length - 1) {
+    if (word.lastIndexOf('s') === word.length - 1) {
       return word.substring(0, word.length - 1);
     } else {
       return word;
@@ -84,6 +94,7 @@ resourceable = {
       };
     }
     if (typeof this.resource === 'object') {
+      this.resource.original_reference = this.resource;
       resource_definition = this.resource;
     }
     resource_definition.parent = this.parent_resource;

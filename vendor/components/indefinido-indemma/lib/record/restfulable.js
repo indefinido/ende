@@ -29,7 +29,7 @@ util = {
 restful = {
   model: {
     create: function() {
-      var attributes, callback, params, record, _i, _j, _len, _results;
+      var attributes, callback, params, record, savings, _i, _j, _len;
 
       params = 2 <= arguments.length ? __slice.call(arguments, 0, _i = arguments.length - 1) : (_i = 0, []), callback = arguments[_i++];
       if (!arguments.length) {
@@ -37,18 +37,19 @@ restful = {
       }
       if (typeof callback !== 'function') {
         params.push(callback);
+        callback = void 0;
       }
       if (!params.length) {
         params.unshift({});
       }
-      _results = [];
+      savings = [];
       for (_j = 0, _len = params.length; _j < _len; _j++) {
         attributes = params[_j];
         record = this(attributes);
         record.dirty = true;
-        _results.push(record.save(callback));
+        savings.push(record.save(callback));
       }
-      return _results;
+      return $.when.apply($, savings);
     },
     all: function(conditions, callback) {
       if (conditions == null) {
@@ -92,7 +93,8 @@ restful = {
       promise = rest.get.call(this, data);
       route = old_route;
       return promise;
-    }
+    },
+    put: rest.put
   },
   record: {
     reload: function() {
@@ -159,19 +161,42 @@ restful = {
       }
       return _results;
     },
-    save: function(doned, failed, data) {
+    destroy: function(doned, failed, data) {
       var promise;
 
-      if (!this.dirty) {
-        return $.Deferred().resolve();
+      if (!((this.id != null) || (this._id != null))) {
+        throw new Error('Can\'t delete record without id!');
       }
-      promise = rest[this._id ? 'put' : 'post'].call(this, data);
-      promise.done(this.saved);
+      promise = rest["delete"].call(this, data);
+      promise.done(this.destroyed);
       promise.fail(this.failed);
       promise.done(doned);
       promise.fail(failed);
-      this.lock = JSON.stringify(this.json());
       return promise;
+    },
+    saving: false,
+    salvation: null,
+    save: function(doned, failed, data) {
+      var salvation;
+
+      if (this.saving) {
+        return this.salvation;
+      }
+      this.lock = JSON.stringify(this.json());
+      if (!this.dirty) {
+        salvation = $.Deferred().resolveWith(this, null);
+      }
+      salvation || (salvation = rest[this._id ? 'put' : 'post'].call(this, data));
+      this.salvation = salvation;
+      this.saving = true;
+      salvation.done(this.saved);
+      salvation.fail(this.failed);
+      salvation.always(function() {
+        return this.saving = false;
+      });
+      salvation.done(doned);
+      salvation.fail(failed);
+      return salvation;
     },
     saved: function(data) {
       var callback, _i, _len, _ref, _results;
@@ -248,9 +273,12 @@ restful = {
       serialized[this.resource] = this.json();
       return JSON.stringify(serialized);
     },
-    json: function() {
+    json: function(methods) {
       var attribute, json, name, value, _i, _len, _ref;
 
+      if (methods == null) {
+        methods = {};
+      }
       json = {};
       for (name in this) {
         value = this[name];
@@ -262,13 +290,13 @@ restful = {
         }
         if (type(value) === 'object') {
           if (value.toJSON != null) {
-            json[name] = value.toJSON();
+            json[name] = value.toJSON(methods[name]);
           } else {
             _ref = this.nested_attributes;
             for (_i = 0, _len = _ref.length; _i < _len; _i++) {
               attribute = _ref[_i];
               if (attribute === name) {
-                json["" + name + "_attributes"] = value.json();
+                json["" + name + "_attributes"] = value.json(methods[name]);
               }
             }
           }
@@ -284,11 +312,13 @@ restful = {
       delete json.after_initialize;
       delete json.parent_resource;
       delete json.nested_attributes;
-      delete json.on_save;
+      delete json.saving;
+      delete json.salvation;
       delete json.element;
       delete json["default"];
       delete json.lock;
       delete json.validated;
+      delete json.validation;
       return json;
     }
   }
