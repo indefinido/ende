@@ -7,10 +7,13 @@ module.exports = {
     return request.call(this, 'get', (this._id ? "" + this.route + "/" + this._id : this.route), data);
   },
   put: function(data) {
-    return request.call(this, 'put', "" + this.route + "/" + this._id, data);
+    return request.call(this, 'put', (this._id ? "" + this.route + "/" + this._id : this.route), data);
   },
   post: function(data) {
     return request.call(this, 'post', this.route, data);
+  },
+  "delete": function(data) {
+    return request.call(this, 'delete', this.route, data);
   }
 };
 
@@ -22,9 +25,9 @@ request = function(method, url, data) {
     data = {};
     data[param_name] = this.json();
   }
-  if (data[param_name]) {
-    delete data[param_name]._id;
-    delete data[param_name].id;
+  if (data && data[param_name]) {
+    delete data[param_name]['id'];
+    delete data[param_name]['_id'];
   }
   return $.ajax({
     url: url,

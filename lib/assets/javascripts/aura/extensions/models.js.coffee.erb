@@ -20,6 +20,7 @@ end
 
 %>
 
+
 'use strict'
 
 root = exports ? this
@@ -47,10 +48,10 @@ define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
       pluralize: indemma.model.pluralize
       singularize: indemma.model.singularize
 
-    # TODO rename core.models to core.domain, completely
-    core.domain = core.models   = sandbox.models = indemma.model
+    # TODO rename core.models and core.domain to core.resources, completely
+    core.resources = core.domain = core.models   = sandbox.models = indemma.model
 
-    core.model  = sandbox.model = (name) ->
+    core.resource = core.model  = sandbox.resource = sandbox.model = (name) ->
       # TODO use a Map internally in indemma
       model = indemma.model[name]
       throw new Error "Model '#{name}' not found!" unless model?
