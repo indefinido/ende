@@ -33,8 +33,9 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
       element.css
         width: element.width()
         height: element.height()
+        visibility: 'hidden'
 
-      child.detach()
+      # child.detach()
 
     pride: (element) ->
       element  = $ element
@@ -45,7 +46,7 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
         ghost.shamed = false
         # In order to remove staticaly set width and height we pass
         # empty strings to css jquery method
-        element.css(width: '', height: '').append ghost.child
+        element.css(width: '', height: '', visibility: '')
 
 
     viewed: (event, in_view, horizontal, vertical) ->
@@ -81,7 +82,7 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
     @scope = scope
 
     # TODO better hierachical event distribution
-    for { _widget: widget } in @sandbox._children
+    for { _widget: widget } in @sandbox._children?
       widget.scope_to? child_scope
 
     @repopulate()
@@ -106,11 +107,20 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
       # TODO implement Array.concat ou Array.merge in observer, and
       # use it here instead of pushing each record
       viewer.items.push record for record in records
+      viewer.items.push record for record in records
+      viewer.items.push record for record in records
+      viewer.items.push record for record in records
+
+      viewer.items.push record for record in records
+      viewer.items.push record for record in records
+      viewer.items.push record for record in records
+      viewer.items.push record for record in records
+
 
 
     presented.then =>
       if viewer.items.length
-        boo.initialize @$el.find '.results .items'
+        # boo.initialize @$el.find '.results .items'
         @$el.addClass 'filled'
         @$el.removeClass 'empty'
       else
@@ -144,32 +154,19 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
       @html templates[@options.resource]
 
       if records.length
-        boo.initialize @$el.find '.results .items'
+        # boo.initialize @$el.find '.results .items'
         @$el.addClass 'filled'
       else
         @$el.addClass 'empty'
 
       # TODO move binders to application
-      @bind @presentation,
-         binders:
-           unfolding: (element) ->
-             drawing = sandbox.modacad.drawing $(element), @model.model
-             setTimeout ->
-               drawing.redisplay
-                 doll:
-                   front: 'hide'
-                   back : 'hide'
-                 unfolding:
-                   back : 'hide'
+      @bind @presentation, presenter.presentation
 
       @handles 'click', 'back', '.back'
 
   initialize: (options) ->
-    # TODO rename all options model to options.resource
-    options.model     ||= options.resource
-
     # TODO import core extensions in another place
-    @scope = model = @sandbox.models[options.resource]
+    @scope = model = @sandbox.resource options.resource
     cssify         = @sandbox.util.inflector.cssify
     @sandbox.on "viewer.#{@identifier}.scope", @scope_to, @
 
@@ -196,7 +193,7 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
 
       presenter.handlers = handlers
 
-      custom_default_template and templates[options.model] = custom_default_template
+      custom_default_template and templates[options.resource] = custom_default_template
       @presenter = @sandbox.util.extend custom_presenter, presenter if custom_presenter
 
       # Will also initialize sandbox!
