@@ -107,16 +107,6 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
       # TODO implement Array.concat ou Array.merge in observer, and
       # use it here instead of pushing each record
       viewer.items.push record for record in records
-      viewer.items.push record for record in records
-      viewer.items.push record for record in records
-      viewer.items.push record for record in records
-
-      viewer.items.push record for record in records
-      viewer.items.push record for record in records
-      viewer.items.push record for record in records
-      viewer.items.push record for record in records
-
-
 
     presented.then =>
       if viewer.items.length
