@@ -80,10 +80,12 @@ define 'aura/extensions/devise', () ->
 
       user_session
         .save (response, status, xhr) ->
-          sandbox.current_user = @
+          current_user = sandbox.models.user @json()
+
+          sandbox.current_user = current_user
           sandbox.signed_in = true
           mediator.emit 'session.created', @
-          mediator.emit 'user.signed_in', @
+          mediator.emit 'user.signed_in', current_user
 
           # When the user logs in, the csrf token changes, so we need
           # to update it too! The ende gem extends the controller when
@@ -211,6 +213,7 @@ define 'aura/extensions/devise', () ->
               mediator.emit 'password.update_failed'       , @
 
   domain =
+
     action_unauthorized: ->
       # Try to restore session in case of forbindness
       #
