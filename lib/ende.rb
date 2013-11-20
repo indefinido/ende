@@ -26,13 +26,13 @@ module Ende
         if defined? UsersController
           UsersController.class_eval do
             include ::CsrfExtensions
-            after_action :add_new_csrf_token, only: :show
+            after_filter :add_new_csrf_token, only: :show
           end
         end
 
         Devise::SessionsController.class_eval do
           include ::CsrfExtensions
-          after_action :add_new_csrf_token, only: [:create, :destroy]
+          after_filter :add_new_csrf_token, only: [:create, :destroy]
         end
       end
     end
