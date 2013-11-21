@@ -143,7 +143,7 @@
                             if ( current_route ) {
 
                                 //-- Don't dispatch the route we are already on
-                                if ( current_route.path === routes[i].path ) {
+                                if ( current_route.path === routes[i].path && current_route.search === window.location.search) {
                                     return false;
                                 }
 
@@ -164,6 +164,9 @@
 
                             //-- Update the current route
                             current_route = routes[i];
+
+                            //-- Update the current route search string
+                            current_route.search = window.location.search
 
                             //-- Dispatch
                             return this.dispatch(routes[i], context);
