@@ -80,7 +80,22 @@ define 'aura/extensions/devise', () ->
 
       user_session
         .save (response, status, xhr) ->
-          current_user = sandbox.models.user @json()
+          # TODO better way to get user after user_session has been
+          # created
+          # TODO better way to get user associations after
+          # user_session creation
+          # TODO create on indemma the attributes property
+          json = JSON.parse(xhr.responseText)
+          attributes = _.extend json, @json()
+          for name, value of attributes
+            if name.endsWith '_attributes'
+              actual_name = name.replace('_attributes', '')
+              attributes[actual_name] = value
+              delete attributes[name]
+
+
+          current_user = sandbox.models.user()
+          current_user.assign_attributes attributes
 
           sandbox.current_user = current_user
           sandbox.signed_in = true

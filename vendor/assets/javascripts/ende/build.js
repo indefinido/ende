@@ -27084,7 +27084,7 @@ require.register("ened/vendor/assets/javascripts/lennon/lennon.js", function(exp
                             if ( current_route ) {
 
                                 //-- Don't dispatch the route we are already on
-                                if ( current_route.path === routes[i].path ) {
+                                if ( current_route.path === routes[i].path && current_route.search === window.location.search) {
                                     return false;
                                 }
 
@@ -27106,6 +27106,9 @@ require.register("ened/vendor/assets/javascripts/lennon/lennon.js", function(exp
                             //-- Update the current route
                             current_route = routes[i];
 
+                            //-- Update the current route search string
+                            current_route.search = window.location.search
+
                             //-- Dispatch
                             return this.dispatch(routes[i], context);
                         }
@@ -27123,6 +27126,7 @@ require.register("ened/vendor/assets/javascripts/lennon/lennon.js", function(exp
 if ( typeof define === "function" && define.amd ) {
     define( "Lennon", [], function () { return Lennon; } );
 }
+
 });
 require.register("ened/vendor/assets/javascripts/stampit/stampit.js", function(exports, require, module){
 (function(e){if("function"==typeof bootstrap)bootstrap("stampit",e);else if("object"==typeof exports)module.exports=e();else if("function"==typeof define&&define.amd)define(e);else if("undefined"!=typeof ses){if(!ses.ok())return;ses.makeStampit=e}else"undefined"!=typeof window?window.stampit=e():global.stampit=e()})(function(){var define,ses,bootstrap,module,exports;
