@@ -23,13 +23,22 @@ define 'aura/extensions/devise', () ->
       else
 
         # TODO create an indemma model
-        # TODO deprecate this usage and always use app default model
+        # TODO deprecate this usage and always use app default model or the ende default model
         # TODO after that create a configuration for using a custom model
         user_session = core.models.record.call
           resource:
             name  : 'user'
           email   : user.email
           password: user.password
+
+
+      # TODO create an indemma model
+      user_session.destroy = (doned, failed) ->
+        id = @_id
+        delete @_id
+        promise = core.models['user'].delete.call(@).done(doned).fail(failed)
+        @_id = id
+        promise
 
       user_session.route = "/#{user_session.resource}s/sessions"
 
@@ -122,7 +131,7 @@ define 'aura/extensions/devise', () ->
       # TODO update the csrf token with the new one!
       # TODO better resource deletion control, create interface to
       # make delete requests
-      session.instance.id = 0
+
       session.instance.destroy()
         .done (response, status, xhr) ->
           sandbox.current_user = null
