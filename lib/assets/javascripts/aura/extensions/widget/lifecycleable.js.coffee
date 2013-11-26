@@ -58,13 +58,26 @@ define 'aura/extensions/widget/lifecycleable', ->
 
   recyclable =
     constructor: (options) ->
-      recyclable.super.constructor.call @, options
 
       # TODO only listen to this specific sandbox stop
       @sandbox.on 'aura.sandbox.stop', (sandbox) =>
         @stopped() if @sandbox.ref == sandbox.ref
 
-    inject: (name, options) -> core.inject name, options
+      @sandbox.on 'aura.sandbox.start', (sandbox) =>
+        @started() if @sandbox.ref == sandbox.ref
+
+      recyclable.super.constructor.call @, options
+
+      @initialized()
+
+    inject: (name, options) ->
+      core.inject name, options
+
+    initialized: ->
+      @sandbox.emit "#{@name}.#{@identifier}.initialized", @
+
+    started: ->
+      @sandbox.emit "#{@name}.#{@identifier}.started", @
 
     stopped: ->
       @$el.remove()
