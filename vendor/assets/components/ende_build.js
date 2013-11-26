@@ -197,11 +197,11 @@ require.relative = function(parent) {
 };
 require.register("mikeric-rivets/dist/rivets.js", function(exports, require, module){
 // Rivets.js
-// version: 0.6.0
+// version: 0.6.5
 // author: Michael Richards
 // license: MIT
 (function() {
-  var KeypathObserver, Rivets,
+  var Rivets,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
     __slice = [].slice,
@@ -372,28 +372,22 @@ require.register("mikeric-rivets/dist/rivets.js", function(exports, require, mod
         return _this.bindings.push(new Rivets[binding](_this, node, type, keypath, options));
       };
       parse = function(node) {
-        var attribute, attributes, binder, childNode, delimiters, identifier, n, parser, regexp, restTokens, startToken, text, token, tokens, type, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3, _ref4, _results;
+        var attribute, attributes, binder, childNode, delimiters, identifier, n, parser, regexp, text, token, tokens, type, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3, _ref4, _results;
         if (__indexOf.call(skipNodes, node) < 0) {
-          if (node.nodeType === Node.TEXT_NODE) {
+          if (node.nodeType === 3) {
             parser = Rivets.TextTemplateParser;
             if (delimiters = _this.config.templateDelimiters) {
               if ((tokens = parser.parse(node.data, delimiters)).length) {
                 if (!(tokens.length === 1 && tokens[0].type === parser.types.text)) {
-                  startToken = tokens[0], restTokens = 2 <= tokens.length ? __slice.call(tokens, 1) : [];
-                  node.data = startToken.value;
-                  if (startToken.type === 0) {
-                    node.data = startToken.value;
-                  } else {
-                    buildBinding('TextBinding', node, null, startToken.value);
-                  }
-                  for (_i = 0, _len = restTokens.length; _i < _len; _i++) {
-                    token = restTokens[_i];
+                  for (_i = 0, _len = tokens.length; _i < _len; _i++) {
+                    token = tokens[_i];
                     text = document.createTextNode(token.value);
-                    node.parentNode.appendChild(text);
+                    node.parentNode.insertBefore(text, node);
                     if (token.type === 1) {
                       buildBinding('TextBinding', text, null, token.value);
                     }
                   }
+                  node.parentNode.removeChild(node);
                 }
               }
             }
@@ -438,7 +432,16 @@ require.register("mikeric-rivets/dist/rivets.js", function(exports, require, mod
               }
             }
           }
-          _ref4 = node.childNodes;
+          _ref4 = (function() {
+            var _len4, _n, _ref4, _results1;
+            _ref4 = node.childNodes;
+            _results1 = [];
+            for (_n = 0, _len4 = _ref4.length; _n < _len4; _n++) {
+              n = _ref4[_n];
+              _results1.push(n);
+            }
+            return _results1;
+          })();
           _results = [];
           for (_m = 0, _len4 = _ref4.length; _m < _len4; _m++) {
             childNode = _ref4[_m];
@@ -584,7 +587,7 @@ require.register("mikeric-rivets/dist/rivets.js", function(exports, require, mod
 
     Binding.prototype.setObserver = function() {
       var _this = this;
-      this.observer = new KeypathObserver(this.view, this.view.models, this.keypath, function(obs) {
+      this.observer = new Rivets.KeypathObserver(this.view, this.view.models, this.keypath, function(obs) {
         if (_this.key) {
           _this.unbind(true);
         }
@@ -670,7 +673,7 @@ require.register("mikeric-rivets/dist/rivets.js", function(exports, require, mod
         _results = [];
         for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
           dependency = _ref2[_i];
-          observer = new KeypathObserver(this.view, this.model, dependency, function(obs, prev) {
+          observer = new Rivets.KeypathObserver(this.view, this.model, dependency, function(obs, prev) {
             var key;
             key = obs.key;
             _this.view.adapters[key["interface"]].unsubscribe(prev, key.path, _this.sync);
@@ -694,6 +697,7 @@ require.register("mikeric-rivets/dist/rivets.js", function(exports, require, mod
         if ((_ref = this.binder.unbind) != null) {
           _ref.call(this, this.el);
         }
+        this.observer.unobserve();
       }
       if (this.key) {
         this.view.adapters[this.key["interface"]].unsubscribe(this.model, this.key.path, this.sync);
@@ -831,14 +835,14 @@ require.register("mikeric-rivets/dist/rivets.js", function(exports, require, mod
     function KeypathParser() {}
 
     KeypathParser.parse = function(keypath, interfaces, root) {
-      var char, current, index, tokens;
+      var char, current, tokens, _i, _len;
       tokens = [];
       current = {
         "interface": root,
         path: ''
       };
-      for (index in keypath) {
-        char = keypath[index];
+      for (_i = 0, _len = keypath.length; _i < _len; _i++) {
+        char = keypath[_i];
         if (__indexOf.call(interfaces, char) >= 0) {
           tokens.push(current);
           current = {
@@ -886,10 +890,10 @@ require.register("mikeric-rivets/dist/rivets.js", function(exports, require, mod
               value: template.slice(lastIndex, index)
             });
           }
-          lastIndex = index + 2;
+          lastIndex = index + delimiters[0].length;
           index = template.indexOf(delimiters[1], lastIndex);
           if (index < 0) {
-            substring = template.slice(lastIndex - 2);
+            substring = template.slice(lastIndex - delimiters[1].length);
             lastToken = tokens[tokens.length - 1];
             if ((lastToken != null ? lastToken.type : void 0) === this.types.text) {
               lastToken.value += substring;
@@ -906,7 +910,7 @@ require.register("mikeric-rivets/dist/rivets.js", function(exports, require, mod
             type: this.types.binding,
             value: value
           });
-          lastIndex = index + 2;
+          lastIndex = index + delimiters[1].length;
         }
       }
       return tokens;
@@ -916,12 +920,13 @@ require.register("mikeric-rivets/dist/rivets.js", function(exports, require, mod
 
   })();
 
-  KeypathObserver = (function() {
+  Rivets.KeypathObserver = (function() {
     function KeypathObserver(view, model, keypath, callback) {
       this.view = view;
       this.model = model;
       this.keypath = keypath;
       this.callback = callback;
+      this.unobserve = __bind(this.unobserve, this);
       this.realize = __bind(this.realize, this);
       this.update = __bind(this.update, this);
       this.parse = __bind(this.parse, this);
@@ -983,9 +988,44 @@ require.register("mikeric-rivets/dist/rivets.js", function(exports, require, mod
       return current;
     };
 
+    KeypathObserver.prototype.unobserve = function() {
+      var index, obj, token, _i, _len, _ref, _results;
+      _ref = this.tokens;
+      _results = [];
+      for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+        token = _ref[index];
+        if (obj = this.objectPath[index]) {
+          _results.push(this.view.adapters[token["interface"]].unsubscribe(obj, token.path, this.update));
+        } else {
+          _results.push(void 0);
+        }
+      }
+      return _results;
+    };
+
     return KeypathObserver;
 
   })();
+
+  Rivets.binders.text = function(el, value) {
+    if (el.textContent != null) {
+      return el.textContent = value != null ? value : '';
+    } else {
+      return el.innerText = value != null ? value : '';
+    }
+  };
+
+  Rivets.binders.html = function(el, value) {
+    return el.innerHTML = value != null ? value : '';
+  };
+
+  Rivets.binders.show = function(el, value) {
+    return el.style.display = value ? '' : 'none';
+  };
+
+  Rivets.binders.hide = function(el, value) {
+    return el.style.display = value ? 'none' : '';
+  };
 
   Rivets.binders.enabled = function(el, value) {
     return el.disabled = !value;
@@ -1031,18 +1071,6 @@ require.register("mikeric-rivets/dist/rivets.js", function(exports, require, mod
     }
   };
 
-  Rivets.binders.show = function(el, value) {
-    return el.style.display = value ? '' : 'none';
-  };
-
-  Rivets.binders.hide = function(el, value) {
-    return el.style.display = value ? 'none' : '';
-  };
-
-  Rivets.binders.html = function(el, value) {
-    return el.innerHTML = value != null ? value : '';
-  };
-
   Rivets.binders.value = {
     publishes: true,
     bind: function(el) {
@@ -1072,14 +1100,6 @@ require.register("mikeric-rivets/dist/rivets.js", function(exports, require, mod
           return el.value = value != null ? value : '';
         }
       }
-    }
-  };
-
-  Rivets.binders.text = function(el, value) {
-    if (el.innerText != null) {
-      return el.innerText = value != null ? value : '';
-    } else {
-      return el.textContent = value != null ? value : '';
     }
   };
 
@@ -2237,12 +2257,54 @@ module.exports = function extend (object) {
 };
 });
 require.register("pluma-assimilate/dist/assimilate.js", function(exports, require, module){
-/*! assimilate 0.2.0 Copyright (c) 2013 Alan Plum. MIT licensed. */
+/*! assimilate 0.3.0 Copyright (c) 2013 Alan Plum. MIT licensed. */
 var slice = Array.prototype.slice;
 
-function assimilateWithStrategy(strategy, copyInherited, target) {
-    var sources = slice.call(arguments, 3),
-        i, source, key;
+function bind(fn, self) {
+    var args = slice.call(arguments, 2);
+    if (typeof Function.prototype.bind === 'function') {
+        return Function.prototype.bind.apply(fn, [self].concat(args));
+    }
+    return function() {
+        return fn.apply(self, args.concat(slice.call(arguments, 0)));
+    };
+}
+
+function simpleCopy(target, name, source) {
+    target[name] = source[name];
+}
+
+function properCopy(target, name, source) {
+    var descriptor = Object.getOwnPropertyDescriptor(source, name);
+    Object.defineProperty(target, name, descriptor);
+}
+
+function ownProperties(obj) {
+    return Object.getOwnPropertyNames(obj);
+}
+
+function allKeys(obj) {
+    var keys = [];
+    for (var name in obj) {
+        keys.push(name);
+    }
+    return keys;
+}
+
+function ownKeys(obj) {
+    var keys = [];
+    for (var name in obj) {
+        if (obj.hasOwnProperty(name)) {
+            keys.push(name);
+        }
+    }
+    return keys;
+}
+
+function assimilateWithStrategy(target) {
+    var strategy = this,
+    sources = slice.call(arguments, 1),
+    i, source, names, j, name;
 
     if (target === undefined || target === null) {
         target = {};
@@ -2250,83 +2312,81 @@ function assimilateWithStrategy(strategy, copyInherited, target) {
 
     for (i = 0; i < sources.length; i++) {
         source = sources[i];
-        if (source === undefined || source === null) continue;
-        for (key in source) {
-            if (copyInherited || source.hasOwnProperty(key)) {
-                strategy(target, source, key, copyInherited);
-            }
+        names = strategy.keysFn(source);
+        for (j = 0; j < names.length; j++) {
+            name = names[j];
+            strategy.copyFn(target, name, source);
         }
     }
 
     return target;
 }
 
-function assimilate() {
-    var args = slice.call(arguments, 0);
-    return assimilateWithStrategy.apply(
-        this, [assimilate.strategies.DEFAULT, false].concat(args)
-    );
-}
-
-assimilate.withStrategy = function(strategy, copyInherited) {
-    if (arguments.length === 1 && typeof strategy === 'boolean') {
-        copyInherited = strategy;
-        strategy = 'default';
-    }
-    if (typeof strategy === 'string') {
-        strategy = strategy.toUpperCase();
-        if (typeof assimilate.strategies[strategy] === 'function') {
-            strategy = assimilate.strategies[strategy];
+var strategies = {
+    DEFAULT: {
+        keysFn: ownKeys,
+        copyFn: simpleCopy
+    },
+    PROPER: {
+        keysFn: ownProperties,
+        copyFn: properCopy
+    },
+    INHERITED: {
+        keysFn: allKeys,
+        copyFn: simpleCopy
+    },
+    DEEP: {
+        keysFn: ownKeys,
+        copyFn: function recursiveCopy(target, name, source) {
+            var val = source[name];
+            var old = target[name];
+            if (typeof val === 'object' && typeof old === 'object') {
+                assimilateWithStrategy.call(strategies.DEEP, old, val);
+            } else {
+                simpleCopy(target, name, source);
+            }
         }
+    },
+    STRICT: {
+        keysFn: ownKeys,
+        copyFn: function strictCopy(target, name, source) {
+            if (source[name] !== undefined) {
+                simpleCopy(target, name, source);
+            }
+        }
+    },
+    FALLBACK: {
+        keysFn: function fallbackCopy(target, name, source) {
+            if (target[name] === undefined) {
+                simpleCopy(target, name, source);
+            }
+        },
+        copyFn: simpleCopy
     }
-    if (typeof strategy !== 'function') {
-        throw new Error('Unknown strategy or not a function: ' + strategy);
-    }
-    return function() {
-        var args = slice.call(arguments, 0);
-        return assimilateWithStrategy.apply(
-            this, [strategy, !!copyInherited].concat(args)
-        );
-    };
 };
 
-assimilate.strategies = {
-    DEFAULT: function(target, source, key) {
-        target[key] = source[key];
-    },
-    DEEP: function(target, source, key, copyInherited) {
-        var newValue = source[key];
-        var oldValue = target[key];
-        if (
-            target.hasOwnProperty(key) &&
-            typeof newValue === 'object' &&
-            typeof oldValue === 'object'
-        ) {
-            assimilateWithStrategy(
-                assimilate.strategies.DEEP, copyInherited, oldValue, newValue
-            );
-        } else {
-            target[key] = newValue;
-        }
-    },
-    STRICT: function(target, source, key) {
-        var value = source[key];
-        if (value !== undefined) {
-            target[key] = value;
-        }
-    },
-    FALLBACK: function(target, source, key) {
-        var oldValue = target[key];
-        if (oldValue === undefined) {
-            target[key] = source[key];
-        }
+var assimilate = bind(assimilateWithStrategy, strategies.DEFAULT);
+assimilate.strategies = strategies;
+assimilate.withStrategy = function withStrategy(strategy) {
+    if (typeof strategy === 'string') {
+        strategy = strategies[strategy.toUpperCase()];
     }
+    if (!strategy) {
+        throw new Error('Unknwon or invalid strategy:' + strategy);
+    }
+    if (typeof strategy.copyFn !== 'function') {
+        throw new Error('Strategy missing copy function:' + strategy);
+    }
+    if (typeof strategy.keysFn !== 'function') {
+        throw new Error('Strategy missing keys function:' + strategy);
+    }
+    return bind(assimilateWithStrategy, strategy);
 };
 
 module.exports = assimilate;
 });
 require.register("paulmillr-es6-shim/es6-shim.js", function(exports, require, module){
-// ES6-shim 0.9.0 (c) 2013 Paul Miller (paulmillr.com)
+// ES6-shim 0.9.1 (c) 2013 Paul Miller (http://paulmillr.com)
 // ES6-shim may be freely distributed under the MIT license.
 // For more details and documentation:
 // https://github.com/paulmillr/es6-shim/
@@ -2471,7 +2531,7 @@ require.register("paulmillr-es6-shim/es6-shim.js", function(exports, require, mo
         var thisStr = String(this);
         searchStr = String(searchStr);
         var start = Math.max(ES.toInteger(arguments[1]), 0);
-        return thisStr.slice(start, start + searchStr.length) === searchStr;
+        return thisStr.substr(start, searchStr.length) === searchStr;
       },
 
       endsWith: function(searchStr) {
@@ -2657,7 +2717,7 @@ require.register("paulmillr-es6-shim/es6-shim.js", function(exports, require, mo
       }
     });
 
-	var maxSafeInteger = Math.pow(2, 53) - 1;
+    var maxSafeInteger = Math.pow(2, 53) - 1;
     defineProperties(Number, {
       MAX_SAFE_INTEGER: maxSafeInteger,
       MIN_SAFE_INTEGER: -maxSafeInteger,
@@ -2889,18 +2949,29 @@ require.register("paulmillr-es6-shim/es6-shim.js", function(exports, require, mo
       hypot: function(x, y) {
         var anyNaN = false;
         var allZero = true;
-        var z = arguments.length > 2 ? arguments[2] : 0;
-        if ([x, y, z].some(function(num) {
+        var anyInfinity = false;
+        var numbers = [];
+        Array.prototype.every.call(arguments, function(arg) {
+          var num = Number(arg);
           if (Number.isNaN(num)) anyNaN = true;
-          else if (num === Infinity || num === -Infinity) return true;
+          else if (num === Infinity || num === -Infinity) anyInfinity = true;
           else if (num !== 0) allZero = false;
-        })) return Infinity;
+          if (anyInfinity) {
+            return false;
+          } else if (!anyNaN) {
+            numbers.push(Math.abs(num));
+          }
+          return true;
+        });
+        if (anyInfinity) return Infinity;
         if (anyNaN) return NaN;
         if (allZero) return 0;
-        if (x == null) x = 0;
-        if (y == null) y = 0;
-        if (z == null) z = 0;
-        return Math.sqrt(x * x + y * y + z * z);
+
+        numbers.sort(function (a, b) { return b - a; });
+        var largest = numbers[0];
+        var divided = numbers.map(function (number) { return number / largest; });
+        var sum = divided.reduce(function (sum, number) { return sum += number * number; }, 0);
+        return largest * Math.sqrt(sum);
       },
 
       log2: function(value) {
@@ -19139,199 +19210,6 @@ if (typeof module == "object" && typeof require == "function") {
 return sinon;}.call(typeof window != 'undefined' && window || {}));
 
 });
-require.register("indefinido-indemma/vendor/owl/pluralize.js", function(exports, require, module){
-/* This file is part of OWL Pluralization.
-
-OWL Pluralization is free software: you can redistribute it and/or 
-modify it under the terms of the GNU Lesser General Public License
-as published by the Free Software Foundation, either version 3 of
-the License, or (at your option) any later version.
-
-OWL Pluralization is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public 
-License along with OWL Pluralization.  If not, see 
-<http://www.gnu.org/licenses/>.
-*/
-
-// prepare the owl namespace.
-if ( typeof owl === 'undefined' ) owl = {};
-
-owl.pluralize = (function() {
-	var userDefined = {};
-
-	function capitalizeSame(word, sampleWord) {
-		if ( sampleWord.match(/^[A-Z]/) ) {
-			return word.charAt(0).toUpperCase() + word.slice(1);
-		} else {
-			return word;
-		}
-	}
-
-	// returns a plain Object having the given keys,
-	// all with value 1, which can be used for fast lookups.
-	function toKeys(keys) {
-		keys = keys.split(',');
-		var keysLength = keys.length;
-		var table = {};
-		for ( var i=0; i < keysLength; i++ ) {
-			table[ keys[i] ] = 1;
-		}
-		return table;
-	}
-
-	// words that are always singular, always plural, or the same in both forms.
-	var uninflected = toKeys("aircraft,advice,blues,corn,molasses,equipment,gold,information,cotton,jewelry,kin,legislation,luck,luggage,moose,music,offspring,rice,silver,trousers,wheat,bison,bream,breeches,britches,carp,chassis,clippers,cod,contretemps,corps,debris,diabetes,djinn,eland,elk,flounder,gallows,graffiti,headquarters,herpes,high,homework,innings,jackanapes,mackerel,measles,mews,mumps,news,pincers,pliers,proceedings,rabies,salmon,scissors,sea,series,shears,species,swine,trout,tuna,whiting,wildebeest,pike,oats,tongs,dregs,snuffers,victuals,tweezers,vespers,pinchers,bellows,cattle");
-
-	var irregular = {
-		// pronouns
-		I: 'we',
-		you: 'you',
-		he: 'they',
-		it: 'they',  // or them
-		me: 'us',
-		you: 'you',
-		him: 'them',
-		them: 'them',
-		myself: 'ourselves',
-		yourself: 'yourselves',
-		himself: 'themselves',
-		herself: 'themselves',
-		itself: 'themselves',
-		themself: 'themselves',
-		oneself: 'oneselves',
-
-		child: 'children',
-		dwarf: 'dwarfs',  // dwarfs are real; dwarves are fantasy.
-		mongoose: 'mongooses',
-		mythos: 'mythoi',
-		ox: 'oxen',
-		soliloquy: 'soliloquies',
-		trilby: 'trilbys',
-		person: 'people',
-		forum: 'forums', // fora is ok but uncommon.
-
-		// latin plural in popular usage.
-		syllabus: 'syllabi',
-		alumnus: 'alumni', 
-		genus: 'genera',
-		viscus: 'viscera',
-		stigma: 'stigmata'
-	};
-
-	var suffixRules = [
-		// common suffixes
-		[ /man$/i, 'men' ],
-		[ /([lm])ouse$/i, '$1ice' ],
-		[ /tooth$/i, 'teeth' ],
-		[ /goose$/i, 'geese' ],
-		[ /foot$/i, 'feet' ],
-		[ /zoon$/i, 'zoa' ],
-		[ /([tcsx])is$/i, '$1es' ],
-
-		// fully assimilated suffixes
-		[ /ix$/i, 'ices' ],
-		[ /^(cod|mur|sil|vert)ex$/i, '$1ices' ],
-		[ /^(agend|addend|memorand|millenni|dat|extrem|bacteri|desiderat|strat|candelabr|errat|ov|symposi)um$/i, '$1a' ],
-		[ /^(apheli|hyperbat|periheli|asyndet|noumen|phenomen|criteri|organ|prolegomen|\w+hedr)on$/i, '$1a' ],
-		[ /^(alumn|alg|vertebr)a$/i, '$1ae' ],
-		
-		// churches, classes, boxes, etc.
-		[ /([cs]h|ss|x)$/i, '$1es' ],
-
-		// words with -ves plural form
-		[ /([aeo]l|[^d]ea|ar)f$/i, '$1ves' ],
-		[ /([nlw]i)fe$/i, '$1ves' ],
-
-		// -y
-		[ /([aeiou])y$/i, '$1ys' ],
-		[ /(^[A-Z][a-z]*)y$/, '$1ys' ], // case sensitive!
-		[ /y$/i, 'ies' ],
-
-		// -o
-		[ /([aeiou])o$/i, '$1os' ],
-		[ /^(pian|portic|albin|generalissim|manifest|archipelag|ghett|medic|armadill|guan|octav|command|infern|phot|ditt|jumb|pr|dynam|ling|quart|embry|lumbag|rhin|fiasc|magnet|styl|alt|contralt|sopran|bass|crescend|temp|cant|sol|kimon)o$/i, '$1os' ],
-		[ /o$/i, 'oes' ],
-
-		// words ending in s...
-		[ /s$/i, 'ses' ]
-	];
-
-	// pluralizes the given singular noun.  There are three ways to call it:
-	//   pluralize(noun) -> pluralNoun
-	//     Returns the plural of the given noun.
-	//   Example: 
-	//     pluralize("person") -> "people"
-	//     pluralize("me") -> "us"
-	//
-	//   pluralize(noun, count) -> plural or singular noun
-	//   Inflect the noun according to the count, returning the singular noun
-	//   if the count is 1.
-	//   Examples:
-	//     pluralize("person", 3) -> "people"
-	//     pluralize("person", 1) -> "person"
-	//     pluralize("person", 0) -> "people"
-	//
-	//   pluralize(noun, count, plural) -> plural or singular noun
-	//   you can provide an irregular plural yourself as the 3rd argument.
-	//   Example:
-	//     pluralize("château", 2 "châteaux") -> "châteaux"
-	function pluralize(word, count, plural) {
-		// handle the empty string reasonably.
-		if ( word === '' ) return '';
-
-		// singular case.
-		if ( count === 1 ) return word;
-
-		// life is very easy if an explicit plural was provided.
-		if ( typeof plural === 'string' ) return plural;
-
-		var lowerWord = word.toLowerCase();
-
-		// user defined rules have the highest priority.
-		if ( lowerWord in userDefined ) {
-			return capitalizeSame(userDefined[lowerWord], word);
-		}
-
-		// single letters are pluralized with 's, "I got five A's on
-		// my report card."
-		if ( word.match(/^[A-Z]$/) ) return word + "'s";
-
-		// some word don't change form when plural.
-		if ( word.match(/fish$|ois$|sheep$|deer$|pox$|itis$/i) ) return word;
-		if ( word.match(/^[A-Z][a-z]*ese$/) ) return word;  // Nationalities.
-		if ( lowerWord in uninflected ) return word;
-
-		// there's a known set of words with irregular plural forms.
-		if ( lowerWord in irregular ) {
-			return capitalizeSame(irregular[lowerWord], word);
-		}
-		
-		// try to pluralize the word depending on its suffix.
-		var suffixRulesLength = suffixRules.length;
-		for ( var i=0; i < suffixRulesLength; i++ ) {
-			var rule = suffixRules[i];
-			if ( word.match(rule[0]) ) {
-				return word.replace(rule[0], rule[1]);
-			}
-		}
-
-		// if all else fails, just add s.
-		return word + 's';
-	}
-
-	pluralize.define = function(word, plural) {
-		userDefined[word.toLowerCase()] = plural;
-	}
-
-	return pluralize;
-
-})();
-
-});
 require.register("indefinido-indemma/lib/record.js", function(exports, require, module){
 var $, advisable, bind, extend, merge, observable, type,
   __slice = [].slice;
@@ -19717,8 +19595,6 @@ var model, resource, resourceable, stampit;
 
 stampit = require('../../vendor/stampit');
 
-require('../../vendor/owl/pluralize');
-
 resource = stampit({
   toString: function() {
     return this.name;
@@ -19741,12 +19617,12 @@ resource = stampit({
 });
 
 resourceable = {
-  pluralize: function(word, count, plural) {
+  pluralize: function(word) {
     if (!(word && word.length)) {
       throw new TypeError("Invalid string passed to pluralize '" + word + "'");
     }
     if (word.indexOf('s') !== word.length - 1) {
-      return owl.pluralize(word, count, plural);
+      return word + 's';
     } else {
       return word;
     }
@@ -27098,6 +26974,9 @@ Emitter.prototype.hasListeners = function(event){
 
 });
 require.register("component-event/index.js", function(exports, require, module){
+var bind = (window.addEventListener !== undefined) ? 'addEventListener' : 'attachEvent',
+    unbind = (window.removeEventListener !== undefined) ? 'removeEventListener' : 'detachEvent',
+    prefix = (bind !== 'addEventListener') ? 'on' : '';
 
 /**
  * Bind `el` event `type` to `fn`.
@@ -27111,11 +26990,8 @@ require.register("component-event/index.js", function(exports, require, module){
  */
 
 exports.bind = function(el, type, fn, capture){
-  if (el.addEventListener) {
-    el.addEventListener(type, fn, capture || false);
-  } else {
-    el.attachEvent('on' + type, fn);
-  }
+  el[bind](prefix + type, fn, capture || false);
+
   return fn;
 };
 
@@ -27131,14 +27007,10 @@ exports.bind = function(el, type, fn, capture){
  */
 
 exports.unbind = function(el, type, fn, capture){
-  if (el.removeEventListener) {
-    el.removeEventListener(type, fn, capture || false);
-  } else {
-    el.detachEvent('on' + type, fn);
-  }
+  el[unbind](prefix + type, fn, capture || false);
+
   return fn;
 };
-
 });
 require.register("component-matches-selector/index.js", function(exports, require, module){
 /**
@@ -27188,32 +27060,13 @@ function match(el, selector) {
 }
 
 });
-require.register("discore-closest/index.js", function(exports, require, module){
-var matches = require('matches-selector')
-
-module.exports = function (element, selector, checkYoSelf, root) {
-  element = checkYoSelf ? element : element.parentNode
-  root = root || document
-
-  do {
-    if (matches(element, selector))
-      return element
-    // After `matches` on the edge case that
-    // the selector matches the root
-    // (when the root is not the document)
-    if (element === root)
-      return
-    // Make sure `element !== document`
-    // otherwise we get an illegal invocation
-  } while ((element = element.parentNode) && element !== document)
-}
-});
 require.register("component-delegate/index.js", function(exports, require, module){
+
 /**
  * Module dependencies.
  */
 
-var closest = require('closest')
+var matches = require('matches-selector')
   , event = require('event');
 
 /**
@@ -27232,10 +27085,9 @@ var closest = require('closest')
 
 exports.bind = function(el, selector, type, fn, capture){
   return event.bind(el, type, function(e){
-    var target = e.target || e.srcElement;
-    e.delegateTarget = closest(target, selector, true, el);
-    if (e.delegateTarget) fn.call(el, e);
+    if (matches(e.target, selector)) fn(e);
   }, capture);
+  return callback;
 };
 
 /**
@@ -29611,7 +29463,6 @@ require.alias("components-modernizr/modernizr.js", "components-modernizr/index.j
 require.alias("indefinido-indemma/index.js", "ened/deps/indemma/index.js");
 require.alias("indefinido-indemma/vendor/stampit.js", "ened/deps/indemma/vendor/stampit.js");
 require.alias("indefinido-indemma/vendor/sinon.js", "ened/deps/indemma/vendor/sinon.js");
-require.alias("indefinido-indemma/vendor/owl/pluralize.js", "ened/deps/indemma/vendor/owl/pluralize.js");
 require.alias("indefinido-indemma/lib/record.js", "ened/deps/indemma/lib/record.js");
 require.alias("indefinido-indemma/lib/record/associable.js", "ened/deps/indemma/lib/record/associable.js");
 require.alias("indefinido-indemma/lib/record/resource.js", "ened/deps/indemma/lib/record/resource.js");
@@ -29694,12 +29545,8 @@ require.alias("component-type/index.js", "component-dom/deps/type/index.js");
 require.alias("component-event/index.js", "component-dom/deps/event/index.js");
 
 require.alias("component-delegate/index.js", "component-dom/deps/delegate/index.js");
-require.alias("discore-closest/index.js", "component-delegate/deps/closest/index.js");
-require.alias("discore-closest/index.js", "component-delegate/deps/closest/index.js");
-require.alias("component-matches-selector/index.js", "discore-closest/deps/matches-selector/index.js");
+require.alias("component-matches-selector/index.js", "component-delegate/deps/matches-selector/index.js");
 require.alias("component-query/index.js", "component-matches-selector/deps/query/index.js");
-
-require.alias("discore-closest/index.js", "discore-closest/index.js");
 
 require.alias("component-event/index.js", "component-delegate/deps/event/index.js");
 

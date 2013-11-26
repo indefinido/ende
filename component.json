@@ -17,7 +17,8 @@
     "components/modernizr": "*",
     "indefinido/indemma": "*",
     "indefinido/observable": "*",
-    "indefinido/advisable": "*"
+    "indefinido/advisable": "*",
+    "component/dialog": "*"
   },
   "scripts": [
     "vendor/assets/javascripts/lennon/lennon.js",

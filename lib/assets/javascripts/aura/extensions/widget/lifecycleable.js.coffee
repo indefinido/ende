@@ -71,7 +71,7 @@ define 'aura/extensions/widget/lifecycleable', ->
 
   (application) ->
 
-    version: '0.1.0'
+    version: '0.2.0'
 
     initialize: (application) ->
       {core} = application
@@ -87,19 +87,27 @@ define 'aura/extensions/widget/lifecycleable', ->
       lifecycleable.decamelize = core.util.decamelize
       lifecycleable.capitalize = core.util.capitalize
 
-      # Add injection functiono for widgets
-      core.inject = (name = options.name, options) ->
-        if jQuery.isArray name
-          widgets    = name
-          injections = core.util._.map widgets, lifecycleable.injection, lifecycleable
-          return core.start injections
+      # Add injection function for widgets
+      core.inject = (name, options) ->
 
-        if not name
-          throw new TypeError "app.core.inject: No widget name provided"
+        switch arguments.length
+          when 1
+            if jQuery.isArray name
+              widgets    = name
+              injections = core.util._.map widgets, lifecycleable.injection, lifecycleable
+              return core.start injections
+            else
+              options = name
+              core.start [lifecycleable.injection name: options.name, options: options]
 
-        options.name = name
+          when 2
+            options.name ||= name
+            core.start [lifecycleable.injection name: options.name, options: options]
 
-        core.start [lifecycleable.injection name: name, options: options]
+      # TODO instead of using inject function, overwrite start function
+      application.sandbox.inject = (params...) ->
+        console.warn 'sandbox.inject will be deprecated, then you will use sandbox.start with object parameters'
+        core.inject params...
 
       # Add support for element removal after stoping widget
       # TODO replace Base.extend inheritance to stampit composition

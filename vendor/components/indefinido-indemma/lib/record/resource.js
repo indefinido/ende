@@ -2,8 +2,6 @@ var model, resource, resourceable, stampit;
 
 stampit = require('../../vendor/stampit');
 
-require('../../vendor/owl/pluralize');
-
 resource = stampit({
   toString: function() {
     return this.name;
@@ -26,12 +24,12 @@ resource = stampit({
 });
 
 resourceable = {
-  pluralize: function(word, count, plural) {
+  pluralize: function(word) {
     if (!(word && word.length)) {
       throw new TypeError("Invalid string passed to pluralize '" + word + "'");
     }
     if (word.indexOf('s') !== word.length - 1) {
-      return owl.pluralize(word, count, plural);
+      return word + 's';
     } else {
       return word;
     }

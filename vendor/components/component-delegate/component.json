@@ -2,7 +2,7 @@
   "name": "delegate",
   "repo": "component/delegate",
   "description": "Event delegation component",
-  "version": "0.2.1",
+  "version": "0.1.0",
   "keywords": [
     "event",
     "events",
@@ -10,7 +10,7 @@
     "delegation"
   ],
   "dependencies": {
-    "discore/closest": "*",
+    "component/matches-selector": "*",
     "component/event": "*"
   },
   "scripts": [

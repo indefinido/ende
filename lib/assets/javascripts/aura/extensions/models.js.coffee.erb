@@ -20,7 +20,6 @@ end
 
 %>
 
-
 'use strict'
 
 root = exports ? this
@@ -54,7 +53,7 @@ define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
     core.resource = core.model  = sandbox.resource = sandbox.model = (name) ->
       # TODO use a Map internally in indemma
       model = indemma.model[name]
-      throw new Error "Model '#{name}' not found!" unless model?
+      throw new Error unless model?
       model
 
     # TODO rename core.models to core.domain, completely
