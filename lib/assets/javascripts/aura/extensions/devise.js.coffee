@@ -116,8 +116,9 @@ define 'aura/extensions/devise', () ->
           # devise is included to send it to us
           # TODO implement as a indemma extension
           token = xhr.getResponseHeader 'X-CSRF-Token'
-          console.warn "Server did not send the new csrf token.\n User may not be logged in!" unless token
-          $('meta[name="csrf-token"]').attr 'content', token
+          unless token
+            console.error "Server did not send the new csrf token.\n User may not be logged in!"
+            $('meta[name="csrf-token"]').attr 'content', token
 
         .fail (xhr) ->
           switch xhr.status
