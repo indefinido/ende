@@ -28,17 +28,14 @@ define ->
       {sandbox, $el: el} = widget
       @el = el
 
+      el.addClass 'hide' unless options.autoshow
+
       sandbox.inject options.content
 
       el.find '.close', (event) =>
         @emit 'close'
         @hide()
         event.preventDefault()
-
-      unless options.autoshow
-        setTimeout ->
-          el.addClass 'hide'
-        , 0
 
   type: 'Base'
 
@@ -48,6 +45,7 @@ define ->
 
     autoshow: false
     modal: false
+    closable: true
 
   initialize: (options) ->
     @sandbox.logger.log "initialized!"
@@ -71,8 +69,13 @@ define ->
     # https://github.com/component/dialog/issues/9 is fixed
     if @options.modal
       @dialog.on 'show', ->
-        @_overlay = overlay closable: false
-        @_overlay.show()
+        o = overlay closable: options.closable
+
+        o.on 'hide', =>
+          @_overlay = null
+          @hide()
+
+        @_overlay = o
 
 
     @sandbox.on "modal.#{@identifier}.show"   , @dialog.show   , @dialog
@@ -83,6 +86,7 @@ define ->
     # @presentation = presenter model
     # @bind presentation
     @sandbox.start()
+    @options.autoshow && @sandbox.emit "modal.#{@identifier}.show"
 
   extract_options: ->
     options =  _.omit @options, 'el', 'ref', '_ref', 'name', 'require', 'baseUrl'
