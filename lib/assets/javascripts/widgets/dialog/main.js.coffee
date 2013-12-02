@@ -11,7 +11,7 @@ define ->
       # overlay
       if overlay
         overlay.show()
-        @el.addClass 'model'
+        @el.addClass 'modal'
 
       # escapable
       @escapable() if !overlay || overlay.closable
@@ -24,7 +24,7 @@ define ->
       @emit 'showed'
 
     render: (options) ->
-      {widget}  = options
+      {widget, content: child}  = options
       {sandbox, $el: el} = widget
       @el = el
 
@@ -32,10 +32,12 @@ define ->
 
       sandbox.inject options.content
 
-      el.find '.close', (event) =>
-        @emit 'close'
-        @hide()
-        event.preventDefault()
+      sandbox.once "#{child.name}.#{child.identifier || 'default'}.started", (widget) =>
+
+        el.find('.close').click (event) =>
+          @emit 'close'
+          @hide()
+          event.preventDefault()
 
   type: 'Base'
 
@@ -46,6 +48,7 @@ define ->
     autoshow: false
     modal: false
     closable: true
+    size: null
 
   initialize: (options) ->
     @sandbox.logger.log "initialized!"
@@ -57,13 +60,19 @@ define ->
 
     widget_options = @extract_options()
     @dialog = new dialog
-      widget: @,
+      widget: @, # TODO forward only element of the widget
       autoshow: @options.autoshow
       content: widget_options
 
+      # TODO forward only element of the widget
+      # sandbox: @sandbox
+      # el: @$el
+
+
     @identifier = widget_options.name if @identifier == 'default'
     @$el.attr 'id', 'dialog'
-    @$el.addClass "modal"
+    options.size && @$el.addClass options.size
+
 
     # TODO update dialog and remove this code when issue
     # https://github.com/component/dialog/issues/9 is fixed
@@ -78,18 +87,31 @@ define ->
         @_overlay = o
 
 
-    @sandbox.on "modal.#{@identifier}.show"   , @dialog.show   , @dialog
-    @sandbox.on "modal.#{@identifier}.hide"   , @dialog.hide   , @dialog
+    # TODO add deprecation warning messages to modal commands
+    @sandbox.on "modal.#{@identifier}.show"     , @dialog.show  , @dialog
+    @sandbox.on "modal.#{@identifier}.hide"     , @dialog.hide  , @dialog
+
+    @sandbox.on "dialog.#{@identifier}.show"    , @dialog.show  , @dialog
+    @sandbox.on "dialog.#{@identifier}.hide"    , @dialog.hide  , @dialog
+    @sandbox.on "dialog.#{@identifier}.destroy" , @sandbox.stop , @sandbox
+    @dialog.on 'hide', => @sandbox.emit "dialog.#{@identifier}.hidden"
     # @sandbox.on "modal.#{@identifier}.overlay", @dialog.overlay, @dialog
 
     # TODO build a custom presenter for the widget?
     # @presentation = presenter model
     # @bind presentation
     @sandbox.start()
-    @options.autoshow && @sandbox.emit "modal.#{@identifier}.show"
+    @options.autoshow && @sandbox.emit "dialog.#{@identifier}.show"
+
+  stopped: ->
+    @dialog.on 'hide', =>
+      # TODO Remove when updating to aura 0.9
+      @$el.remove()
+
+    @dialog.hide()
 
   extract_options: ->
-    options =  _.omit @options, 'el', 'ref', '_ref', 'name', 'require', 'baseUrl'
+    options =  _.omit @options, 'el', 'ref', '_ref', 'name', 'require', 'baseUrl', 'size'
 
     dynamic_options = _.omit options, Object.keys(@constructor.__super__.options)
 
