@@ -28,7 +28,7 @@ define ->
       @sandbox.once "content.#{@identifier}.load", @, @load
 
     @$el.addClass "content"
-    @$el.attr 'id', @identifier
+    @$el.attr 'id', @identifier unless @$el.attr 'id'
   load: ->
     options = @sandbox.util._.omit @options, 'el', 'ref', '_ref', 'name', 'require', 'baseUrl'
     options = $.extend {}, defaults, options
