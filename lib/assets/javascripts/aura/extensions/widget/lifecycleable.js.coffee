@@ -79,6 +79,7 @@ define 'aura/extensions/widget/lifecycleable', ->
     started: ->
       @sandbox.emit "#{@name}.#{@identifier}.started", @
 
+    # TODO Remove when updating to aura 0.9
     stopped: ->
       @$el.remove()
 

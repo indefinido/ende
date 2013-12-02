@@ -20,6 +20,7 @@ end
 
 %>
 
+
 'use strict'
 
 root = exports ? this
@@ -31,6 +32,9 @@ define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
   require 'indefinido-indemma/lib/extensions/rivets'
   require 'indefinido-indemma/lib/record/rest'
   require 'indefinido-indemma/lib/record/associable'
+  require 'indefinido-indemma/lib/record/storable'
+  require 'indefinido-indemma/lib/record/persistable'
+  require 'indefinido-indemma/lib/record/queryable'
   require 'indefinido-indemma/lib/record/scopable'
   require 'indefinido-indemma/lib/record/restfulable'
   require 'indefinido-indemma/lib/record/resource'
