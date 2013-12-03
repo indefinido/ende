@@ -3,6 +3,9 @@
 define ->
 
   dialog_extensions =
+    positionate: ->
+      @el.css marginLeft: -(this.el.width() / 2) + 'px'
+
     show: ->
       @emit 'show'
 
@@ -19,7 +22,7 @@ define ->
       # position
       @el.removeClass 'hide'
       @el.appendTo 'body'
-      @el.css marginLeft: -(this.el.width() / 2) + 'px'
+      @positionate()
 
       @emit 'showed'
 
@@ -33,6 +36,7 @@ define ->
       sandbox.inject options.content
 
       sandbox.once "#{child.name}.#{child.identifier || 'default'}.started", (widget) =>
+        @positionate()
 
         el.find('.close').click (event) =>
           @emit 'close'
@@ -49,6 +53,7 @@ define ->
     modal: false
     closable: true
     size: null
+    theme: null
 
   initialize: (options) ->
     @sandbox.logger.log "initialized!"
@@ -72,6 +77,7 @@ define ->
     @identifier = widget_options.name if @identifier == 'default'
     @$el.attr 'id', 'dialog'
     options.size && @$el.addClass options.size
+    options.theme && @$el.addClass options.theme
 
 
     # TODO update dialog and remove this code when issue
@@ -111,7 +117,7 @@ define ->
     @dialog.hide()
 
   extract_options: ->
-    options =  _.omit @options, 'el', 'ref', '_ref', 'name', 'require', 'baseUrl', 'size'
+    options =  _.omit @options, 'el', 'ref', '_ref', 'name', 'require', 'baseUrl', 'theme'
 
     dynamic_options = _.omit options, Object.keys(@constructor.__super__.options)
 

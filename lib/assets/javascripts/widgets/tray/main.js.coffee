@@ -4,10 +4,11 @@ define ->
 
   type: 'Base'
 
-  version: '0.1.0'
+  version: '0.1.2'
 
   initialize: (options) ->
     names = []
+    {identifier} = options
 
     # TODO access omit method throuhgh underscore
     widget_options =  _.omit options, 'el', 'ref', '_ref', 'name', 'require', 'baseUrl'
@@ -19,8 +20,13 @@ define ->
 
     @$el.addClass ['tray', 'widget'].concat(names).join(' ')
 
-    # TODO find a way to build the id based on content
-    @$el.attr 'id', options.identifier if options.identifier?
+    @identifier = options.identifier
+    # TODO find a way to build the id beased on content
+    if identifier?
+      @identifier = identifier
+      @$el.attr 'id', identifier
+
+    @sandbox.start()
 
   add: (name, options) ->
 
