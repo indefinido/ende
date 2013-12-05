@@ -3,6 +3,8 @@
 define ->
 
   dialog_extensions =
+    close_template: '<a class="close">&times;</a>'
+
     positionate: ->
       @el.css marginLeft: -(this.el.width() / 2) + 'px'
 
@@ -31,13 +33,17 @@ define ->
       {sandbox, $el: el} = widget
       @el = el
 
-      el.addClass 'hide' unless options.autoshow
+      el.addClass 'hide'         unless options.autoshow
 
       sandbox.inject options.content
 
       sandbox.once "#{child.name}.#{child.identifier || 'default'}.started", (widget) =>
         @positionate()
 
+        # TODO better close html creation and handling
+        el.prepend @close_template if     options.closable
+
+        # TODO use urls on hrefs istead of binding events
         el.find('.close').click (event) =>
           @emit 'close'
           @hide()
@@ -46,6 +52,8 @@ define ->
   type: 'Base'
 
   dialog: null
+
+  version: '0.1.0'
 
   options:
 
@@ -66,7 +74,8 @@ define ->
     widget_options = @extract_options()
     @dialog = new dialog
       widget: @, # TODO forward only element of the widget
-      autoshow: @options.autoshow
+      autoshow: options.autoshow
+      closable: options.closable
       content: widget_options
 
       # TODO forward only element of the widget
