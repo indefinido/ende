@@ -58,7 +58,12 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
   # TODO Current remote page that is beign displayed
   options:
     resource: 'default'
+
+    # TODO rename records to resource
     records: null
+
+    # Use to fetch records from an attribute instead of all
+    attribute: null
   #   page:
   #     current: 1
   #     per    : 5
@@ -78,7 +83,7 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
     @sandbox.emit "viewer.#{@identifier}.selected", item.model
 
   scope_to: (scope, child_scope) ->
-    throw new TypeError "Invalid scope sent to viewer@#{@identifier} sent: #{scope.resource}, expected: #{@scope.resource}" if scope.resource != @scope.resource
+    throw new TypeError "Invalid scope sent to viewer@#{@identifier} sent: #{scope.resource}, expected: #{@scope.resource}" if scope.resource.toString() != @scope.resource.toString()
     @scope = scope
 
     # TODO better hierachical event distribution
@@ -101,7 +106,9 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
 
     # ✔ Generalize this filtering option
     # TODO make scope.all method use scope too, and replace @scope.fetch by it
-    presented = @scope.fetch null, (records) ->
+    options  = @options # TODO better options accessing
+    presented = @scope.fetch null, (result) ->
+      records = if options.attribute? then result[options.attribute] else result
       records = _.map records, @, @
 
       # TODO implement Array.concat ou Array.merge in observer, and
@@ -122,20 +129,36 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
         @load.stop()
         @load = null
 
-
   populate: (handlers) ->
     sandbox = @sandbox
 
     @load   = @sandbox.ui.loader @results
 
-    if @options.records?
+
+    # TODO replace with strategy pattern, please!
+    if @options.records?.length
+
       deferred = jQuery.Deferred()
       deferred.resolveWith @scope, [@options.records]
+
+    else if @options.attribute
+
+      deferred = @scope.reload?()
+
+      # TODO better threating this case!
+      unless deferred
+        deferred = jQuery.Deferred()
+        empty    = {}
+        empty[@options.attribute] = []
+        deferred.resolveWith @scope, [empty]
+
     else
       deferred = @scope.all()
 
     # Initialize dependencies
-    deferred.done (records) =>
+    # TODO replace with strategy pattern, please!
+    deferred.done (result) =>
+      records = if @options.attribute? then result[@options.attribute] else result
 
       @load.stop()
 
@@ -154,15 +177,15 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
 
       @handles 'click', 'back', '.back'
 
+    deferred.fail =>
+      # TODO better error message and viewer status
+      @html 'Failed to fetch data from server.'
+
   initialize: (options) ->
     # TODO import core extensions in another place
     @scope = model = @sandbox.resource options.resource
     cssify         = @sandbox.util.inflector.cssify
     @sandbox.on "viewer.#{@identifier}.scope", @scope_to, @
-
-    # Extend presentation
-    # TODO execute only one time
-    presenter.drawing = @sandbox.modacad.drawing
 
     # TODO Initialize pagination settings
     # @page  = options.page
