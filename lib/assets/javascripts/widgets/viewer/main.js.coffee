@@ -46,24 +46,24 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
         ghost.shamed = false
         # In order to remove staticaly set width and height we pass
         # empty strings to css jquery method
-        element.css(width: '', height: '', visibility: '')
+        element.css width: '', height: '', visibility: ''
 
 
     viewed: (event, in_view, horizontal, vertical) ->
       boo[if in_view then 'pride' else 'shame'] event.target
 
-  version: '0.1.3'
+  version: '0.1.4'
 
   # TODO better separation of concerns
   # TODO Current remote page that is beign displayed
   options:
     resource: 'default'
 
-    # TODO rename records to resource
+    # TODO rename records to resources
     records: null
 
-    # Use to fetch records from an attribute instead of all
-    attribute: null
+    # Automatically fetch records on initialization
+    autofetch: false
   #   page:
   #     current: 1
   #     per    : 5
@@ -107,9 +107,10 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
     # ✔ Generalize this filtering option
     # TODO make scope.all method use scope too, and replace @scope.fetch by it
     options  = @options # TODO better options accessing
-    presented = @scope.fetch null, (result) ->
-      records = if options.attribute? then result[options.attribute] else result
-      records = _.map records, @, @
+    presented = @scope.fetch null, (records) =>
+
+      # TODO instantiate records before calling this callback
+      records = _.map records, @resource, @resource unless records[0].resource
 
       # TODO implement Array.concat ou Array.merge in observer, and
       # use it here instead of pushing each record
@@ -141,24 +142,18 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
       deferred = jQuery.Deferred()
       deferred.resolveWith @scope, [@options.records]
 
-    else if @options.attribute
+    else if @options.autofetch == 'false'
 
-      deferred = @scope.reload?()
-
-      # TODO better threating this case!
-      unless deferred
-        deferred = jQuery.Deferred()
-        empty    = {}
-        empty[@options.attribute] = []
-        deferred.resolveWith @scope, [empty]
+      deferred = @scope.all()
 
     else
-      deferred = @scope.all()
+
+      deferred = jQuery.Deferred()
+      deferred.resolveWith @scope, [[]]
 
     # Initialize dependencies
     # TODO replace with strategy pattern, please!
-    deferred.done (result) =>
-      records = if @options.attribute? then result[@options.attribute] else result
+    deferred.done (records) =>
 
       @load.stop()
 
@@ -173,7 +168,7 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
         @$el.addClass 'empty'
 
       # TODO move binders to application
-      @bind @presentation, presenter.presentation
+      @bind @presentation, @presenter.presentation
 
       @handles 'click', 'back', '.back'
 
@@ -183,7 +178,8 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
 
   initialize: (options) ->
     # TODO import core extensions in another place
-    @scope = model = @sandbox.resource options.resource
+    @resource      = @sandbox.resource options.resource
+    @scope         = model = @resource
     cssify         = @sandbox.util.inflector.cssify
     @sandbox.on "viewer.#{@identifier}.scope", @scope_to, @
 
