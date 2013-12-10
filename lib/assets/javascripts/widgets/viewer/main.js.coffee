@@ -1,8 +1,71 @@
 'use strict';
 
-define ['./states/index', './presenters/default', '/assets/jquery/inview'], (templates, presenter) ->
+define [
+  './states/index',
+  './presenters/default',
+  '/assets/jquery/inview',
+  'stampit/stampit'], (templates, presenter, inview, stampit) ->
 
   observable = require('indefinido-observable').mixin
+
+  paginable = stampit
+    flip_to: (page) ->
+      @widget.scope.page (page - 1)
+      @flip()
+
+    flip: ->
+      {scope} = @widget
+      {page_number, total_pages} = scope
+
+      return unless total_pages?
+
+      scope.page ++page_number
+
+      if page_number <= total_pages
+        @widget.scope_to scope
+      else
+        @widget.sandbox.emit "#{@widget.name}.#{@widget.identifier}.last_page"
+  ,
+    {}
+  , ->
+
+    {sandbox, scope}   = @widget
+    {page_number}      = scope
+    scope.total_pages ?= Infinity
+
+    unless scope.page? page_number
+      throw new TypeError "Pagination could not be initialized required method scope#page not found!"
+
+    # TODO scope.subscribe 'page_number', total_pages
+
+    sandbox.on "#{@widget.name}.#{@widget.identifier}.flip"         , @flip    , @
+    sandbox.on "#{@widget.name}.#{@widget.identifier}.flip_to"      , @flip_to , @
+
+    stampit.mixIn @, @widget.options.pagination
+
+  scrollable = stampit
+    bottoned: ->
+      scrollBottom     = @scroll_container.scrollTop() + @scroll_container.height()
+      scrollableBottom = @widget.$el.height() + @widget.$el.offset().top
+
+      scrollBottom + @buffer  > scrollableBottom
+
+    scrolled: ->
+      @widget.sandbox.emit "#{@widget.name}.#{@widget.identifier}.flip" if @bottoned()
+  ,
+    buffer: 400
+  , ->
+    @scroll_container = $ window
+
+    @scroll_container.scroll _.throttle (params...) =>
+      @scrolled params...
+    , 500
+
+    # Trigger more items loading if page starts in bottom state
+    # TODO Account for autofetchable viewer
+    @widget.sandbox.on "viewer.#{@widget.identifier}.populated", @scrolled, @
+
+    stampit.mixIn @, @widget.options.scroll
 
   boo =
     cache: {}
@@ -52,7 +115,7 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
     viewed: (event, in_view, horizontal, vertical) ->
       boo[if in_view then 'pride' else 'shame'] event.target
 
-  version: '0.1.4'
+  version: '0.2.0'
 
   # TODO better separation of concerns
   # TODO Current remote page that is beign displayed
@@ -64,9 +127,12 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
 
     # Automatically fetch records on initialization
     autofetch: false
-  #   page:
-  #     current: 1
-  #     per    : 5
+
+    # If page attribute is set, viewer will assume that there is a
+    # page method on the scope
+    page: null
+
+    scroll: null
 
   type: 'Base'
 
@@ -83,15 +149,16 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
     @sandbox.emit "viewer.#{@identifier}.selected", item.model
 
   scope_to: (scope, child_scope) ->
-    throw new TypeError "Invalid scope sent to viewer@#{@identifier} sent: #{scope.resource}, expected: #{@scope.resource}" if scope.resource.toString() != @scope.resource.toString()
+    throw new TypeError "Invalid scope sent to viewer@#{@identifier} sent: #{scope.resource.toString()}, expected: #{@scope.resource.toString()}" if scope.resource.toString() != @scope.resource.toString()
     @scope = scope
 
     # TODO better hierachical event distribution
     for { _widget: widget } in @sandbox._children?
       widget.scope_to? child_scope
 
-    @repopulate()
     @sandbox.emit "viewer.#{@identifier}.scope_changed", @scope
+
+    @repopulate()
 
   repopulate: ->
     if @load?
@@ -99,10 +166,14 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
       @load = null
 
     # TODO store spinner instance, instead of creating a new one every time
-    @load = @sandbox.ui.loader @$el.find '.results .items' unless @load?
+    unless @load?
+      @load   = @sandbox.ui.loader @$el.find '.results .items'
+
+      # TODO implement status for viewer widget
+      @$el.addClass 'idle'
+      @$el.removeClass 'loading'
 
     viewer        = @presentation.viewer
-    viewer.items  = []
 
     # ✔ Generalize this filtering option
     # TODO make scope.all method use scope too, and replace @scope.fetch by it
@@ -110,13 +181,13 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
     presented = @scope.fetch null, (records) =>
 
       # TODO instantiate records before calling this callback
-      records = _.map records, @resource, @resource unless records[0].resource
+      records = _.map records, @resource, @resource unless records[0]?.resource
 
       # TODO implement Array.concat ou Array.merge in observer, and
       # use it here instead of pushing each record
-      viewer.items.push record for record in records
+      viewer.items = records
 
-    presented.then =>
+    presented.then (records) =>
       if viewer.items.length
         # boo.initialize @$el.find '.results .items'
         @$el.addClass 'filled'
@@ -126,15 +197,26 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
         @$el.addClass 'empty'
         @$el.removeClass 'filled'
 
+      @sandbox.emit "viewer.#{@identifier}.populated", records
+
+    presented.always =>
+      # TODO implement status for viewer widget
+      @$el.addClass 'idle'
+      @$el.removeClass 'loading'
+
       if @load?
         @load.stop()
         @load = null
 
+
   populate: (handlers) ->
     sandbox = @sandbox
 
-    @load   = @sandbox.ui.loader @results
+    @load   = @sandbox.ui.loader @$results
 
+    # TODO implement status for viewer widget
+    @$el.removeClass 'idle'
+    @$el.addClass 'loading'
 
     # TODO replace with strategy pattern, please!
     if @options.records?.length
@@ -142,7 +224,7 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
       deferred = jQuery.Deferred()
       deferred.resolveWith @scope, [@options.records]
 
-    else if @options.autofetch == 'false'
+    else if @options.autofetch
 
       deferred = @scope.all()
 
@@ -161,6 +243,7 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
 
       @html templates[@options.resource]
 
+
       if records.length
         # boo.initialize @$el.find '.results .items'
         @$el.addClass 'filled'
@@ -172,9 +255,19 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
 
       @handles 'click', 'back', '.back'
 
+      @sandbox.emit "viewer.#{@identifier}.populated", records
+
+
     deferred.fail =>
       # TODO better error message and viewer status
       @html 'Failed to fetch data from server.'
+
+
+  plugins: (options) ->
+
+    paginable  widget: @ if options.page
+    scrollable widget: @ if options.scroll
+
 
   initialize: (options) ->
     # TODO import core extensions in another place
@@ -183,8 +276,10 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
     cssify         = @sandbox.util.inflector.cssify
     @sandbox.on "viewer.#{@identifier}.scope", @scope_to, @
 
-    # TODO Initialize pagination settings
-    # @page  = options.page
+    # Iniitalize plugins
+    @plugins options
+
+    @$el.addClass "viewer widget #{cssify(options.resource)} idle clearfix"
 
     # Fetch custom templates
     # TODO better custom templates structure and custom presenter
@@ -205,8 +300,6 @@ define ['./states/index', './presenters/default', '/assets/jquery/inview'], (tem
       custom_default_template and templates[options.resource] = custom_default_template
       @presenter = @sandbox.util.extend custom_presenter, presenter if custom_presenter
 
-      # Will also initialize sandbox!
-      @$el.addClass "viewer widget #{cssify(options.resource)}"
       @$results = @$el.find '.results .items'
 
       # Fetch default data
