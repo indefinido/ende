@@ -21,7 +21,8 @@ this.model = (function() {
   modelable = {
     after_mix: [],
     record: {
-      after_initialize: []
+      after_initialize: [],
+      before_initialize: []
     },
     all: function() {
       return this.cache;
@@ -31,11 +32,6 @@ this.model = (function() {
 
       params = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
       throw 'model.create not implemented yet, try using the restful.model.create method';
-    },
-    find: function(id) {
-      return this.where({
-        id: id
-      }, true);
     },
     where: function(conditions, first) {
       var record, results, _i, _len, _ref;
@@ -66,7 +62,7 @@ this.model = (function() {
     }
   };
   initialize_record = function(data) {
-    var after_initialize, callback, instance, _i, _len, _ref;
+    var after_initialize, callback, creation, index, instance, _i, _j, _len, _len1, _ref, _ref1;
 
     if (data == null) {
       data = {
@@ -79,12 +75,18 @@ this.model = (function() {
     data.route || (data.route = this.route);
     data.nested_attributes = this.nested_attributes || [];
     after_initialize = (data.after_initialize || []).concat(this.record.after_initialize);
-    instance = record.call(extend(Object.create(data), this.record, {
+    creation = extend(Object.create(data), this.record, creation, {
       after_initialize: after_initialize
-    }));
-    _ref = instance.after_initialize;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      callback = _ref[_i];
+    });
+    _ref = this.record.before_initialize;
+    for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+      callback = _ref[index];
+      callback.call(this, creation);
+    }
+    instance = record.call(creation);
+    _ref1 = instance.after_initialize;
+    for (index = _j = 0, _len1 = _ref1.length; _j < _len1; index = ++_j) {
+      callback = _ref1[index];
       callback.call(instance, instance);
     }
     delete instance.after_initialize;
@@ -108,6 +110,7 @@ this.model = (function() {
     extend(instance, merge(this, modelable));
     this.record = instance.record = merge({}, instance.record, modelable.record);
     this.record.after_initialize = instance.record.after_initialize = instance.record.after_initialize.concat(after_initialize);
+    this.record.before_initialize = instance.record.before_initialize.concat([]);
     _ref = modelable.after_mix;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       callback = _ref[_i];

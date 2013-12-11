@@ -98,8 +98,8 @@ define 'aura/extensions/devise', () ->
           attributes = _.extend json, @json()
           for name, value of attributes
             if name.endsWith '_attributes'
-              actual_name = name.replace('_attributes', '')
-              attributes[actual_name] = value
+              actual_name = name.replace '_attributes', ''
+              attributes[actual_name] = _.extend {}, attributes[actual_name], attributes[name]
               delete attributes[name]
 
 

@@ -19210,6 +19210,199 @@ if (typeof module == "object" && typeof require == "function") {
 return sinon;}.call(typeof window != 'undefined' && window || {}));
 
 });
+require.register("indefinido-indemma/vendor/owl/pluralize.js", function(exports, require, module){
+/* This file is part of OWL Pluralization.
+
+OWL Pluralization is free software: you can redistribute it and/or 
+modify it under the terms of the GNU Lesser General Public License
+as published by the Free Software Foundation, either version 3 of
+the License, or (at your option) any later version.
+
+OWL Pluralization is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public 
+License along with OWL Pluralization.  If not, see 
+<http://www.gnu.org/licenses/>.
+*/
+
+// prepare the owl namespace.
+if ( typeof owl === 'undefined' ) owl = {};
+
+owl.pluralize = (function() {
+	var userDefined = {};
+
+	function capitalizeSame(word, sampleWord) {
+		if ( sampleWord.match(/^[A-Z]/) ) {
+			return word.charAt(0).toUpperCase() + word.slice(1);
+		} else {
+			return word;
+		}
+	}
+
+	// returns a plain Object having the given keys,
+	// all with value 1, which can be used for fast lookups.
+	function toKeys(keys) {
+		keys = keys.split(',');
+		var keysLength = keys.length;
+		var table = {};
+		for ( var i=0; i < keysLength; i++ ) {
+			table[ keys[i] ] = 1;
+		}
+		return table;
+	}
+
+	// words that are always singular, always plural, or the same in both forms.
+	var uninflected = toKeys("aircraft,advice,blues,corn,molasses,equipment,gold,information,cotton,jewelry,kin,legislation,luck,luggage,moose,music,offspring,rice,silver,trousers,wheat,bison,bream,breeches,britches,carp,chassis,clippers,cod,contretemps,corps,debris,diabetes,djinn,eland,elk,flounder,gallows,graffiti,headquarters,herpes,high,homework,innings,jackanapes,mackerel,measles,mews,mumps,news,pincers,pliers,proceedings,rabies,salmon,scissors,sea,series,shears,species,swine,trout,tuna,whiting,wildebeest,pike,oats,tongs,dregs,snuffers,victuals,tweezers,vespers,pinchers,bellows,cattle");
+
+	var irregular = {
+		// pronouns
+		I: 'we',
+		you: 'you',
+		he: 'they',
+		it: 'they',  // or them
+		me: 'us',
+		you: 'you',
+		him: 'them',
+		them: 'them',
+		myself: 'ourselves',
+		yourself: 'yourselves',
+		himself: 'themselves',
+		herself: 'themselves',
+		itself: 'themselves',
+		themself: 'themselves',
+		oneself: 'oneselves',
+
+		child: 'children',
+		dwarf: 'dwarfs',  // dwarfs are real; dwarves are fantasy.
+		mongoose: 'mongooses',
+		mythos: 'mythoi',
+		ox: 'oxen',
+		soliloquy: 'soliloquies',
+		trilby: 'trilbys',
+		person: 'people',
+		forum: 'forums', // fora is ok but uncommon.
+
+		// latin plural in popular usage.
+		syllabus: 'syllabi',
+		alumnus: 'alumni', 
+		genus: 'genera',
+		viscus: 'viscera',
+		stigma: 'stigmata'
+	};
+
+	var suffixRules = [
+		// common suffixes
+		[ /man$/i, 'men' ],
+		[ /([lm])ouse$/i, '$1ice' ],
+		[ /tooth$/i, 'teeth' ],
+		[ /goose$/i, 'geese' ],
+		[ /foot$/i, 'feet' ],
+		[ /zoon$/i, 'zoa' ],
+		[ /([tcsx])is$/i, '$1es' ],
+
+		// fully assimilated suffixes
+		[ /ix$/i, 'ices' ],
+		[ /^(cod|mur|sil|vert)ex$/i, '$1ices' ],
+		[ /^(agend|addend|memorand|millenni|dat|extrem|bacteri|desiderat|strat|candelabr|errat|ov|symposi)um$/i, '$1a' ],
+		[ /^(apheli|hyperbat|periheli|asyndet|noumen|phenomen|criteri|organ|prolegomen|\w+hedr)on$/i, '$1a' ],
+		[ /^(alumn|alg|vertebr)a$/i, '$1ae' ],
+		
+		// churches, classes, boxes, etc.
+		[ /([cs]h|ss|x)$/i, '$1es' ],
+
+		// words with -ves plural form
+		[ /([aeo]l|[^d]ea|ar)f$/i, '$1ves' ],
+		[ /([nlw]i)fe$/i, '$1ves' ],
+
+		// -y
+		[ /([aeiou])y$/i, '$1ys' ],
+		[ /(^[A-Z][a-z]*)y$/, '$1ys' ], // case sensitive!
+		[ /y$/i, 'ies' ],
+
+		// -o
+		[ /([aeiou])o$/i, '$1os' ],
+		[ /^(pian|portic|albin|generalissim|manifest|archipelag|ghett|medic|armadill|guan|octav|command|infern|phot|ditt|jumb|pr|dynam|ling|quart|embry|lumbag|rhin|fiasc|magnet|styl|alt|contralt|sopran|bass|crescend|temp|cant|sol|kimon)o$/i, '$1os' ],
+		[ /o$/i, 'oes' ],
+
+		// words ending in s...
+		[ /s$/i, 'ses' ]
+	];
+
+	// pluralizes the given singular noun.  There are three ways to call it:
+	//   pluralize(noun) -> pluralNoun
+	//     Returns the plural of the given noun.
+	//   Example: 
+	//     pluralize("person") -> "people"
+	//     pluralize("me") -> "us"
+	//
+	//   pluralize(noun, count) -> plural or singular noun
+	//   Inflect the noun according to the count, returning the singular noun
+	//   if the count is 1.
+	//   Examples:
+	//     pluralize("person", 3) -> "people"
+	//     pluralize("person", 1) -> "person"
+	//     pluralize("person", 0) -> "people"
+	//
+	//   pluralize(noun, count, plural) -> plural or singular noun
+	//   you can provide an irregular plural yourself as the 3rd argument.
+	//   Example:
+	//     pluralize("château", 2 "châteaux") -> "châteaux"
+	function pluralize(word, count, plural) {
+		// handle the empty string reasonably.
+		if ( word === '' ) return '';
+
+		// singular case.
+		if ( count === 1 ) return word;
+
+		// life is very easy if an explicit plural was provided.
+		if ( typeof plural === 'string' ) return plural;
+
+		var lowerWord = word.toLowerCase();
+
+		// user defined rules have the highest priority.
+		if ( lowerWord in userDefined ) {
+			return capitalizeSame(userDefined[lowerWord], word);
+		}
+
+		// single letters are pluralized with 's, "I got five A's on
+		// my report card."
+		if ( word.match(/^[A-Z]$/) ) return word + "'s";
+
+		// some word don't change form when plural.
+		if ( word.match(/fish$|ois$|sheep$|deer$|pox$|itis$/i) ) return word;
+		if ( word.match(/^[A-Z][a-z]*ese$/) ) return word;  // Nationalities.
+		if ( lowerWord in uninflected ) return word;
+
+		// there's a known set of words with irregular plural forms.
+		if ( lowerWord in irregular ) {
+			return capitalizeSame(irregular[lowerWord], word);
+		}
+		
+		// try to pluralize the word depending on its suffix.
+		var suffixRulesLength = suffixRules.length;
+		for ( var i=0; i < suffixRulesLength; i++ ) {
+			var rule = suffixRules[i];
+			if ( word.match(rule[0]) ) {
+				return word.replace(rule[0], rule[1]);
+			}
+		}
+
+		// if all else fails, just add s.
+		return word + 's';
+	}
+
+	pluralize.define = function(word, plural) {
+		userDefined[word.toLowerCase()] = plural;
+	}
+
+	return pluralize;
+
+})();
+
+});
 require.register("indefinido-indemma/lib/record.js", function(exports, require, module){
 var $, advisable, bind, extend, merge, observable, type,
   __slice = [].slice;
@@ -19234,7 +19427,8 @@ this.model = (function() {
   modelable = {
     after_mix: [],
     record: {
-      after_initialize: []
+      after_initialize: [],
+      before_initialize: []
     },
     all: function() {
       return this.cache;
@@ -19244,11 +19438,6 @@ this.model = (function() {
 
       params = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
       throw 'model.create not implemented yet, try using the restful.model.create method';
-    },
-    find: function(id) {
-      return this.where({
-        id: id
-      }, true);
     },
     where: function(conditions, first) {
       var record, results, _i, _len, _ref;
@@ -19279,7 +19468,7 @@ this.model = (function() {
     }
   };
   initialize_record = function(data) {
-    var after_initialize, callback, instance, _i, _len, _ref;
+    var after_initialize, callback, creation, index, instance, _i, _j, _len, _len1, _ref, _ref1;
 
     if (data == null) {
       data = {
@@ -19292,12 +19481,18 @@ this.model = (function() {
     data.route || (data.route = this.route);
     data.nested_attributes = this.nested_attributes || [];
     after_initialize = (data.after_initialize || []).concat(this.record.after_initialize);
-    instance = record.call(extend(Object.create(data), this.record, {
+    creation = extend(Object.create(data), this.record, creation, {
       after_initialize: after_initialize
-    }));
-    _ref = instance.after_initialize;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      callback = _ref[_i];
+    });
+    _ref = this.record.before_initialize;
+    for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+      callback = _ref[index];
+      callback.call(this, creation);
+    }
+    instance = record.call(creation);
+    _ref1 = instance.after_initialize;
+    for (index = _j = 0, _len1 = _ref1.length; _j < _len1; index = ++_j) {
+      callback = _ref1[index];
       callback.call(instance, instance);
     }
     delete instance.after_initialize;
@@ -19321,6 +19516,7 @@ this.model = (function() {
     extend(instance, merge(this, modelable));
     this.record = instance.record = merge({}, instance.record, modelable.record);
     this.record.after_initialize = instance.record.after_initialize = instance.record.after_initialize.concat(after_initialize);
+    this.record.before_initialize = instance.record.before_initialize.concat([]);
     _ref = modelable.after_mix;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       callback = _ref[_i];
@@ -19371,12 +19567,14 @@ exports.model = this.model;
 
 });
 require.register("indefinido-indemma/lib/record/associable.js", function(exports, require, module){
-var $, associable, model, plural, root, singular,
+var $, associable, callbacks, extend, model, modifiers, plural, root, singular, subscribers,
   __slice = [].slice;
 
 root = window;
 
 $ = require('jquery');
+
+extend = require('assimilate');
 
 require('./resource');
 
@@ -19421,7 +19619,10 @@ plural = {
     data[_name = this.parent_resource] || (data[_name] = this.parent);
     return model[model.singularize(this.resource)](data);
   },
-  push: Array.prototype.push,
+  push: function() {
+    console.warn("" + this.resource + ".push is deprecated and will be removed, please use add instead");
+    return Array.prototype.push.apply(this, arguments);
+  },
   length: 0,
   json: function(methods, omissions) {
     var record, _i, _len, _results;
@@ -19437,92 +19638,192 @@ plural = {
 
 singular = {
   create: function(data) {
-    return model[this.resource].create($.extend({}, this, data));
+    return model[this.resource].create(extend({}, this, data));
   },
   build: function(data) {
-    return this[this.parent_resource][this.resource] = model[this.resource]($.extend({}, this, data));
+    return this.owner[this.resource.toString()] = model[this.resource.toString()](extend({}, this, data));
+  }
+};
+
+subscribers = {
+  belongs_to: {
+    foreign_key: function(resource_id) {
+      var associated, association_name, current_resource_id, resource, _ref;
+
+      association_name = this.resource.toString();
+      if (resource_id === null || resource_id === void 0) {
+        this.dirty = true;
+        this.owner[association_name] = resource_id;
+        return resource_id;
+      }
+      current_resource_id = (_ref = this.owner[association_name]) != null ? _ref._id : void 0;
+      if (resource_id !== current_resource_id) {
+        resource = model[association_name];
+        if (!resource) {
+          console.warn("subscribers.belongs_to.foreign_key: associated factory not found for model: " + association_name);
+          return resource_id;
+        }
+        associated = resource.find(resource_id);
+        associated || (associated = resource({
+          _id: resource_id
+        }));
+        this.owner.observed[association_name] = associated;
+      }
+      return resource_id;
+    },
+    associated_changed: function(associated) {
+      return this.owner.observed["" + (this.resource.toString()) + "_id"] = associated ? associated._id : null;
+    }
+  }
+};
+
+modifiers = {
+  belongs_to: {
+    associated_loader: function() {
+      var association_name,
+        _this = this;
+
+      association_name = this.resource.toString();
+      return Object.defineProperty(this.owner, association_name, {
+        set: function(associated) {
+          return this.observed[association_name] = associated;
+        },
+        get: function() {
+          var associated, associated_id, resource;
+
+          associated = _this.owner.observed[association_name];
+          associated_id = _this.owner.observed[association_name + '_id'];
+          if (!(((associated != null ? associated._id : void 0) != null) || associated_id)) {
+            return associated;
+          }
+          if (associated != null ? associated.sustained : void 0) {
+            return associated;
+          }
+          resource = model[association_name];
+          if (!resource) {
+            console.warn("subscribers.belongs_to.foreign_key: associated factory not found for model: " + association_name);
+            return associated;
+          }
+          associated = resource.find(associated_id || associated._id);
+          associated || (associated = resource({
+            _id: associated_id
+          }));
+          resource.storage.store(associated._id, associated);
+          associated.reload();
+          return _this.owner.observed[association_name] = associated;
+        },
+        configurable: true,
+        enumerable: true
+      });
+    }
+  }
+};
+
+callbacks = {
+  has_many: {
+    nest_attributes: function() {
+      var association, association_name, association_names, associations_attributes, message, _i, _len, _results;
+
+      association_names = model[this.resource].has_many;
+      if (association_names) {
+        _results = [];
+        for (_i = 0, _len = association_names.length; _i < _len; _i++) {
+          association_name = association_names[_i];
+          associations_attributes = this["" + association_name + "_attributes"];
+          if (associations_attributes && associations_attributes.length) {
+            association = this[model.pluralize(association_name)];
+            if (!association) {
+              message = "has_many.nest_attributes: Association not found for " + association_name + ". \n";
+              message += "did you set it on model declaration? \n  has_many: " + association_name + " ";
+              throw message;
+            }
+            association.resource = model.singularize(association.resource);
+            association.add.apply(association, associations_attributes);
+            _results.push(association.resource = model.pluralize(association.resource));
+          } else {
+            _results.push(void 0);
+          }
+        }
+        return _results;
+      }
+    },
+    update_association: function(data) {
+      var associated, association, association_name, id, pluralized_association, _i, _j, _len, _len1, _ref;
+
+      id = this._id || data && (data._id || data.id);
+      if (!id) {
+        return;
+      }
+      _ref = model[this.resource.toString()].has_many;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        association_name = _ref[_i];
+        pluralized_association = model.pluralize(association_name);
+        association = this[pluralized_association];
+        if (!association.route) {
+          association.route = "/" + (model.pluralize(this.resource.toString())) + "/" + id + "/" + (model.pluralize(association.resource));
+          for (_j = 0, _len1 = association.length; _j < _len1; _j++) {
+            associated = association[_j];
+            if (!associated.route && (associated.parent != null)) {
+              associated.route = "/" + (model.pluralize(this.resource.toString())) + "/" + id + "/" + (model.pluralize(association.resource));
+            }
+          }
+        }
+      }
+      return true;
+    },
+    autosave: function() {
+      throw 'Not implemented yet';
+    }
+  },
+  has_one: {
+    nest_attributes: function() {
+      var association_name, association_names, associations_attributes, _i, _len, _results;
+
+      association_names = model[this.resource].has_one;
+      if (association_names) {
+        _results = [];
+        for (_i = 0, _len = association_names.length; _i < _len; _i++) {
+          association_name = association_names[_i];
+          associations_attributes = this["" + association_name + "_attributes"];
+          if (associations_attributes) {
+            this[association_name] = this["build_" + association_name](associations_attributes);
+            _results.push(delete this["" + association_name + "_attributes"]);
+          } else {
+            _results.push(void 0);
+          }
+        }
+        return _results;
+      }
+    }
   }
 };
 
 associable = {
-  model: function(options) {
-    var callbacks;
+  model: {
+    blender: function(definition) {
+      var model;
 
-    if (this.resource == null) {
-      console.error('resource must be defined in order to associate');
-    }
-    callbacks = {
-      has_many: {
-        nest_attributes: function() {
-          var association, association_name, association_names, associations_attributes, message, _i, _len, _results;
-
-          association_names = model[this.resource].has_many;
-          if (association_names) {
-            _results = [];
-            for (_i = 0, _len = association_names.length; _i < _len; _i++) {
-              association_name = association_names[_i];
-              associations_attributes = this["" + association_name + "_attributes"];
-              if (associations_attributes && associations_attributes.length) {
-                association = this[model.pluralize(association_name)];
-                if (!association) {
-                  message = "has_many.nest_attributes: Association not found for " + association_name + ". \n";
-                  message += "did you set it on model declaration? \n  has_many: " + association_name + " ";
-                  throw message;
-                }
-                association.resource = model.singularize(association.resource);
-                association.add.apply(association, associations_attributes);
-                _results.push(association.resource = model.pluralize(association.resource));
-              } else {
-                _results.push(void 0);
-              }
-            }
-            return _results;
-          }
-        },
-        update_association: function(data) {
-          var associated, association, association_name, id, pluralized_association, _i, _j, _len, _len1, _ref;
-
-          id = this._id || data && (data._id || data.id);
-          if (!id) {
-            return;
-          }
-          _ref = model[this.resource.toString()].has_many;
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            association_name = _ref[_i];
-            pluralized_association = model.pluralize(association_name);
-            association = this[pluralized_association];
-            if (!association.route) {
-              association.route = "/" + (model.pluralize(this.resource.toString())) + "/" + id + "/" + (model.pluralize(association.resource));
-              for (_j = 0, _len1 = association.length; _j < _len1; _j++) {
-                associated = association[_j];
-                if (!associated.route && (associated.parent != null)) {
-                  associated.route = "/" + (model.pluralize(this.resource.toString())) + "/" + id + "/" + (model.pluralize(association.resource));
-                }
-              }
-            }
-          }
-          return true;
-        },
-        autosave: function() {
-          return this.save();
-        }
+      model = associable.model;
+      this.create_after_hooks = model.create_after_hooks;
+      this.create_before_hooks = model.create_before_hooks;
+      if (this.has_many && $.type(this.has_many) !== 'array') {
+        this.has_many = [this.has_many];
       }
-    };
-    if (this.has_many && $.type(this.has_many) !== 'array') {
-      this.has_many = [this.has_many];
-    }
-    if (this.has_one && $.type(this.has_one) !== 'array') {
-      this.has_one = [this.has_one];
-    }
-    if (this.belongs_to && $.type(this.belongs_to) !== 'array') {
-      this.belongs_to = [this.belongs_to];
-    }
-    this.has_many || (this.has_many = []);
-    this.has_one || (this.has_one = []);
-    this.belongs_to || (this.belongs_to = []);
-    return this.create_associations = function() {
-      var association_name, association_proxy, resource, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _results;
+      if (this.has_one && $.type(this.has_one) !== 'array') {
+        this.has_one = [this.has_one];
+      }
+      if (this.belongs_to && $.type(this.belongs_to) !== 'array') {
+        this.belongs_to = [this.belongs_to];
+      }
+      this.has_many || (this.has_many = []);
+      this.has_one || (this.has_one = []);
+      this.belongs_to || (this.belongs_to = []);
+      return true;
+    },
+    create_after_hooks: function(definition) {
+      var association_name, association_proxy, old_resource_id, options, resource, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _results;
 
+      options = model[this.resource.name || this.resource.toString()];
       if (options.has_many) {
         _ref = options.has_many;
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -19544,12 +19845,14 @@ associable = {
           resource = _ref1[_j];
           association_proxy = {
             resource: resource,
-            parent_resource: this.resource
+            parent_resource: this.resource,
+            owner: this
           };
-          association_proxy[this.resource] = this;
+          association_proxy[this.resource.toString()] = this;
           this["build_" + resource] = $.proxy(singular.build, association_proxy);
           this["create_" + resource] = $.proxy(singular.create, association_proxy);
         }
+        callbacks.has_one.nest_attributes.call(this);
       }
       if (options.belongs_to) {
         _ref2 = options.belongs_to;
@@ -19558,29 +19861,69 @@ associable = {
           resource = _ref2[_k];
           association_proxy = {
             resource: resource,
-            parent_resource: this.resource
+            parent_resource: this.resource,
+            parent: this,
+            owner: this
           };
-          association_proxy[this.resource] = this;
+          association_proxy[this.resource.toString()] = this;
           this["build_" + resource] = $.proxy(singular.build, association_proxy);
-          _results.push(this["create_" + resource] = $.proxy(singular.create, association_proxy));
+          this["create_" + resource] = $.proxy(singular.create, association_proxy);
+          old_resource_id = this["" + resource + "_id"];
+          this["" + resource + "_id"] = null;
+          this.subscribe("" + resource + "_id", $.proxy(subscribers.belongs_to.foreign_key, association_proxy));
+          this.subscribe(resource.toString(), $.proxy(subscribers.belongs_to.associated_changed, association_proxy));
+          this.resource_id = old_resource_id;
+          if (this["" + resource + "_id"] && !this[resource]) {
+            _results.push(this.publish("" + resource + "_id", this["" + resource + "_id"]));
+          } else {
+            _results.push(void 0);
+          }
         }
         return _results;
       }
-    };
-  },
-  record: function(options) {
-    if (this.resource == null) {
-      console.error('resource must be defined in order to associate');
+    },
+    create_before_hooks: function(record) {
+      var association_proxy, definition, resource, _i, _len, _ref, _results;
+
+      definition = this;
+      if (definition.belongs_to) {
+        _ref = definition.belongs_to;
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          resource = _ref[_i];
+          association_proxy = {
+            resource: resource,
+            parent_resource: this.resource,
+            owner: record
+          };
+          _results.push(modifiers.belongs_to.associated_loader.call(association_proxy));
+        }
+        return _results;
+      }
     }
-    return model[this.resource.name || this.resource.toString()].create_associations.call(this);
+  },
+  record: {
+    after_initialize: function(attributes) {
+      if (this.resource == null) {
+        throw new Error('resource must be defined in order to associate');
+      }
+      return model[this.resource.name || this.resource.toString()].create_after_hooks.call(this);
+    },
+    before_initialize: function(creation) {
+      if (!this.resource) {
+        throw new Error('resource must be defined in order to associate');
+      }
+      return model[this.resource.name || this.resource.toString()].create_before_hooks(creation);
+    }
   }
 };
 
 model = root.model;
 
 model.mix(function(modelable) {
-  modelable.after_mix.push(associable.model);
-  return modelable.record.after_initialize.push(associable.record);
+  modelable.after_mix.push(associable.model.blender);
+  modelable.record.before_initialize.push(associable.record.before_initialize);
+  return modelable.record.after_initialize.push(associable.record.after_initialize);
 });
 
 model.associable = {
@@ -19590,10 +19933,133 @@ model.associable = {
 };
 
 });
+require.register("indefinido-indemma/lib/record/persistable.js", function(exports, require, module){
+var handlers, model, persistable, record;
+
+require('./queryable');
+
+handlers = {
+  store_after_saved: function() {
+    var storage;
+
+    storage = model[this.resource.toString()].storage;
+    if (this._id) {
+      return storage.store(this._id, this);
+    }
+  }
+};
+
+persistable = {
+  record: {
+    after_initialize: function() {
+      return this.after('saved', handlers.store_after_saved);
+    }
+  }
+};
+
+model = window.model;
+
+record = window.record;
+
+model.persistable = true;
+
+model.mix(function(modelable) {
+  return modelable.record.after_initialize.push(persistable.record.after_initialize);
+});
+
+});
+require.register("indefinido-indemma/lib/record/storable.js", function(exports, require, module){
+var extend, merge, model, record, stampit, storable;
+
+extend = require('assimilate');
+
+merge = extend.withStrategy('deep');
+
+stampit = require('../../vendor/stampit');
+
+storable = stampit({
+  store: function(keypath, value, options) {
+    var collection, entry, key, _i, _len;
+
+    collection = this.database;
+    keypath = keypath.toString().split('.');
+    key = keypath.pop();
+    for (_i = 0, _len = keypath.length; _i < _len; _i++) {
+      entry = keypath[_i];
+      collection[entry] || (collection[entry] = {});
+      collection = collection[entry];
+    }
+    if (arguments.length === 1) {
+      this.reads++;
+      return collection[key];
+    } else {
+      this.writes++;
+      value.sustained = true;
+      return collection[key] = value;
+    }
+  },
+  values: function() {
+    return Object.values(this.database);
+  }
+}, {
+  type: 'object',
+  writes: 0,
+  reads: 0
+}, function() {
+  this.database || (this.database = {});
+  return this;
+});
+
+model = window.model;
+
+record = window.record;
+
+model.storable = true;
+
+module.exports = storable;
+
+});
+require.register("indefinido-indemma/lib/record/queryable.js", function(exports, require, module){
+var extend, model, queryable, record, stampit, storable;
+
+extend = require('assimilate');
+
+storable = require('./storable');
+
+stampit = require('../../vendor/stampit');
+
+queryable = {
+  storage: storable(),
+  find: function(key) {
+    return this.storage.store(key);
+  },
+  all: function() {
+    return this.storage.values();
+  },
+  where: function() {
+    throw new Error('queryable.where: Not implemented yet');
+  }
+};
+
+model = window.model;
+
+record = window.record;
+
+model.queryable = true;
+
+module.exports = queryable;
+
+model.mix(function(modelable) {
+  return extend(modelable, queryable);
+});
+
+});
 require.register("indefinido-indemma/lib/record/resource.js", function(exports, require, module){
 var model, resource, resourceable, stampit;
 
 stampit = require('../../vendor/stampit');
+
+require('../../vendor/owl/pluralize');
 
 resource = stampit({
   toString: function() {
@@ -19617,12 +20083,12 @@ resource = stampit({
 });
 
 resourceable = {
-  pluralize: function(word) {
+  pluralize: function(word, count, plural) {
     if (!(word && word.length)) {
       throw new TypeError("Invalid string passed to pluralize '" + word + "'");
     }
     if (word.indexOf('s') !== word.length - 1) {
-      return word + 's';
+      return owl.pluralize(word, count, plural);
     } else {
       return word;
     }
@@ -19666,7 +20132,9 @@ resourceable = {
   },
   parent_id: {
     get: function() {
-      return this[this.parent_resource]._id;
+      if (this[this.parent_resource]) {
+        return this[this.parent_resource]._id;
+      }
     },
     set: function() {
       return console.error('Warning changing associations throught parent_id not allowed for security and style guide purposes');
@@ -19676,7 +20144,11 @@ resourceable = {
     var resource_definition, _ref;
 
     if (this.parent_resource) {
-      Object.defineProperty(this, "" + this.parent_resource + "_id", resourceable.parent_id);
+      Object.defineProperty(this, "" + this.parent_resource + "_id", {
+        value: resourceable.parent_id,
+        configurable: true,
+        enumerable: true
+      });
     }
     resource_definition = {};
     if (typeof this.resource === 'string') {
@@ -19722,7 +20194,7 @@ module.exports = {
     return request.call(this, 'post', this.route, data);
   },
   "delete": function(data) {
-    return request.call(this, 'delete', this.route, data);
+    return request.call(this, 'delete', (this._id ? "" + this.route + "/" + this._id : this.route), data);
   }
 };
 
@@ -19830,8 +20302,14 @@ restful = {
     get: function(action, data) {
       var old_route, payload, promise, resource, route;
 
+      if (data == null) {
+        data = {};
+      }
       old_route = this.route;
-      this.route = "/" + (model.pluralize(this.resource.name)) + "/" + action;
+      this.route = "/" + (model.pluralize(this.resource.name));
+      if (action) {
+        this.route += "/" + action;
+      }
       resource = data.resource;
       if (data && data.json) {
         data = data.json();
@@ -19845,20 +20323,24 @@ restful = {
       route = old_route;
       return promise;
     },
-    put: rest.put
+    put: rest.put,
+    "delete": rest["delete"]
   },
   record: {
     reload: function() {
-      var argument, promise, _i, _len;
+      var data, param, params, promise, _i, _len;
 
-      promise = rest.get.call(this);
+      params = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+      data = params.pop();
+      if (type(data) !== 'object') {
+        params.push(data);
+      }
+      promise = rest.get.call(this, data || {});
       promise.done(this.assign_attributes);
       promise.fail(this.failed);
-      for (_i = 0, _len = arguments.length; _i < _len; _i++) {
-        argument = arguments[_i];
-        if (type(argument) === 'function') {
-          promise.done(argument);
-        }
+      for (_i = 0, _len = params.length; _i < _len; _i++) {
+        param = params[_i];
+        promise.done(param);
       }
       return promise;
     },
@@ -19902,13 +20384,16 @@ restful = {
         association_name = _ref2[_l];
         association_attributes = attributes[association_name];
         delete attributes[association_name];
+        delete attributes[association_name + "_attributes"];
         if (association_attributes) {
           this[association_name] = this["build_" + association_name](association_attributes);
         }
       }
       _results = [];
       for (attribute in attributes) {
-        _results.push(this[attribute] = attributes[attribute]);
+        if (attribute !== this[attribute]) {
+          _results.push(this[attribute] = attributes[attribute]);
+        }
       }
       return _results;
     },
@@ -19972,7 +20457,7 @@ restful = {
       }
     },
     failed: function(xhr, error, status) {
-      var attribute_name, definition, e, message, messages, payload, _ref, _results;
+      var attribute_name, definition, e, message, messages, payload, _i, _len, _ref;
 
       payload = xhr.responseJSON;
       try {
@@ -19985,37 +20470,33 @@ restful = {
         case 422:
           definition = model[this.resource];
           _ref = payload.errors;
-          _results = [];
           for (attribute_name in _ref) {
             messages = _ref[attribute_name];
-            if (!(this.hasOwnProperty(attribute_name) || definition.hasOwnProperty(attribute_name))) {
+            if (!definition.associations) {
+              definition.associations = definition.has_one.concat(definition.has_many.concat(definition.belongs_to));
+            }
+            if (!(this.hasOwnProperty(attribute_name) || definition.hasOwnProperty(attribute_name) || definition.associations.indexOf(attribute_name) !== -1 || attribute_name === 'base')) {
               message = "Server returned an validation error message for a attribute that is not defined in your model.\n";
               message += "The attribute was '" + attribute_name + "', the model resource was '" + this.resource + "'.\n";
               message += "The model definition keys were '" + (JSON.stringify(Object.keys(definition))) + "'.\n";
               message += "Please remove server validation, or update your model definition.";
               throw new TypeError(message);
             }
-            _results.push((function() {
-              var _i, _len, _results1;
-
-              _results1 = [];
-              for (_i = 0, _len = messages.length; _i < _len; _i++) {
-                message = messages[_i];
-                _results1.push(this.errors.add(attribute_name, 'server', {
-                  server_message: message
-                }));
-              }
-              return _results1;
-            }).call(this));
+            for (_i = 0, _len = messages.length; _i < _len; _i++) {
+              message = messages[_i];
+              this.errors.add(attribute_name, 'server', {
+                server_message: message
+              });
+            }
           }
-          return _results;
           break;
         default:
           message = "Fail in " + this.resource + ".save:\n";
           message += "Record: " + this + "\n";
           message += "Status: " + status + " (" + (payload.status || xhr.status) + ")\n";
-          return message += "Error : " + (payload.error || payload.message || payload);
+          message += "Error : " + (payload.error || payload.message || payload);
       }
+      return this.saving = false;
     },
     toString: function() {
       var serialized;
@@ -20061,10 +20542,12 @@ restful = {
       delete json.route;
       delete json.initial_route;
       delete json.after_initialize;
+      delete json.before_initialize;
       delete json.parent_resource;
       delete json.nested_attributes;
       delete json.saving;
       delete json.salvation;
+      delete json.sustained;
       delete json.element;
       delete json["default"];
       delete json.lock;
@@ -20141,7 +20624,7 @@ scopable = {
       }
       builder = builders[type];
       if (builder == null) {
-        throw "Unknown scope type " + type + " for model with resource " + model.resource;
+        throw "Unknown scope type: '" + type + "', For model with resource: '" + this.resource + "'";
       }
       this.scope.declared.push(name);
       return this[name] = builder({
@@ -20210,7 +20693,7 @@ scopable = {
     forward_scopes_to_associations: function() {
       var associated_factory, associated_resource, association, association_name, factory, forwarder, generate_forwarder, scope, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3, _ref4;
 
-      factory = model[this.resource];
+      factory = model[this.resource.name];
       _ref = factory.has_many;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         association_name = _ref[_i];
@@ -20290,6 +20773,19 @@ scopable = {
 };
 
 builders = {
+  string: stampit().enclose(function() {
+    var base;
+
+    base = scopable.base(this);
+    return stampit.mixIn(function() {
+      var callbacks, value, _base, _name;
+
+      value = arguments[0], callbacks = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+      callbacks.length && (this.scope.then = this.scope.then.concat(callbacks));
+      (_base = this.scope.data)[_name = base.name] || (_base[_name] = value != null ? value : this["$" + base.name]);
+      return this;
+    });
+  }),
   boolean: stampit().enclose(function() {
     var base;
 
@@ -20665,7 +21161,7 @@ cpfable = stampit({
     if (d1 > 9) {
       d1 = 0;
     }
-    if (+dv.charAt(0 !== d1)) {
+    if (+dv.charAt(0) !== d1) {
       return false;
     }
     d1 *= 2;
@@ -20729,8 +21225,12 @@ messages = {
     return "O registro associado " + attribute_name + " não é válido.";
   },
   server: function(attribute_name, options) {
-    attribute_name = this.human_attribute_name(attribute_name);
-    return "" + attribute_name + " " + options.server_message + ".";
+    if (attribute_name === 'base') {
+      return options.server_message;
+    } else {
+      attribute_name = this.human_attribute_name(attribute_name);
+      return "" + attribute_name + " " + options.server_message + ".";
+    }
   },
   type: function(attribute_name, options) {
     attribute_name = this.human_attribute_name(attribute_name);
@@ -20764,7 +21264,8 @@ errorsable = stampit({
     }
   },
   push: Array.prototype.push,
-  splice: Array.prototype.splice
+  splice: Array.prototype.splice,
+  indexOf: Array.prototype.indexOf
 }, {
   model: null,
   messages: null,
@@ -20785,7 +21286,7 @@ initializers = {
       }
     });
     this.validated = false;
-    this.subscribe('dirty', function() {
+    this.subscribe('dirty', function(value) {
       return this.validated = false;
     });
     return Object.defineProperty(this, 'valid', {
@@ -20866,7 +21367,7 @@ extensions = {
     validate: function(doned, failed) {
       var results, validator, _i, _len, _ref;
 
-      if (this.validated) {
+      if (this.validated && !this.dirty) {
         return this.validation;
       }
       this.errors.clear();
@@ -29463,8 +29964,12 @@ require.alias("components-modernizr/modernizr.js", "components-modernizr/index.j
 require.alias("indefinido-indemma/index.js", "ened/deps/indemma/index.js");
 require.alias("indefinido-indemma/vendor/stampit.js", "ened/deps/indemma/vendor/stampit.js");
 require.alias("indefinido-indemma/vendor/sinon.js", "ened/deps/indemma/vendor/sinon.js");
+require.alias("indefinido-indemma/vendor/owl/pluralize.js", "ened/deps/indemma/vendor/owl/pluralize.js");
 require.alias("indefinido-indemma/lib/record.js", "ened/deps/indemma/lib/record.js");
 require.alias("indefinido-indemma/lib/record/associable.js", "ened/deps/indemma/lib/record/associable.js");
+require.alias("indefinido-indemma/lib/record/persistable.js", "ened/deps/indemma/lib/record/persistable.js");
+require.alias("indefinido-indemma/lib/record/storable.js", "ened/deps/indemma/lib/record/storable.js");
+require.alias("indefinido-indemma/lib/record/queryable.js", "ened/deps/indemma/lib/record/queryable.js");
 require.alias("indefinido-indemma/lib/record/resource.js", "ened/deps/indemma/lib/record/resource.js");
 require.alias("indefinido-indemma/lib/record/rest.js", "ened/deps/indemma/lib/record/rest.js");
 require.alias("indefinido-indemma/lib/record/restfulable.js", "ened/deps/indemma/lib/record/restfulable.js");

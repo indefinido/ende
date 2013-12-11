@@ -31,8 +31,12 @@ messages = {
     return "O registro associado " + attribute_name + " não é válido.";
   },
   server: function(attribute_name, options) {
-    attribute_name = this.human_attribute_name(attribute_name);
-    return "" + attribute_name + " " + options.server_message + ".";
+    if (attribute_name === 'base') {
+      return options.server_message;
+    } else {
+      attribute_name = this.human_attribute_name(attribute_name);
+      return "" + attribute_name + " " + options.server_message + ".";
+    }
   },
   type: function(attribute_name, options) {
     attribute_name = this.human_attribute_name(attribute_name);
@@ -66,7 +70,8 @@ errorsable = stampit({
     }
   },
   push: Array.prototype.push,
-  splice: Array.prototype.splice
+  splice: Array.prototype.splice,
+  indexOf: Array.prototype.indexOf
 }, {
   model: null,
   messages: null,
@@ -87,7 +92,7 @@ initializers = {
       }
     });
     this.validated = false;
-    this.subscribe('dirty', function() {
+    this.subscribe('dirty', function(value) {
       return this.validated = false;
     });
     return Object.defineProperty(this, 'valid', {
@@ -168,7 +173,7 @@ extensions = {
     validate: function(doned, failed) {
       var results, validator, _i, _len, _ref;
 
-      if (this.validated) {
+      if (this.validated && !this.dirty) {
         return this.validation;
       }
       this.errors.clear();
