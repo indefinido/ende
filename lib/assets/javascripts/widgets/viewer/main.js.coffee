@@ -181,7 +181,7 @@ define [
     presented = @scope.fetch null, (records) =>
 
       # TODO instantiate records before calling this callback
-      records = _.map records, @resource, @resource unless records[0]?.resource
+      records = _.map records, @resource, @resource unless records[0]?.resource or records[0]?.itemable
 
       # TODO implement Array.concat ou Array.merge in observer, and
       # use it here instead of pushing each record
