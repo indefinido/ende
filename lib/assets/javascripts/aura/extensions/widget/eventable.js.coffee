@@ -19,6 +19,7 @@ define 'aura/extensions/widget/eventable', ->
   translations.set 'animation.start',
     'webkitAnimationStart oanimationstart oAnimationStart msAnimationStart animationstart'
 
+  # TODO better support for custom event handlers
   create_handler = (widget, event_name) ->
     (event) ->
       widget.sandbox.emit "#{widget.name}.#{widget.identifier}.#{event_name}ed", @
@@ -46,7 +47,8 @@ define 'aura/extensions/widget/eventable', ->
       Widgets = application.core.Widgets
 
       extend Widgets.Base.prototype,
-      # TODO implement rivets compatibility, instead of generic binding events, alter html
+      # TODO implement rivets compatibility, instead of generic
+      # binding events, alter html
         handles: (event_name, widget_event_name = event_name, selector = @$el) ->
           unless @name
             message = "Widget name must be provided in order to use handlers, but this.name is '#{@name}' \n"

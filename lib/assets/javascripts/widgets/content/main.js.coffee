@@ -81,7 +81,7 @@ define ->
     @loads++
 
     # TODO move to anoter method
-    @spinner.stop()
+    @spinner?.stop()
     @spinner = null
     @loading = null
 
