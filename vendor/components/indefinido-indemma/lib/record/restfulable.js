@@ -79,8 +79,14 @@ restful = {
     get: function(action, data) {
       var old_route, payload, promise, resource, route;
 
+      if (data == null) {
+        data = {};
+      }
       old_route = this.route;
-      this.route = "/" + (model.pluralize(this.resource.name)) + "/" + action;
+      this.route = "/" + (model.pluralize(this.resource.name));
+      if (action) {
+        this.route += "/" + action;
+      }
       resource = data.resource;
       if (data && data.json) {
         data = data.json();
@@ -94,20 +100,24 @@ restful = {
       route = old_route;
       return promise;
     },
-    put: rest.put
+    put: rest.put,
+    "delete": rest["delete"]
   },
   record: {
     reload: function() {
-      var argument, promise, _i, _len;
+      var data, param, params, promise, _i, _len;
 
-      promise = rest.get.call(this);
+      params = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+      data = params.pop();
+      if (type(data) !== 'object') {
+        params.push(data);
+      }
+      promise = rest.get.call(this, data || {});
       promise.done(this.assign_attributes);
       promise.fail(this.failed);
-      for (_i = 0, _len = arguments.length; _i < _len; _i++) {
-        argument = arguments[_i];
-        if (type(argument) === 'function') {
-          promise.done(argument);
-        }
+      for (_i = 0, _len = params.length; _i < _len; _i++) {
+        param = params[_i];
+        promise.done(param);
       }
       return promise;
     },
@@ -151,13 +161,16 @@ restful = {
         association_name = _ref2[_l];
         association_attributes = attributes[association_name];
         delete attributes[association_name];
+        delete attributes[association_name + "_attributes"];
         if (association_attributes) {
           this[association_name] = this["build_" + association_name](association_attributes);
         }
       }
       _results = [];
       for (attribute in attributes) {
-        _results.push(this[attribute] = attributes[attribute]);
+        if (attribute !== this[attribute]) {
+          _results.push(this[attribute] = attributes[attribute]);
+        }
       }
       return _results;
     },
@@ -221,7 +234,7 @@ restful = {
       }
     },
     failed: function(xhr, error, status) {
-      var attribute_name, definition, e, message, messages, payload, _ref, _results;
+      var attribute_name, definition, e, message, messages, payload, _i, _len, _ref;
 
       payload = xhr.responseJSON;
       try {
@@ -234,37 +247,33 @@ restful = {
         case 422:
           definition = model[this.resource];
           _ref = payload.errors;
-          _results = [];
           for (attribute_name in _ref) {
             messages = _ref[attribute_name];
-            if (!(this.hasOwnProperty(attribute_name) || definition.hasOwnProperty(attribute_name))) {
+            if (!definition.associations) {
+              definition.associations = definition.has_one.concat(definition.has_many.concat(definition.belongs_to));
+            }
+            if (!(this.hasOwnProperty(attribute_name) || definition.hasOwnProperty(attribute_name) || definition.associations.indexOf(attribute_name) !== -1 || attribute_name === 'base')) {
               message = "Server returned an validation error message for a attribute that is not defined in your model.\n";
               message += "The attribute was '" + attribute_name + "', the model resource was '" + this.resource + "'.\n";
               message += "The model definition keys were '" + (JSON.stringify(Object.keys(definition))) + "'.\n";
               message += "Please remove server validation, or update your model definition.";
               throw new TypeError(message);
             }
-            _results.push((function() {
-              var _i, _len, _results1;
-
-              _results1 = [];
-              for (_i = 0, _len = messages.length; _i < _len; _i++) {
-                message = messages[_i];
-                _results1.push(this.errors.add(attribute_name, 'server', {
-                  server_message: message
-                }));
-              }
-              return _results1;
-            }).call(this));
+            for (_i = 0, _len = messages.length; _i < _len; _i++) {
+              message = messages[_i];
+              this.errors.add(attribute_name, 'server', {
+                server_message: message
+              });
+            }
           }
-          return _results;
           break;
         default:
           message = "Fail in " + this.resource + ".save:\n";
           message += "Record: " + this + "\n";
           message += "Status: " + status + " (" + (payload.status || xhr.status) + ")\n";
-          return message += "Error : " + (payload.error || payload.message || payload);
+          message += "Error : " + (payload.error || payload.message || payload);
       }
+      return this.saving = false;
     },
     toString: function() {
       var serialized;
@@ -310,10 +319,12 @@ restful = {
       delete json.route;
       delete json.initial_route;
       delete json.after_initialize;
+      delete json.before_initialize;
       delete json.parent_resource;
       delete json.nested_attributes;
       delete json.saving;
       delete json.salvation;
+      delete json.sustained;
       delete json.element;
       delete json["default"];
       delete json.lock;

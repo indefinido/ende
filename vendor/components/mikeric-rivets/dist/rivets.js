@@ -1,9 +1,9 @@
 // Rivets.js
-// version: 0.6.0
+// version: 0.6.5
 // author: Michael Richards
 // license: MIT
 (function() {
-  var KeypathObserver, Rivets,
+  var Rivets,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
     __slice = [].slice,
@@ -174,28 +174,22 @@
         return _this.bindings.push(new Rivets[binding](_this, node, type, keypath, options));
       };
       parse = function(node) {
-        var attribute, attributes, binder, childNode, delimiters, identifier, n, parser, regexp, restTokens, startToken, text, token, tokens, type, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3, _ref4, _results;
+        var attribute, attributes, binder, childNode, delimiters, identifier, n, parser, regexp, text, token, tokens, type, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3, _ref4, _results;
         if (__indexOf.call(skipNodes, node) < 0) {
-          if (node.nodeType === Node.TEXT_NODE) {
+          if (node.nodeType === 3) {
             parser = Rivets.TextTemplateParser;
             if (delimiters = _this.config.templateDelimiters) {
               if ((tokens = parser.parse(node.data, delimiters)).length) {
                 if (!(tokens.length === 1 && tokens[0].type === parser.types.text)) {
-                  startToken = tokens[0], restTokens = 2 <= tokens.length ? __slice.call(tokens, 1) : [];
-                  node.data = startToken.value;
-                  if (startToken.type === 0) {
-                    node.data = startToken.value;
-                  } else {
-                    buildBinding('TextBinding', node, null, startToken.value);
-                  }
-                  for (_i = 0, _len = restTokens.length; _i < _len; _i++) {
-                    token = restTokens[_i];
+                  for (_i = 0, _len = tokens.length; _i < _len; _i++) {
+                    token = tokens[_i];
                     text = document.createTextNode(token.value);
-                    node.parentNode.appendChild(text);
+                    node.parentNode.insertBefore(text, node);
                     if (token.type === 1) {
                       buildBinding('TextBinding', text, null, token.value);
                     }
                   }
+                  node.parentNode.removeChild(node);
                 }
               }
             }
@@ -240,7 +234,16 @@
               }
             }
           }
-          _ref4 = node.childNodes;
+          _ref4 = (function() {
+            var _len4, _n, _ref4, _results1;
+            _ref4 = node.childNodes;
+            _results1 = [];
+            for (_n = 0, _len4 = _ref4.length; _n < _len4; _n++) {
+              n = _ref4[_n];
+              _results1.push(n);
+            }
+            return _results1;
+          })();
           _results = [];
           for (_m = 0, _len4 = _ref4.length; _m < _len4; _m++) {
             childNode = _ref4[_m];
@@ -386,7 +389,7 @@
 
     Binding.prototype.setObserver = function() {
       var _this = this;
-      this.observer = new KeypathObserver(this.view, this.view.models, this.keypath, function(obs) {
+      this.observer = new Rivets.KeypathObserver(this.view, this.view.models, this.keypath, function(obs) {
         if (_this.key) {
           _this.unbind(true);
         }
@@ -472,7 +475,7 @@
         _results = [];
         for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
           dependency = _ref2[_i];
-          observer = new KeypathObserver(this.view, this.model, dependency, function(obs, prev) {
+          observer = new Rivets.KeypathObserver(this.view, this.model, dependency, function(obs, prev) {
             var key;
             key = obs.key;
             _this.view.adapters[key["interface"]].unsubscribe(prev, key.path, _this.sync);
@@ -496,6 +499,7 @@
         if ((_ref = this.binder.unbind) != null) {
           _ref.call(this, this.el);
         }
+        this.observer.unobserve();
       }
       if (this.key) {
         this.view.adapters[this.key["interface"]].unsubscribe(this.model, this.key.path, this.sync);
@@ -633,14 +637,14 @@
     function KeypathParser() {}
 
     KeypathParser.parse = function(keypath, interfaces, root) {
-      var char, current, index, tokens;
+      var char, current, tokens, _i, _len;
       tokens = [];
       current = {
         "interface": root,
         path: ''
       };
-      for (index in keypath) {
-        char = keypath[index];
+      for (_i = 0, _len = keypath.length; _i < _len; _i++) {
+        char = keypath[_i];
         if (__indexOf.call(interfaces, char) >= 0) {
           tokens.push(current);
           current = {
@@ -688,10 +692,10 @@
               value: template.slice(lastIndex, index)
             });
           }
-          lastIndex = index + 2;
+          lastIndex = index + delimiters[0].length;
           index = template.indexOf(delimiters[1], lastIndex);
           if (index < 0) {
-            substring = template.slice(lastIndex - 2);
+            substring = template.slice(lastIndex - delimiters[1].length);
             lastToken = tokens[tokens.length - 1];
             if ((lastToken != null ? lastToken.type : void 0) === this.types.text) {
               lastToken.value += substring;
@@ -708,7 +712,7 @@
             type: this.types.binding,
             value: value
           });
-          lastIndex = index + 2;
+          lastIndex = index + delimiters[1].length;
         }
       }
       return tokens;
@@ -718,12 +722,13 @@
 
   })();
 
-  KeypathObserver = (function() {
+  Rivets.KeypathObserver = (function() {
     function KeypathObserver(view, model, keypath, callback) {
       this.view = view;
       this.model = model;
       this.keypath = keypath;
       this.callback = callback;
+      this.unobserve = __bind(this.unobserve, this);
       this.realize = __bind(this.realize, this);
       this.update = __bind(this.update, this);
       this.parse = __bind(this.parse, this);
@@ -785,9 +790,44 @@
       return current;
     };
 
+    KeypathObserver.prototype.unobserve = function() {
+      var index, obj, token, _i, _len, _ref, _results;
+      _ref = this.tokens;
+      _results = [];
+      for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+        token = _ref[index];
+        if (obj = this.objectPath[index]) {
+          _results.push(this.view.adapters[token["interface"]].unsubscribe(obj, token.path, this.update));
+        } else {
+          _results.push(void 0);
+        }
+      }
+      return _results;
+    };
+
     return KeypathObserver;
 
   })();
+
+  Rivets.binders.text = function(el, value) {
+    if (el.textContent != null) {
+      return el.textContent = value != null ? value : '';
+    } else {
+      return el.innerText = value != null ? value : '';
+    }
+  };
+
+  Rivets.binders.html = function(el, value) {
+    return el.innerHTML = value != null ? value : '';
+  };
+
+  Rivets.binders.show = function(el, value) {
+    return el.style.display = value ? '' : 'none';
+  };
+
+  Rivets.binders.hide = function(el, value) {
+    return el.style.display = value ? 'none' : '';
+  };
 
   Rivets.binders.enabled = function(el, value) {
     return el.disabled = !value;
@@ -833,18 +873,6 @@
     }
   };
 
-  Rivets.binders.show = function(el, value) {
-    return el.style.display = value ? '' : 'none';
-  };
-
-  Rivets.binders.hide = function(el, value) {
-    return el.style.display = value ? 'none' : '';
-  };
-
-  Rivets.binders.html = function(el, value) {
-    return el.innerHTML = value != null ? value : '';
-  };
-
   Rivets.binders.value = {
     publishes: true,
     bind: function(el) {
@@ -874,14 +902,6 @@
           return el.value = value != null ? value : '';
         }
       }
-    }
-  };
-
-  Rivets.binders.text = function(el, value) {
-    if (el.innerText != null) {
-      return el.innerText = value != null ? value : '';
-    } else {
-      return el.textContent = value != null ? value : '';
     }
   };
 

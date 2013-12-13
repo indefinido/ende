@@ -54,7 +54,7 @@
                         //-- Hashify internal links if history is not available
                         } else {
                             if ( !$this.data('lennonized') ) {
-                                $this.attr('href', '/#' + href).data('lennonized', true);
+                                $this.attr('href', '/#!' + href).data('lennonized', true);
                             }
                         }
                     });
@@ -115,15 +115,15 @@
                         i, j,
                         paramKeys,
                         params,
-                        path = options.historyEnabled? window.location.pathname : window.location.hash.replace('#', '') || '/';
+                        path = options.historyEnabled? window.location.pathname : window.location.hash.replace('#!', '') || '/';
 
                     //-- If we land on the page with a hash value and history is enabled, redirect to the non-hash page
-                    if ( window.location.hash && options.historyEnabled ) {
-                        window.location.href = window.location.hash.replace('#', '');
+                    if ( window.location.hash.indexOf('#!') != -1 && options.historyEnabled ) {
+                        window.location.href = window.location.hash.replace('#!', '');
 
                     //-- If we land on the page with a path and history is disabled, redirect to the hash page
                     } else if ( '/' !== window.location.pathname && !options.historyEnabled ) {
-                        window.location.href = '/#' + window.location.pathname;
+                        window.location.href = '/#!' + window.location.pathname;
                     }
 
                     //-- Process the route

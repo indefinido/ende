@@ -12,6 +12,8 @@ type       = require 'type'
 # TODO implement method
 # model[resource].validators_on 'field' # Get all validators related to this field
 
+# TODO use http://validatejs.org for internal handling
+
 messages =
   blank:  (attribute_name) ->
     attribute_name = @human_attribute_name attribute_name
@@ -31,8 +33,13 @@ messages =
     "O registro associado #{attribute_name} não é válido."
 
   server:  (attribute_name, options) ->
-    attribute_name = @human_attribute_name attribute_name
-    "#{attribute_name} #{options.server_message}."
+    # TODO Better checking of base attribute case, better yet remove
+    # checking from here, just like active record
+    if attribute_name == 'base'
+      options.server_message
+    else
+      attribute_name = @human_attribute_name attribute_name
+      "#{attribute_name} #{options.server_message}."
 
   type:  (attribute_name, options) ->
     attribute_name = @human_attribute_name attribute_name
@@ -62,6 +69,7 @@ errorsable = stampit
 
   push: Array.prototype.push
   splice: Array.prototype.splice
+  indexOf: Array.prototype.indexOf
 ,
   model: null
   messages: null
@@ -84,7 +92,7 @@ initializers =
 
     # TODO move this functionality control to validatorable
     @validated = false
-    @subscribe 'dirty', -> @validated = false
+    @subscribe 'dirty', (value) -> @validated = false
 
     Object.defineProperty @, 'valid',
       get: ->
@@ -150,7 +158,7 @@ extensions =
       validation
 
     validate: (doned, failed) ->
-      return @validation if @validated
+      return @validation if @validated and not @dirty
 
       @errors.clear()
       results  = [@]

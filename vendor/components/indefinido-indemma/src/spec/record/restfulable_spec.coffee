@@ -1,11 +1,40 @@
 require 'indemma/lib/record/restfulable'
+require 'indemma/lib/record/validatable'
 require 'indemma/lib/record/resource'
+
+'use strict'
 
 root = exports ? window
 
 model  = root.model  # TODO model = require 'indemma/model'
 record = root.record # TODO model = require 'indemma/record'
 jQuery = require 'component-jquery'
+
+
+# Move to shared behaviour!
+should_behave_like_errorsable = ->
+
+  describe '.errors', ->
+    describe 'when server responds', ->
+      beforeEach ->
+        @xhr =
+          status: 422
+
+      describe 'with errors', ->
+        it 'should add messages for each attribute on the errors object'
+        it 'should add messages for base attribute on the errors object', ->
+          base_messages = ["arthur you should bring a towel!"]
+          @xhr.responseText = JSON.stringify
+            errors:
+              base: base_messages
+
+          @subject.failed @xhr, 'error'
+          @subject.should.have.property 'errors'
+          @subject.errors[0].should.include 'base', 'server', server_message: base_messages[0]
+          @subject.errors.messages.should.have.property 'base', base_messages[0]
+
+      describe 'with invalid error messages', ->
+        it 'when inexistent attribute should throw exception', ->
 
 describe 'restfulable', ->
 
@@ -16,20 +45,27 @@ describe 'restfulable', ->
     # it 'adds save methods to records'
 
   describe 'record',  ->
+    # TODO Convert to @arthur
     arthur = null
 
-    describe '#()',  ->
+    describe '()',  ->
 
       beforeEach ->
-        arthur = record.call
+        # TODO Convert to @arthur
+        @arthur = arthur = record.call
           resource: 'person'
           name    : 'Arthur Philip Dent'
 
-        arthur.dirty = true
+        @arthur.dirty = true
 
-      describe '#save', ->
+      describe '.save()', ->
         beforeEach -> sinon.stub(jQuery, "ajax").returns(jQuery.Deferred())
         afterEach  -> jQuery.ajax.restore()
+
+        it 'should be able to serialize record', ->
+          JSON.stringify arthur.json()
+
+        it 'should ignore key in transient fields'
 
         it 'should send paramenters accordingly'
 
@@ -40,8 +76,8 @@ describe 'restfulable', ->
           jQuery.ajax.called.should.be.true
 
   describe 'model' ,  ->
-    describe '#()', ->
-      describe '#json', ->
+    describe '()', ->
+      describe '.json()', ->
         friend = person = null
 
         beforeEach ->
@@ -55,7 +91,7 @@ describe 'restfulable', ->
             resource: 'friend'
             belongs_to: 'person'
 
-      describe '#assign_attributes', ->
+      describe '.assign_attributes()', ->
         friend = person = null
 
         beforeEach ->
@@ -90,20 +126,26 @@ describe 'restfulable', ->
 
 
       describe 'with singular resource', ->
-        describe '#create', ->
+        describe '.create()', ->
 
           it 'should return promises'
           it 'should return models when promise is resolved'
 
       describe 'with plural resource', ->
 
-        describe '#create', ->
+        describe '.create()', ->
           deferred = promise = person = null
+          should_behave_like_errorsable()
 
           beforeEach ->
             person   = model.call resource: 'person'
             deferred = jQuery.Deferred()
-            deferred.resolveWith person(name: 'Arthur'), [_id: 1]
+
+            @subject = context = person(name: 'Arthur')
+            context.lock = JSON.stringify context.json()
+            deferred.resolveWith context, [_id: 1, name: 'Arthur']
+
+            deferred.resolveWith person(name: 'Arthur'), [_id: 1, name: 'Arthur']
             sinon.stub(jQuery, "ajax").returns(deferred)
             promise  = person.create {name: 'Arthur'}, {name: 'Ford'}
 
@@ -139,9 +181,10 @@ describe 'restfulable', ->
             expect(person.create).to.throw TypeError
 
           it 'should make ajax calls', ->
-            jQuery.ajax.callCount.should.be.eq 2
+            jQuery.ajax.callCount.should.be.eq 3
 
-      describe '#destroy', ->
+
+      describe '.destroy()', ->
         describe 'with plural resource', ->
           arthur = person = deferred = null
 

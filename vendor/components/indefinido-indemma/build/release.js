@@ -196,12 +196,54 @@ require.relative = function(parent) {
   return localRequire;
 };
 require.register("pluma-assimilate/dist/assimilate.js", function(exports, require, module){
-/*! assimilate 0.2.0 Copyright (c) 2013 Alan Plum. MIT licensed. */
+/*! assimilate 0.3.0 Copyright (c) 2013 Alan Plum. MIT licensed. */
 var slice = Array.prototype.slice;
 
-function assimilateWithStrategy(strategy, copyInherited, target) {
-    var sources = slice.call(arguments, 3),
-        i, source, key;
+function bind(fn, self) {
+    var args = slice.call(arguments, 2);
+    if (typeof Function.prototype.bind === 'function') {
+        return Function.prototype.bind.apply(fn, [self].concat(args));
+    }
+    return function() {
+        return fn.apply(self, args.concat(slice.call(arguments, 0)));
+    };
+}
+
+function simpleCopy(target, name, source) {
+    target[name] = source[name];
+}
+
+function properCopy(target, name, source) {
+    var descriptor = Object.getOwnPropertyDescriptor(source, name);
+    Object.defineProperty(target, name, descriptor);
+}
+
+function ownProperties(obj) {
+    return Object.getOwnPropertyNames(obj);
+}
+
+function allKeys(obj) {
+    var keys = [];
+    for (var name in obj) {
+        keys.push(name);
+    }
+    return keys;
+}
+
+function ownKeys(obj) {
+    var keys = [];
+    for (var name in obj) {
+        if (obj.hasOwnProperty(name)) {
+            keys.push(name);
+        }
+    }
+    return keys;
+}
+
+function assimilateWithStrategy(target) {
+    var strategy = this,
+    sources = slice.call(arguments, 1),
+    i, source, names, j, name;
 
     if (target === undefined || target === null) {
         target = {};
@@ -209,77 +251,75 @@ function assimilateWithStrategy(strategy, copyInherited, target) {
 
     for (i = 0; i < sources.length; i++) {
         source = sources[i];
-        if (source === undefined || source === null) continue;
-        for (key in source) {
-            if (copyInherited || source.hasOwnProperty(key)) {
-                strategy(target, source, key, copyInherited);
-            }
+        names = strategy.keysFn(source);
+        for (j = 0; j < names.length; j++) {
+            name = names[j];
+            strategy.copyFn(target, name, source);
         }
     }
 
     return target;
 }
 
-function assimilate() {
-    var args = slice.call(arguments, 0);
-    return assimilateWithStrategy.apply(
-        this, [assimilate.strategies.DEFAULT, false].concat(args)
-    );
-}
-
-assimilate.withStrategy = function(strategy, copyInherited) {
-    if (arguments.length === 1 && typeof strategy === 'boolean') {
-        copyInherited = strategy;
-        strategy = 'default';
-    }
-    if (typeof strategy === 'string') {
-        strategy = strategy.toUpperCase();
-        if (typeof assimilate.strategies[strategy] === 'function') {
-            strategy = assimilate.strategies[strategy];
+var strategies = {
+    DEFAULT: {
+        keysFn: ownKeys,
+        copyFn: simpleCopy
+    },
+    PROPER: {
+        keysFn: ownProperties,
+        copyFn: properCopy
+    },
+    INHERITED: {
+        keysFn: allKeys,
+        copyFn: simpleCopy
+    },
+    DEEP: {
+        keysFn: ownKeys,
+        copyFn: function recursiveCopy(target, name, source) {
+            var val = source[name];
+            var old = target[name];
+            if (typeof val === 'object' && typeof old === 'object') {
+                assimilateWithStrategy.call(strategies.DEEP, old, val);
+            } else {
+                simpleCopy(target, name, source);
+            }
         }
+    },
+    STRICT: {
+        keysFn: ownKeys,
+        copyFn: function strictCopy(target, name, source) {
+            if (source[name] !== undefined) {
+                simpleCopy(target, name, source);
+            }
+        }
+    },
+    FALLBACK: {
+        keysFn: function fallbackCopy(target, name, source) {
+            if (target[name] === undefined) {
+                simpleCopy(target, name, source);
+            }
+        },
+        copyFn: simpleCopy
     }
-    if (typeof strategy !== 'function') {
-        throw new Error('Unknown strategy or not a function: ' + strategy);
-    }
-    return function() {
-        var args = slice.call(arguments, 0);
-        return assimilateWithStrategy.apply(
-            this, [strategy, !!copyInherited].concat(args)
-        );
-    };
 };
 
-assimilate.strategies = {
-    DEFAULT: function(target, source, key) {
-        target[key] = source[key];
-    },
-    DEEP: function(target, source, key, copyInherited) {
-        var newValue = source[key];
-        var oldValue = target[key];
-        if (
-            target.hasOwnProperty(key) &&
-            typeof newValue === 'object' &&
-            typeof oldValue === 'object'
-        ) {
-            assimilateWithStrategy(
-                assimilate.strategies.DEEP, copyInherited, oldValue, newValue
-            );
-        } else {
-            target[key] = newValue;
-        }
-    },
-    STRICT: function(target, source, key) {
-        var value = source[key];
-        if (value !== undefined) {
-            target[key] = value;
-        }
-    },
-    FALLBACK: function(target, source, key) {
-        var oldValue = target[key];
-        if (oldValue === undefined) {
-            target[key] = source[key];
-        }
+var assimilate = bind(assimilateWithStrategy, strategies.DEFAULT);
+assimilate.strategies = strategies;
+assimilate.withStrategy = function withStrategy(strategy) {
+    if (typeof strategy === 'string') {
+        strategy = strategies[strategy.toUpperCase()];
     }
+    if (!strategy) {
+        throw new Error('Unknwon or invalid strategy:' + strategy);
+    }
+    if (typeof strategy.copyFn !== 'function') {
+        throw new Error('Strategy missing copy function:' + strategy);
+    }
+    if (typeof strategy.keysFn !== 'function') {
+        throw new Error('Strategy missing keys function:' + strategy);
+    }
+    return bind(assimilateWithStrategy, strategy);
 };
 
 module.exports = assimilate;
@@ -19941,7 +19981,8 @@ this.model = (function() {
   modelable = {
     after_mix: [],
     record: {
-      after_initialize: []
+      after_initialize: [],
+      before_initialize: []
     },
     all: function() {
       return this.cache;
@@ -19951,11 +19992,6 @@ this.model = (function() {
 
       params = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
       throw 'model.create not implemented yet, try using the restful.model.create method';
-    },
-    find: function(id) {
-      return this.where({
-        id: id
-      }, true);
     },
     where: function(conditions, first) {
       var record, results, _i, _len, _ref;
@@ -19986,7 +20022,7 @@ this.model = (function() {
     }
   };
   initialize_record = function(data) {
-    var after_initialize, callback, instance, _i, _len, _ref;
+    var after_initialize, callback, creation, index, instance, _i, _j, _len, _len1, _ref, _ref1;
 
     if (data == null) {
       data = {
@@ -19999,12 +20035,18 @@ this.model = (function() {
     data.route || (data.route = this.route);
     data.nested_attributes = this.nested_attributes || [];
     after_initialize = (data.after_initialize || []).concat(this.record.after_initialize);
-    instance = record.call(extend(Object.create(data), this.record, {
+    creation = extend(Object.create(data), this.record, creation, {
       after_initialize: after_initialize
-    }));
-    _ref = instance.after_initialize;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      callback = _ref[_i];
+    });
+    _ref = this.record.before_initialize;
+    for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+      callback = _ref[index];
+      callback.call(this, creation);
+    }
+    instance = record.call(creation);
+    _ref1 = instance.after_initialize;
+    for (index = _j = 0, _len1 = _ref1.length; _j < _len1; index = ++_j) {
+      callback = _ref1[index];
       callback.call(instance, instance);
     }
     delete instance.after_initialize;
@@ -20028,6 +20070,7 @@ this.model = (function() {
     extend(instance, merge(this, modelable));
     this.record = instance.record = merge({}, instance.record, modelable.record);
     this.record.after_initialize = instance.record.after_initialize = instance.record.after_initialize.concat(after_initialize);
+    this.record.before_initialize = instance.record.before_initialize.concat([]);
     _ref = modelable.after_mix;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       callback = _ref[_i];
@@ -20078,12 +20121,14 @@ exports.model = this.model;
 
 });
 require.register("indemma/lib/record/associable.js", function(exports, require, module){
-var $, associable, model, plural, root, singular,
+var $, associable, callbacks, extend, model, modifiers, plural, root, singular, subscribers,
   __slice = [].slice;
 
 root = window;
 
 $ = require('jquery');
+
+extend = require('assimilate');
 
 require('./resource');
 
@@ -20128,7 +20173,10 @@ plural = {
     data[_name = this.parent_resource] || (data[_name] = this.parent);
     return model[model.singularize(this.resource)](data);
   },
-  push: Array.prototype.push,
+  push: function() {
+    console.warn("" + this.resource + ".push is deprecated and will be removed, please use add instead");
+    return Array.prototype.push.apply(this, arguments);
+  },
   length: 0,
   json: function(methods, omissions) {
     var record, _i, _len, _results;
@@ -20144,92 +20192,192 @@ plural = {
 
 singular = {
   create: function(data) {
-    return model[this.resource].create($.extend({}, this, data));
+    return model[this.resource].create(extend({}, this, data));
   },
   build: function(data) {
-    return this[this.parent_resource][this.resource] = model[this.resource]($.extend({}, this, data));
+    return this.owner[this.resource.toString()] = model[this.resource.toString()](extend({}, this, data));
+  }
+};
+
+subscribers = {
+  belongs_to: {
+    foreign_key: function(resource_id) {
+      var associated, association_name, current_resource_id, resource, _ref;
+
+      association_name = this.resource.toString();
+      if (resource_id === null || resource_id === void 0) {
+        this.dirty = true;
+        this.owner[association_name] = resource_id;
+        return resource_id;
+      }
+      current_resource_id = (_ref = this.owner[association_name]) != null ? _ref._id : void 0;
+      if (resource_id !== current_resource_id) {
+        resource = model[association_name];
+        if (!resource) {
+          console.warn("subscribers.belongs_to.foreign_key: associated factory not found for model: " + association_name);
+          return resource_id;
+        }
+        associated = resource.find(resource_id);
+        associated || (associated = resource({
+          _id: resource_id
+        }));
+        this.owner.observed[association_name] = associated;
+      }
+      return resource_id;
+    },
+    associated_changed: function(associated) {
+      return this.owner.observed["" + (this.resource.toString()) + "_id"] = associated ? associated._id : null;
+    }
+  }
+};
+
+modifiers = {
+  belongs_to: {
+    associated_loader: function() {
+      var association_name,
+        _this = this;
+
+      association_name = this.resource.toString();
+      return Object.defineProperty(this.owner, association_name, {
+        set: function(associated) {
+          return this.observed[association_name] = associated;
+        },
+        get: function() {
+          var associated, associated_id, resource;
+
+          associated = _this.owner.observed[association_name];
+          associated_id = _this.owner.observed[association_name + '_id'];
+          if (!(((associated != null ? associated._id : void 0) != null) || associated_id)) {
+            return associated;
+          }
+          if (associated != null ? associated.sustained : void 0) {
+            return associated;
+          }
+          resource = model[association_name];
+          if (!resource) {
+            console.warn("subscribers.belongs_to.foreign_key: associated factory not found for model: " + association_name);
+            return associated;
+          }
+          associated = resource.find(associated_id || associated._id);
+          associated || (associated = resource({
+            _id: associated_id
+          }));
+          resource.storage.store(associated._id, associated);
+          associated.reload();
+          return _this.owner.observed[association_name] = associated;
+        },
+        configurable: true,
+        enumerable: true
+      });
+    }
+  }
+};
+
+callbacks = {
+  has_many: {
+    nest_attributes: function() {
+      var association, association_name, association_names, associations_attributes, message, _i, _len, _results;
+
+      association_names = model[this.resource].has_many;
+      if (association_names) {
+        _results = [];
+        for (_i = 0, _len = association_names.length; _i < _len; _i++) {
+          association_name = association_names[_i];
+          associations_attributes = this["" + association_name + "_attributes"];
+          if (associations_attributes && associations_attributes.length) {
+            association = this[model.pluralize(association_name)];
+            if (!association) {
+              message = "has_many.nest_attributes: Association not found for " + association_name + ". \n";
+              message += "did you set it on model declaration? \n  has_many: " + association_name + " ";
+              throw message;
+            }
+            association.resource = model.singularize(association.resource);
+            association.add.apply(association, associations_attributes);
+            _results.push(association.resource = model.pluralize(association.resource));
+          } else {
+            _results.push(void 0);
+          }
+        }
+        return _results;
+      }
+    },
+    update_association: function(data) {
+      var associated, association, association_name, id, pluralized_association, _i, _j, _len, _len1, _ref;
+
+      id = this._id || data && (data._id || data.id);
+      if (!id) {
+        return;
+      }
+      _ref = model[this.resource.toString()].has_many;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        association_name = _ref[_i];
+        pluralized_association = model.pluralize(association_name);
+        association = this[pluralized_association];
+        if (!association.route) {
+          association.route = "/" + (model.pluralize(this.resource.toString())) + "/" + id + "/" + (model.pluralize(association.resource));
+          for (_j = 0, _len1 = association.length; _j < _len1; _j++) {
+            associated = association[_j];
+            if (!associated.route && (associated.parent != null)) {
+              associated.route = "/" + (model.pluralize(this.resource.toString())) + "/" + id + "/" + (model.pluralize(association.resource));
+            }
+          }
+        }
+      }
+      return true;
+    },
+    autosave: function() {
+      throw 'Not implemented yet';
+    }
+  },
+  has_one: {
+    nest_attributes: function() {
+      var association_name, association_names, associations_attributes, _i, _len, _results;
+
+      association_names = model[this.resource].has_one;
+      if (association_names) {
+        _results = [];
+        for (_i = 0, _len = association_names.length; _i < _len; _i++) {
+          association_name = association_names[_i];
+          associations_attributes = this["" + association_name + "_attributes"];
+          if (associations_attributes) {
+            this[association_name] = this["build_" + association_name](associations_attributes);
+            _results.push(delete this["" + association_name + "_attributes"]);
+          } else {
+            _results.push(void 0);
+          }
+        }
+        return _results;
+      }
+    }
   }
 };
 
 associable = {
-  model: function(options) {
-    var callbacks;
+  model: {
+    blender: function(definition) {
+      var model;
 
-    if (this.resource == null) {
-      console.error('resource must be defined in order to associate');
-    }
-    callbacks = {
-      has_many: {
-        nest_attributes: function() {
-          var association, association_name, association_names, associations_attributes, message, _i, _len, _results;
-
-          association_names = model[this.resource].has_many;
-          if (association_names) {
-            _results = [];
-            for (_i = 0, _len = association_names.length; _i < _len; _i++) {
-              association_name = association_names[_i];
-              associations_attributes = this["" + association_name + "_attributes"];
-              if (associations_attributes && associations_attributes.length) {
-                association = this[model.pluralize(association_name)];
-                if (!association) {
-                  message = "has_many.nest_attributes: Association not found for " + association_name + ". \n";
-                  message += "did you set it on model declaration? \n  has_many: " + association_name + " ";
-                  throw message;
-                }
-                association.resource = model.singularize(association.resource);
-                association.add.apply(association, associations_attributes);
-                _results.push(association.resource = model.pluralize(association.resource));
-              } else {
-                _results.push(void 0);
-              }
-            }
-            return _results;
-          }
-        },
-        update_association: function(data) {
-          var associated, association, association_name, id, pluralized_association, _i, _j, _len, _len1, _ref;
-
-          id = this._id || data && (data._id || data.id);
-          if (!id) {
-            return;
-          }
-          _ref = model[this.resource.toString()].has_many;
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            association_name = _ref[_i];
-            pluralized_association = model.pluralize(association_name);
-            association = this[pluralized_association];
-            if (!association.route) {
-              association.route = "/" + (model.pluralize(this.resource.toString())) + "/" + id + "/" + (model.pluralize(association.resource));
-              for (_j = 0, _len1 = association.length; _j < _len1; _j++) {
-                associated = association[_j];
-                if (!associated.route && (associated.parent != null)) {
-                  associated.route = "/" + (model.pluralize(this.resource.toString())) + "/" + id + "/" + (model.pluralize(association.resource));
-                }
-              }
-            }
-          }
-          return true;
-        },
-        autosave: function() {
-          return this.save();
-        }
+      model = associable.model;
+      this.create_after_hooks = model.create_after_hooks;
+      this.create_before_hooks = model.create_before_hooks;
+      if (this.has_many && $.type(this.has_many) !== 'array') {
+        this.has_many = [this.has_many];
       }
-    };
-    if (this.has_many && $.type(this.has_many) !== 'array') {
-      this.has_many = [this.has_many];
-    }
-    if (this.has_one && $.type(this.has_one) !== 'array') {
-      this.has_one = [this.has_one];
-    }
-    if (this.belongs_to && $.type(this.belongs_to) !== 'array') {
-      this.belongs_to = [this.belongs_to];
-    }
-    this.has_many || (this.has_many = []);
-    this.has_one || (this.has_one = []);
-    this.belongs_to || (this.belongs_to = []);
-    return this.create_associations = function() {
-      var association_name, association_proxy, resource, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _results;
+      if (this.has_one && $.type(this.has_one) !== 'array') {
+        this.has_one = [this.has_one];
+      }
+      if (this.belongs_to && $.type(this.belongs_to) !== 'array') {
+        this.belongs_to = [this.belongs_to];
+      }
+      this.has_many || (this.has_many = []);
+      this.has_one || (this.has_one = []);
+      this.belongs_to || (this.belongs_to = []);
+      return true;
+    },
+    create_after_hooks: function(definition) {
+      var association_name, association_proxy, old_resource_id, options, resource, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _results;
 
+      options = model[this.resource.name || this.resource.toString()];
       if (options.has_many) {
         _ref = options.has_many;
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -20251,12 +20399,14 @@ associable = {
           resource = _ref1[_j];
           association_proxy = {
             resource: resource,
-            parent_resource: this.resource
+            parent_resource: this.resource,
+            owner: this
           };
-          association_proxy[this.resource] = this;
+          association_proxy[this.resource.toString()] = this;
           this["build_" + resource] = $.proxy(singular.build, association_proxy);
           this["create_" + resource] = $.proxy(singular.create, association_proxy);
         }
+        callbacks.has_one.nest_attributes.call(this);
       }
       if (options.belongs_to) {
         _ref2 = options.belongs_to;
@@ -20265,29 +20415,69 @@ associable = {
           resource = _ref2[_k];
           association_proxy = {
             resource: resource,
-            parent_resource: this.resource
+            parent_resource: this.resource,
+            parent: this,
+            owner: this
           };
-          association_proxy[this.resource] = this;
+          association_proxy[this.resource.toString()] = this;
           this["build_" + resource] = $.proxy(singular.build, association_proxy);
-          _results.push(this["create_" + resource] = $.proxy(singular.create, association_proxy));
+          this["create_" + resource] = $.proxy(singular.create, association_proxy);
+          old_resource_id = this["" + resource + "_id"];
+          this["" + resource + "_id"] = null;
+          this.subscribe("" + resource + "_id", $.proxy(subscribers.belongs_to.foreign_key, association_proxy));
+          this.subscribe(resource.toString(), $.proxy(subscribers.belongs_to.associated_changed, association_proxy));
+          this.resource_id = old_resource_id;
+          if (this["" + resource + "_id"] && !this[resource]) {
+            _results.push(this.publish("" + resource + "_id", this["" + resource + "_id"]));
+          } else {
+            _results.push(void 0);
+          }
         }
         return _results;
       }
-    };
-  },
-  record: function(options) {
-    if (this.resource == null) {
-      console.error('resource must be defined in order to associate');
+    },
+    create_before_hooks: function(record) {
+      var association_proxy, definition, resource, _i, _len, _ref, _results;
+
+      definition = this;
+      if (definition.belongs_to) {
+        _ref = definition.belongs_to;
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          resource = _ref[_i];
+          association_proxy = {
+            resource: resource,
+            parent_resource: this.resource,
+            owner: record
+          };
+          _results.push(modifiers.belongs_to.associated_loader.call(association_proxy));
+        }
+        return _results;
+      }
     }
-    return model[this.resource.name || this.resource.toString()].create_associations.call(this);
+  },
+  record: {
+    after_initialize: function(attributes) {
+      if (this.resource == null) {
+        throw new Error('resource must be defined in order to associate');
+      }
+      return model[this.resource.name || this.resource.toString()].create_after_hooks.call(this);
+    },
+    before_initialize: function(creation) {
+      if (!this.resource) {
+        throw new Error('resource must be defined in order to associate');
+      }
+      return model[this.resource.name || this.resource.toString()].create_before_hooks(creation);
+    }
   }
 };
 
 model = root.model;
 
 model.mix(function(modelable) {
-  modelable.after_mix.push(associable.model);
-  return modelable.record.after_initialize.push(associable.record);
+  modelable.after_mix.push(associable.model.blender);
+  modelable.record.before_initialize.push(associable.record.before_initialize);
+  return modelable.record.after_initialize.push(associable.record.after_initialize);
 });
 
 model.associable = {
@@ -20295,6 +20485,127 @@ model.associable = {
     return blender(singular, plural);
   }
 };
+
+});
+require.register("indemma/lib/record/persistable.js", function(exports, require, module){
+var handlers, model, persistable, record;
+
+require('./queryable');
+
+handlers = {
+  store_after_saved: function() {
+    var storage;
+
+    storage = model[this.resource.toString()].storage;
+    if (this._id) {
+      return storage.store(this._id, this);
+    }
+  }
+};
+
+persistable = {
+  record: {
+    after_initialize: function() {
+      return this.after('saved', handlers.store_after_saved);
+    }
+  }
+};
+
+model = window.model;
+
+record = window.record;
+
+model.persistable = true;
+
+model.mix(function(modelable) {
+  return modelable.record.after_initialize.push(persistable.record.after_initialize);
+});
+
+});
+require.register("indemma/lib/record/storable.js", function(exports, require, module){
+var extend, merge, model, record, stampit, storable;
+
+extend = require('assimilate');
+
+merge = extend.withStrategy('deep');
+
+stampit = require('../../vendor/stampit');
+
+storable = stampit({
+  store: function(keypath, value, options) {
+    var collection, entry, key, _i, _len;
+
+    collection = this.database;
+    keypath = keypath.toString().split('.');
+    key = keypath.pop();
+    for (_i = 0, _len = keypath.length; _i < _len; _i++) {
+      entry = keypath[_i];
+      collection[entry] || (collection[entry] = {});
+      collection = collection[entry];
+    }
+    if (arguments.length === 1) {
+      this.reads++;
+      return collection[key];
+    } else {
+      this.writes++;
+      value.sustained = true;
+      return collection[key] = value;
+    }
+  },
+  values: function() {
+    return Object.values(this.database);
+  }
+}, {
+  type: 'object',
+  writes: 0,
+  reads: 0
+}, function() {
+  this.database || (this.database = {});
+  return this;
+});
+
+model = window.model;
+
+record = window.record;
+
+model.storable = true;
+
+module.exports = storable;
+
+});
+require.register("indemma/lib/record/queryable.js", function(exports, require, module){
+var extend, model, queryable, record, stampit, storable;
+
+extend = require('assimilate');
+
+storable = require('./storable');
+
+stampit = require('../../vendor/stampit');
+
+queryable = {
+  storage: storable(),
+  find: function(key) {
+    return this.storage.store(key);
+  },
+  all: function() {
+    return this.storage.values();
+  },
+  where: function() {
+    throw new Error('queryable.where: Not implemented yet');
+  }
+};
+
+model = window.model;
+
+record = window.record;
+
+model.queryable = true;
+
+module.exports = queryable;
+
+model.mix(function(modelable) {
+  return extend(modelable, queryable);
+});
 
 });
 require.register("indemma/lib/record/resource.js", function(exports, require, module){
@@ -20375,7 +20686,9 @@ resourceable = {
   },
   parent_id: {
     get: function() {
-      return this[this.parent_resource]._id;
+      if (this[this.parent_resource]) {
+        return this[this.parent_resource]._id;
+      }
     },
     set: function() {
       return console.error('Warning changing associations throught parent_id not allowed for security and style guide purposes');
@@ -20385,7 +20698,11 @@ resourceable = {
     var resource_definition, _ref;
 
     if (this.parent_resource) {
-      Object.defineProperty(this, "" + this.parent_resource + "_id", resourceable.parent_id);
+      Object.defineProperty(this, "" + this.parent_resource + "_id", {
+        value: resourceable.parent_id,
+        configurable: true,
+        enumerable: true
+      });
     }
     resource_definition = {};
     if (typeof this.resource === 'string') {
@@ -20431,7 +20748,7 @@ module.exports = {
     return request.call(this, 'post', this.route, data);
   },
   "delete": function(data) {
-    return request.call(this, 'delete', this.route, data);
+    return request.call(this, 'delete', (this._id ? "" + this.route + "/" + this._id : this.route), data);
   }
 };
 
@@ -20539,8 +20856,14 @@ restful = {
     get: function(action, data) {
       var old_route, payload, promise, resource, route;
 
+      if (data == null) {
+        data = {};
+      }
       old_route = this.route;
-      this.route = "/" + (model.pluralize(this.resource.name)) + "/" + action;
+      this.route = "/" + (model.pluralize(this.resource.name));
+      if (action) {
+        this.route += "/" + action;
+      }
       resource = data.resource;
       if (data && data.json) {
         data = data.json();
@@ -20554,20 +20877,24 @@ restful = {
       route = old_route;
       return promise;
     },
-    put: rest.put
+    put: rest.put,
+    "delete": rest["delete"]
   },
   record: {
     reload: function() {
-      var argument, promise, _i, _len;
+      var data, param, params, promise, _i, _len;
 
-      promise = rest.get.call(this);
+      params = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+      data = params.pop();
+      if (type(data) !== 'object') {
+        params.push(data);
+      }
+      promise = rest.get.call(this, data || {});
       promise.done(this.assign_attributes);
       promise.fail(this.failed);
-      for (_i = 0, _len = arguments.length; _i < _len; _i++) {
-        argument = arguments[_i];
-        if (type(argument) === 'function') {
-          promise.done(argument);
-        }
+      for (_i = 0, _len = params.length; _i < _len; _i++) {
+        param = params[_i];
+        promise.done(param);
       }
       return promise;
     },
@@ -20611,13 +20938,16 @@ restful = {
         association_name = _ref2[_l];
         association_attributes = attributes[association_name];
         delete attributes[association_name];
+        delete attributes[association_name + "_attributes"];
         if (association_attributes) {
           this[association_name] = this["build_" + association_name](association_attributes);
         }
       }
       _results = [];
       for (attribute in attributes) {
-        _results.push(this[attribute] = attributes[attribute]);
+        if (attribute !== this[attribute]) {
+          _results.push(this[attribute] = attributes[attribute]);
+        }
       }
       return _results;
     },
@@ -20681,7 +21011,7 @@ restful = {
       }
     },
     failed: function(xhr, error, status) {
-      var attribute_name, definition, e, message, messages, payload, _ref, _results;
+      var attribute_name, definition, e, message, messages, payload, _i, _len, _ref;
 
       payload = xhr.responseJSON;
       try {
@@ -20694,37 +21024,33 @@ restful = {
         case 422:
           definition = model[this.resource];
           _ref = payload.errors;
-          _results = [];
           for (attribute_name in _ref) {
             messages = _ref[attribute_name];
-            if (!(this.hasOwnProperty(attribute_name) || definition.hasOwnProperty(attribute_name))) {
+            if (!definition.associations) {
+              definition.associations = definition.has_one.concat(definition.has_many.concat(definition.belongs_to));
+            }
+            if (!(this.hasOwnProperty(attribute_name) || definition.hasOwnProperty(attribute_name) || definition.associations.indexOf(attribute_name) !== -1 || attribute_name === 'base')) {
               message = "Server returned an validation error message for a attribute that is not defined in your model.\n";
               message += "The attribute was '" + attribute_name + "', the model resource was '" + this.resource + "'.\n";
               message += "The model definition keys were '" + (JSON.stringify(Object.keys(definition))) + "'.\n";
               message += "Please remove server validation, or update your model definition.";
               throw new TypeError(message);
             }
-            _results.push((function() {
-              var _i, _len, _results1;
-
-              _results1 = [];
-              for (_i = 0, _len = messages.length; _i < _len; _i++) {
-                message = messages[_i];
-                _results1.push(this.errors.add(attribute_name, 'server', {
-                  server_message: message
-                }));
-              }
-              return _results1;
-            }).call(this));
+            for (_i = 0, _len = messages.length; _i < _len; _i++) {
+              message = messages[_i];
+              this.errors.add(attribute_name, 'server', {
+                server_message: message
+              });
+            }
           }
-          return _results;
           break;
         default:
           message = "Fail in " + this.resource + ".save:\n";
           message += "Record: " + this + "\n";
           message += "Status: " + status + " (" + (payload.status || xhr.status) + ")\n";
-          return message += "Error : " + (payload.error || payload.message || payload);
+          message += "Error : " + (payload.error || payload.message || payload);
       }
+      return this.saving = false;
     },
     toString: function() {
       var serialized;
@@ -20770,10 +21096,12 @@ restful = {
       delete json.route;
       delete json.initial_route;
       delete json.after_initialize;
+      delete json.before_initialize;
       delete json.parent_resource;
       delete json.nested_attributes;
       delete json.saving;
       delete json.salvation;
+      delete json.sustained;
       delete json.element;
       delete json["default"];
       delete json.lock;
@@ -20850,7 +21178,7 @@ scopable = {
       }
       builder = builders[type];
       if (builder == null) {
-        throw "Unknown scope type " + type + " for model with resource " + model.resource;
+        throw "Unknown scope type: '" + type + "', For model with resource: '" + this.resource + "'";
       }
       this.scope.declared.push(name);
       return this[name] = builder({
@@ -20919,7 +21247,7 @@ scopable = {
     forward_scopes_to_associations: function() {
       var associated_factory, associated_resource, association, association_name, factory, forwarder, generate_forwarder, scope, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3, _ref4;
 
-      factory = model[this.resource];
+      factory = model[this.resource.name];
       _ref = factory.has_many;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         association_name = _ref[_i];
@@ -20999,6 +21327,19 @@ scopable = {
 };
 
 builders = {
+  string: stampit().enclose(function() {
+    var base;
+
+    base = scopable.base(this);
+    return stampit.mixIn(function() {
+      var callbacks, value, _base, _name;
+
+      value = arguments[0], callbacks = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+      callbacks.length && (this.scope.then = this.scope.then.concat(callbacks));
+      (_base = this.scope.data)[_name = base.name] || (_base[_name] = value != null ? value : this["$" + base.name]);
+      return this;
+    });
+  }),
   boolean: stampit().enclose(function() {
     var base;
 
@@ -21374,7 +21715,7 @@ cpfable = stampit({
     if (d1 > 9) {
       d1 = 0;
     }
-    if (+dv.charAt(0 !== d1)) {
+    if (+dv.charAt(0) !== d1) {
       return false;
     }
     d1 *= 2;
@@ -21438,8 +21779,12 @@ messages = {
     return "O registro associado " + attribute_name + " não é válido.";
   },
   server: function(attribute_name, options) {
-    attribute_name = this.human_attribute_name(attribute_name);
-    return "" + attribute_name + " " + options.server_message + ".";
+    if (attribute_name === 'base') {
+      return options.server_message;
+    } else {
+      attribute_name = this.human_attribute_name(attribute_name);
+      return "" + attribute_name + " " + options.server_message + ".";
+    }
   },
   type: function(attribute_name, options) {
     attribute_name = this.human_attribute_name(attribute_name);
@@ -21473,7 +21818,8 @@ errorsable = stampit({
     }
   },
   push: Array.prototype.push,
-  splice: Array.prototype.splice
+  splice: Array.prototype.splice,
+  indexOf: Array.prototype.indexOf
 }, {
   model: null,
   messages: null,
@@ -21494,7 +21840,7 @@ initializers = {
       }
     });
     this.validated = false;
-    this.subscribe('dirty', function() {
+    this.subscribe('dirty', function(value) {
       return this.validated = false;
     });
     return Object.defineProperty(this, 'valid', {
@@ -21575,7 +21921,7 @@ extensions = {
     validate: function(doned, failed) {
       var results, validator, _i, _len, _ref;
 
-      if (this.validated) {
+      if (this.validated && !this.dirty) {
         return this.validation;
       }
       this.errors.clear();

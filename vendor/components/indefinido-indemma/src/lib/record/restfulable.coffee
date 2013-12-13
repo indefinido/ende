@@ -58,12 +58,16 @@ restful =
       # TODO should fail when server returns more then one record
       @all conditions, callback
 
-    get: (action, data) ->
+    # TODO better treating of arguments
+    get: (action, data = {}) ->
       # TODO better way to override route
-      old_route = @route
-      @route    = "/#{model.pluralize @resource.name}/#{action}"
-      resource  = data.resource
-      data      = data.json() if data and data.json
+      old_route  = @route
+      @route     = "/#{model.pluralize @resource.name}"
+      @route    += "/#{action}" if action
+
+      # TODO not allow resource overriding
+      resource   = data.resource
+      data       = data.json() if data and data.json
 
       if resource?
         payload        = data
@@ -77,15 +81,21 @@ restful =
       promise
 
     put: rest.put
+    delete: rest.delete
 
   record:
-    reload: ->
-      promise = rest.get.call @
+    reload: (params...) ->
+
+      # TODO better signature implementation
+      data = params.pop()
+      params.push data if type(data) != 'object'
+
+      promise = rest.get.call @, data || {}
       promise.done @assign_attributes
       promise.fail @failed
 
       # Bind one time save callbacks
-      promise.done argument for argument in arguments when type(argument) is 'function'
+      promise.done param for param in params
 
       promise
 
@@ -96,6 +106,8 @@ restful =
       # TODO implement setter on has_many association and move this code there
       for association_name in model[@resource.toString()].has_many
         associations_attributes = attributes[association_name]
+
+        # TODO copy attributes object and don't change it inside the assignment method
         delete attributes[association_name] # Remove loaded json data
 
         # Clear current stored cache on this association
@@ -124,9 +136,12 @@ restful =
 
           # TODO only nest specified nested attributes on model definition
           # TODO create special deserialization method no plural association
-          # TODO check if we need to nest attributes in other association tipes
+          # TODO check if we need to nest attributes in other association types
           for association_name in model[singular_resource].has_many
             association_attributes["#{association_name}_attributes"] = association_attributes[association_name]
+
+            # TODO copy attributes object and don't change it inside
+            # the assignment method
             delete association_attributes[association_name]
 
         # Load new associations_attributes on this association
@@ -134,16 +149,22 @@ restful =
 
 
       # Nested attributes
-      # TODO implement setter on has_one association and move this code there
+      # TODO implement setter on has_one association and move this
+      # code there
       for association_name in model[@resource.toString()].has_one
         association_attributes = attributes[association_name]
-        delete attributes[association_name]
 
+        # TODO copy attributes object and don't change it inside the
+        # assignment method
+        delete attributes[association_name]
+        delete attributes[association_name + "_attributes"]
         @[association_name] = @["build_#{association_name}"] association_attributes if association_attributes
 
 
       # Assign remaining attributes
-      @[attribute] = attributes[attribute] for attribute of attributes
+      # TODO see if it is a best practice not overriding unchanged attributes
+      for attribute of attributes when attribute isnt @[attribute]
+        @[attribute] = attributes[attribute]
 
     destroy: (doned, failed, data) ->
       throw new Error 'Can\'t delete record without id!' unless @id? or @_id?
@@ -204,17 +225,26 @@ restful =
       try payload ||= JSON.parse(xhr.responseText) catch e
       payload     ||= xhr.responseText
 
+
       # When client fail
       switch xhr.status
-        # move to validatable
+        # TODO move to validatable
         when 422
 
           definition = model[@resource]
 
           for attribute_name, messages of payload.errors
 
+            # TODO add support for error checking message introspection
+            # Check for association errors
+            if (!definition.associations)
+              # TODO update this attribute when associations are dinamically changed
+              definition.associations = definition.has_one.concat(definition.has_many.concat(definition.belongs_to))
+
             # Only add errors to existing attributes
-            unless @hasOwnProperty(attribute_name) or definition.hasOwnProperty(attribute_name)
+            # TODO shorten this verification
+            unless @hasOwnProperty(attribute_name) or definition.hasOwnProperty(attribute_name) or definition.associations.indexOf(attribute_name) != -1 or attribute_name == 'base'
+
               message  = "Server returned an validation error message for a attribute that is not defined in your model.\n"
               message += "The attribute was '#{attribute_name}', the model resource was '#{@resource}'.\n"
               message += "The model definition keys were '#{JSON.stringify Object.keys definition }'.\n"
@@ -231,6 +261,8 @@ restful =
           message += "Status: #{status} (#{payload.status || xhr.status})\n"
           message += "Error : #{payload.error || payload.message || payload}"
 
+      # Finish saving
+      @saving = false
 
     toString: ->
       serialized = {}
@@ -271,10 +303,12 @@ restful =
       delete json.route
       delete json.initial_route # TODO implement better initial_route and remove attribute from here
       delete json.after_initialize
+      delete json.before_initialize
       delete json.parent_resource
       delete json.nested_attributes
       delete json.saving
       delete json.salvation
+      delete json.sustained
       delete json.element
       delete json.default
       delete json.lock

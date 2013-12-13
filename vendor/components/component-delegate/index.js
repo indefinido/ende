@@ -1,8 +1,9 @@
+
 /**
  * Module dependencies.
  */
 
-var closest = require('closest')
+var matches = require('matches-selector')
   , event = require('event');
 
 /**
@@ -21,10 +22,9 @@ var closest = require('closest')
 
 exports.bind = function(el, selector, type, fn, capture){
   return event.bind(el, type, function(e){
-    var target = e.target || e.srcElement;
-    e.delegateTarget = closest(target, selector, true, el);
-    if (e.delegateTarget) fn.call(el, e);
+    if (matches(e.target, selector)) fn(e);
   }, capture);
+  return callback;
 };
 
 /**

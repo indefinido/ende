@@ -211,9 +211,7 @@ define 'aura/extensions/rivets', ->
         else if value?.toString() isnt el.value?.toString()
           el.value = if value? then value else ''
 
-
-
-  rivets.formatters.float = (value) ->
+  rivets.formatters.float ||= (value) ->
     throw new TypeError "Invalid value passed to float formatter: #{value}" unless value?
 
     # Blank value and impossible to convert to string
@@ -228,8 +226,9 @@ define 'aura/extensions/rivets', ->
     # Format value
     value.toFixed(2).toString().replace '.', ','
 
-  rivets.formatters.currency = (value) ->
+  rivets.formatters.currency ||= (value) ->
     'R$ ' + rivets.formatters.float value
+
 
 
   (application) ->

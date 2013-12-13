@@ -32,6 +32,9 @@ define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
   require 'indefinido-indemma/lib/extensions/rivets'
   require 'indefinido-indemma/lib/record/rest'
   require 'indefinido-indemma/lib/record/associable'
+  require 'indefinido-indemma/lib/record/storable'
+  require 'indefinido-indemma/lib/record/persistable'
+  require 'indefinido-indemma/lib/record/queryable'
   require 'indefinido-indemma/lib/record/scopable'
   require 'indefinido-indemma/lib/record/restfulable'
   require 'indefinido-indemma/lib/record/resource'
@@ -54,7 +57,7 @@ define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
     core.resource = core.model  = sandbox.resource = sandbox.model = (name) ->
       # TODO use a Map internally in indemma
       model = indemma.model[name]
-      throw new Error "Model '#{name}' not found!" unless model?
+      throw new Error unless model?
       model
 
     # TODO rename core.models to core.domain, completely

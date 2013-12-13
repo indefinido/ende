@@ -1,8 +1,12 @@
-var jQuery, model, record, root;
+var jQuery, model, record, root, should_behave_like_errorsable;
 
 require('indemma/lib/record/restfulable');
 
+require('indemma/lib/record/validatable');
+
 require('indemma/lib/record/resource');
+
+'use strict';
 
 root = typeof exports !== "undefined" && exports !== null ? exports : window;
 
@@ -11,6 +15,40 @@ model = root.model;
 record = root.record;
 
 jQuery = require('component-jquery');
+
+should_behave_like_errorsable = function() {
+  return describe('.errors', function() {
+    return describe('when server responds', function() {
+      beforeEach(function() {
+        return this.xhr = {
+          status: 422
+        };
+      });
+      describe('with errors', function() {
+        it('should add messages for each attribute on the errors object');
+        return it('should add messages for base attribute on the errors object', function() {
+          var base_messages;
+
+          base_messages = ["arthur you should bring a towel!"];
+          this.xhr.responseText = JSON.stringify({
+            errors: {
+              base: base_messages
+            }
+          });
+          this.subject.failed(this.xhr, 'error');
+          this.subject.should.have.property('errors');
+          this.subject.errors[0].should.include('base', 'server', {
+            server_message: base_messages[0]
+          });
+          return this.subject.errors.messages.should.have.property('base', base_messages[0]);
+        });
+      });
+      return describe('with invalid error messages', function() {
+        return it('when inexistent attribute should throw exception', function() {});
+      });
+    });
+  });
+};
 
 describe('restfulable', function() {
   describe('when included', function() {
@@ -22,21 +60,25 @@ describe('restfulable', function() {
     var arthur;
 
     arthur = null;
-    return describe('#()', function() {
+    return describe('()', function() {
       beforeEach(function() {
-        arthur = record.call({
+        this.arthur = arthur = record.call({
           resource: 'person',
           name: 'Arthur Philip Dent'
         });
-        return arthur.dirty = true;
+        return this.arthur.dirty = true;
       });
-      return describe('#save', function() {
+      return describe('.save()', function() {
         beforeEach(function() {
           return sinon.stub(jQuery, "ajax").returns(jQuery.Deferred());
         });
         afterEach(function() {
           return jQuery.ajax.restore();
         });
+        it('should be able to serialize record', function() {
+          return JSON.stringify(arthur.json());
+        });
+        it('should ignore key in transient fields');
         it('should send paramenters accordingly');
         return it('should make ajax call', function() {
           arthur.save();
@@ -46,8 +88,8 @@ describe('restfulable', function() {
     });
   });
   return describe('model', function() {
-    return describe('#()', function() {
-      describe('#json', function() {
+    return describe('()', function() {
+      describe('.json()', function() {
         var friend, person;
 
         friend = person = null;
@@ -64,7 +106,7 @@ describe('restfulable', function() {
           });
         });
       });
-      describe('#assign_attributes', function() {
+      describe('.assign_attributes()', function() {
         var friend, person;
 
         friend = person = null;
@@ -113,26 +155,40 @@ describe('restfulable', function() {
         });
       });
       describe('with singular resource', function() {
-        return describe('#create', function() {
+        return describe('.create()', function() {
           it('should return promises');
           return it('should return models when promise is resolved');
         });
       });
       describe('with plural resource', function() {
-        return describe('#create', function() {
+        return describe('.create()', function() {
           var deferred, person, promise;
 
           deferred = promise = person = null;
+          should_behave_like_errorsable();
           beforeEach(function() {
+            var context;
+
             person = model.call({
               resource: 'person'
             });
             deferred = jQuery.Deferred();
+            this.subject = context = person({
+              name: 'Arthur'
+            });
+            context.lock = JSON.stringify(context.json());
+            deferred.resolveWith(context, [
+              {
+                _id: 1,
+                name: 'Arthur'
+              }
+            ]);
             deferred.resolveWith(person({
               name: 'Arthur'
             }), [
               {
-                _id: 1
+                _id: 1,
+                name: 'Arthur'
               }
             ]);
             sinon.stub(jQuery, "ajax").returns(deferred);
@@ -187,11 +243,11 @@ describe('restfulable', function() {
             return expect(person.create).to["throw"](TypeError);
           });
           return it('should make ajax calls', function() {
-            return jQuery.ajax.callCount.should.be.eq(2);
+            return jQuery.ajax.callCount.should.be.eq(3);
           });
         });
       });
-      return describe('#destroy', function() {
+      return describe('.destroy()', function() {
         return describe('with plural resource', function() {
           var arthur, deferred, person;
 

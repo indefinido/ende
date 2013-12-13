@@ -1,5 +1,6 @@
 # = require lunr/lunr
 
+# TODO reconstruir usando https://github.com/javve/list.js
 define ['./states/index', './presenter'], (templates, presenter) ->
 
   # TODO move lunar and lunr to an extension

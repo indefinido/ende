@@ -11,9 +11,13 @@ module Ende
       assets      = Ende.assets
 
       assets.paths << current_dir.join('lib', 'assets', 'javascripts').to_s
-      # assets.paths << current_dir.join('lib', 'assets', 'stylesheets').to_s uncomment if you use
+      assets.paths << current_dir.join('lib', 'assets', 'stylesheets').to_s
+      assets.paths << current_dir.join('lib', 'assets', 'components' ).to_s
+
       assets.paths << current_dir.join('vendor', 'assets', 'javascripts').to_s
-      # assets.paths << current_dir.join('vendor', 'assets', 'stylesheets').to_s uncomment if you use
+      assets.paths << current_dir.join('vendor', 'assets', 'stylesheets').to_s
+      assets.paths << current_dir.join('vendor', 'assets', 'components' ).to_s
+
     end
 
     # Check if devise exists and extend devise controllers to send
