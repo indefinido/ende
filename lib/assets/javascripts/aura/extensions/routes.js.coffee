@@ -9,6 +9,7 @@ define 'aura/extensions/routes', (routes) ->
   query  = loader.require.call null, 'querystring'
   router = null
 
+
   (application) ->
     core     = application.core
     mediator = core.mediator
@@ -22,14 +23,14 @@ define 'aura/extensions/routes', (routes) ->
         mediator.emit name, params
 
 
-    router.location = (href) ->
+    router.location = (href, process = true) ->
       if Modernizr.history
         window.history.pushState null, null, href
       else
         # TODO parse href and extract path!
         window.location.hash = href
 
-      router.process()
+      process and router.process()
 
     application.core.router = router
 
@@ -40,7 +41,7 @@ define 'aura/extensions/routes', (routes) ->
 
       toString: -> window.location
 
-    version: '0.2.0'
+    version: '0.2.1'
 
     initialize: (application) ->
       application.sandbox.location = location
