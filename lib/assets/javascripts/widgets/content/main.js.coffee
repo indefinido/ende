@@ -63,17 +63,21 @@ define ->
     @html response
 
   failed: (xhr) ->
-    # TODO better debugging code location
-    if @sandbox.debug.enabled
-      html  = "<h2>Content Widget: Failed to load Content</h2>"
-      html += xhr.responseText
-      html  = html.replace /\n/g, '<br/>'
+    switch xhr.status
+      when 401
+        @sandbox.emit "content.#{@identifier}.loading_unauthorized"
+      else
+        # TODO better debugging code location
+        if @sandbox.debug.enabled
+          html  = "<h2>Content Widget: Failed to load Content</h2>"
+          html += xhr.responseText
+          html  = html.replace /\n/g, '<br/>'
 
-    else
-      # TODO prettier message
-      html  = "Failed to load content."
+        else
+          # TODO prettier default user message message
+          html  = "Failed to load content."
 
-    @html html
+        @html html
 
   ended: ->
     @$el.removeClass "loading"

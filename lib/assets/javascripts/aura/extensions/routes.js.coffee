@@ -9,6 +9,7 @@ define 'aura/extensions/routes', (routes) ->
   query  = loader.require.call null, 'querystring'
   router = null
 
+  # TODO rename to router stationg
   (application) ->
     core     = application.core
     mediator = core.mediator
@@ -18,9 +19,9 @@ define 'aura/extensions/routes', (routes) ->
       # TODO implement logger api for lennon or change lennon library
       # logger: application.logger
       publishEvent: (name, params) ->
+
         # TODO method parsing (get, delete, put, post)
         mediator.emit name, params
-
 
     router.location = (href) ->
       if Modernizr.history
@@ -30,6 +31,8 @@ define 'aura/extensions/routes', (routes) ->
         window.location.hash = href
 
       router.process()
+
+
 
     application.core.router = router
 
