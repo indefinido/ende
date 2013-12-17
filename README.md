@@ -7,7 +7,7 @@ Summary
 
 Endë (core, middle)
 
-A modular web application rails engine. Using aurajs for architecture and indemma for resource management by default.
+A modular web application rails gem. Using aurajs for architecture and indemma for resource management by default.
 
 The goal is to provide seamlessly integration for web applications and various standard domains by providing default extensions and components for aura.
 
@@ -35,14 +35,14 @@ Components List
 
 _Detailed documentation is comming!_
 
-• Authenticator
-• Content
-• Dialog
-• Form
-• List
-• Support
-• Tray
-• Viewer
+- Authenticator
+- Content
+- Dialog
+- Form
+- List
+- Support
+- Tray
+- Viewer
 
 <!---
  Heitor do futuro não se esqueça de mencionar a integração do
@@ -55,14 +55,14 @@ _Detailed documentation is comming!_
 Extensions List
 ---------------
 
-• Session
- ◦ Devise
-• Rivets
-• Widget
- ◦ Lifecycleable
- ◦ Eventable
-• Models
-• Loader
+- Session
+ - Devise
+- Rivets
+- Widget
+ - Lifecycleable
+ - Eventable
+- Models
+- Loader
 
 Contributing
 ------------
