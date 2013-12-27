@@ -25,14 +25,14 @@ define 'aura/extensions/routes', (routes) ->
 
         mediator.emit 'route.changed'
 
-    router.location = (href) ->
+    router.location = (href, process = true) ->
       if Modernizr.history
         window.history.pushState null, null, href
       else
         # TODO parse href and extract path!
         window.location.hash = href
 
-      router.process()
+      process and router.process()
 
 
 
