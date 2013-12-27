@@ -11,7 +11,7 @@ define ->
     {identifier} = options
 
     # TODO access omit method throuhgh underscore
-    widget_options =  _.omit options, 'el', 'ref', '_ref', 'name', 'require', 'baseUrl'
+    widget_options =  _.omit options, 'el', 'ref', '_ref', 'name', 'require', 'baseUrl', 'resource'
 
     # TODO remove jquery dependency
     for name, suboptions of widget_options when $.type(suboptions) is "object"

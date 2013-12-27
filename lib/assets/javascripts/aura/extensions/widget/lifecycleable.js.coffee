@@ -46,7 +46,7 @@ define 'aura/extensions/widget/lifecycleable', ->
       options.require           = options.require || {}
       options.require.packages  = options.require.packages || []
       options.require.packages.push name: options.ref, location: widgetsPath + "/" + widgetName
-      options.name  = widgetName;
+      options.name  = widgetName
 
       unless options.el
         options.el  = jQuery '<div class="widget"></div>'

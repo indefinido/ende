@@ -83,7 +83,7 @@ define ->
       # el: @$el
 
 
-    @identifier = widget_options.name if @identifier == 'default'
+    @identifier = widget_options.name if @identifier == 'default' or @identifier == @name
     @$el.attr 'id', 'dialog'
     options.size && @$el.addClass options.size
     options.theme && @$el.addClass options.theme
@@ -126,7 +126,7 @@ define ->
     @dialog.hide()
 
   extract_options: ->
-    options =  _.omit @options, 'el', 'ref', '_ref', 'name', 'require', 'baseUrl', 'theme'
+    options =  _.omit @options, 'el', 'ref', '_ref', 'name', 'require', 'baseUrl', 'theme', 'resource'
 
     dynamic_options = _.omit options, Object.keys(@constructor.__super__.options)
 

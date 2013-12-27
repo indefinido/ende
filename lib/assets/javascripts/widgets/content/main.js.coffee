@@ -1,11 +1,7 @@
 define ->
 
-  defaults =
-    beforeSend: (xhr) ->
-      xhr.setRequestHeader 'X-XHR-Referer', document.location.href
-
   type: 'Base'
-  version: '0.1.0'
+  version: '0.1.1'
   options:
     autoload: true
 
@@ -21,22 +17,25 @@ define ->
     @$el.addClass "content idle"
     @$el.attr 'id', @identifier unless @$el.attr 'id'
 
-  normalize_options: (extra) ->
-    throw new TypeError "content.initialize: Multiple before sends are not supported yet" if extra?.beforeSend
-
+  request_options: (extra) ->
     options = @sandbox.util._.omit @options, 'el', 'ref', '_ref', 'name', 'require', 'baseUrl'
-    normalized_options = @sandbox.util.extend context: @, defaults, options, extra
+
+    normalized_options = @sandbox.util.extend context: @, options, extra
 
     throw new TypeError "content.initialize: No uri provided to load content" unless normalized_options.uri?
 
     normalized_options.url = normalized_options.uri
     delete normalized_options.uri
 
+    normalized_options.headers = @sandbox.util.extend 'X-XHR-Referer': document.location.href, normalized_options.headers
+
     normalized_options
+
 
   # Total number of completed loads (loaded or failed)
   loads: 0
 
+  # TODO move to handlers
   load: (options) ->
     # TODO move to anoter method
     if @loads > 0
@@ -53,7 +52,7 @@ define ->
     @$el.removeClass "idle"
 
     # TODO remove jQuery dependency
-    @loading = $.ajax(@normalize_options options).done(@loaded).fail(@failed).always(@ended)
+    @loading = $.ajax(@request_options options).done(@loaded).fail(@failed).always(@ended)
 
     @sandbox.emit "content.#{@identifier}.loading", @loading
 
@@ -69,13 +68,17 @@ define ->
       else
         # TODO better debugging code location
         if @sandbox.debug.enabled
-          html  = "<h2>Content Widget: Failed to load Content</h2>"
+          html  = "<h2>Content Widget: Failed to load Content. Click to retry.</h2>"
           html += xhr.responseText
           html  = html.replace /\n/g, '<br/>'
 
         else
           # TODO prettier default user message message
-          html  = "Failed to load content."
+          html  = "Failed to load content. Click to retry."
+
+        # TODO change method name to retry
+        # TODO treat complex settings cases, and better store the settings
+        @$el.one('click', => @load())
 
         @html html
 

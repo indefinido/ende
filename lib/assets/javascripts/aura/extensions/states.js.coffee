@@ -40,7 +40,8 @@ define 'aura/extensions/states', ['application/states'], (states) ->
           widgets = []
 
           for name, options of unormalized_widget_options
-            widget_name    = options.name || name
+            widget_name        = options.name || name
+            options.resource ||= name
 
             # To allow user controlling the application change the
             # widget configuration at runtime, we check the transition

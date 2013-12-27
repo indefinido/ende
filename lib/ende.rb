@@ -38,6 +38,11 @@ module Ende
           include ::CsrfExtensions
           after_filter :add_new_csrf_token, only: [:create, :destroy]
         end
+
+        Devise::RegistrationsController.class_eval do
+          include ::CsrfExtensions
+          after_filter :add_new_csrf_token, only: [:create]
+        end
       end
     end
   end

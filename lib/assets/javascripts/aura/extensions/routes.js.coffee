@@ -23,6 +23,8 @@ define 'aura/extensions/routes', (routes) ->
         # TODO method parsing (get, delete, put, post)
         mediator.emit name, params
 
+        mediator.emit 'route.changed'
+
     router.location = (href) ->
       if Modernizr.history
         window.history.pushState null, null, href
@@ -43,7 +45,7 @@ define 'aura/extensions/routes', (routes) ->
 
       toString: -> window.location
 
-    version: '0.2.0'
+    version: '0.2.1'
 
     initialize: (application) ->
       application.sandbox.location = location
