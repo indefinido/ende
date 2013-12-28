@@ -2,6 +2,7 @@
 
 define ->
 
+  # TODO remove component.json modal, and use our custom modal
   dialog_extensions =
     close_template: '<a class="close">&times;</a>'
 
@@ -48,6 +49,11 @@ define ->
           @emit 'close'
           @hide()
           event.preventDefault()
+    remove: ->
+      @emit('hide');
+      @el.detach();
+      @
+
 
   type: 'Base'
 
