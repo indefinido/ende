@@ -42,16 +42,17 @@ define ->
         @positionate()
 
         # TODO better close html creation and handling
-        el.prepend @close_template if     options.closable
+        el.prepend @close_template if options.closable
 
         # TODO use urls on hrefs istead of binding events
-        el.find('.close').click (event) =>
+        el.on 'click', '.close', (event) =>
           @emit 'close'
           @hide()
-          event.preventDefault()
+          false
+
     remove: ->
-      @emit('hide');
-      @el.detach();
+      @emit 'hide'
+      @el.detach()
       @
 
 
@@ -88,6 +89,8 @@ define ->
       # sandbox: @sandbox
       # el: @$el
 
+    # TODO better dialog implementation
+    options.closable && @dialog.closable()
 
     @identifier = widget_options.name if @identifier == 'default' or @identifier == @name
     @$el.attr 'id', 'dialog'
