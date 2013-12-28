@@ -20,10 +20,13 @@ define 'aura/extensions/routes', (routes) ->
       # logger: application.logger
       publishEvent: (name, params) ->
 
+        current_route = window.location.href
+        if router.last_route != current_route
+          mediator.emit 'route.changed'
+          router.last_route = current_route          
+
         # TODO method parsing (get, delete, put, post)
         mediator.emit name, params
-
-        mediator.emit 'route.changed'
 
     router.location = (href, process = true) ->
       if Modernizr.history
