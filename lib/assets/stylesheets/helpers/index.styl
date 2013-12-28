@@ -1,5 +1,16 @@
-@import "helpers/box-sizing"
+// WARNING!!!
+// ADDING A NEW HELPER TO THIS FILE? Read this:
+//
+//   Add your helper in the appropriated order above 
+//   so that helpers that overrides any nib mixin doesn't 
+//   get overriden by nib again
+
+
+// helpers that require nib
 @import "helpers/button"
+
+// helpers that does not require nib
+@import "helpers/box-sizing"
 @import "helpers/general"
 @import "helpers/link"
 @import "helpers/transition"
