@@ -29,7 +29,10 @@ background-color(color, fallback = null)
   transparent-fallback(background-color, color, fallback)
 
 border-color(color, fallback = null)
-  transparent-fallback(border-color, color, fallback)
+  if color is a 'array'
+    {property} color
+  else
+    transparent-fallback(border-color, color, fallback)
 
 color(c, fallback = null)
   transparent-fallback(color, c, fallback)
