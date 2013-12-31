@@ -23,7 +23,7 @@ define 'aura/extensions/routes', (routes) ->
         current_route = window.location.href
         if router.last_route != current_route
           mediator.emit 'route.changed'
-          router.last_route = current_route          
+          router.last_route = current_route
 
         # TODO method parsing (get, delete, put, post)
         mediator.emit name, params
@@ -36,7 +36,6 @@ define 'aura/extensions/routes', (routes) ->
         window.location.hash = href
 
       process and router.process()
-
 
 
     application.core.router = router
