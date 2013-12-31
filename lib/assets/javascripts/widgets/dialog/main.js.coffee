@@ -38,17 +38,19 @@ define ->
 
       sandbox.inject options.content
 
-      sandbox.once "#{child.name}.#{child.identifier || 'default'}.started", (widget) =>
-        @positionate()
-
-        # TODO better close html creation and handling
-        el.prepend @close_template if options.closable
-
+      if options.closable
         # TODO use urls on hrefs istead of binding events
         el.on 'click', '.close', (event) =>
           @emit 'close'
           @hide()
           false
+
+      sandbox.once "#{child.name}.#{child.identifier || 'default'}.started", (widget) =>
+        @positionate()
+
+        # TODO better close html creation and handling
+        el.prepend @close_template
+
 
     remove: ->
       @emit 'hide'
