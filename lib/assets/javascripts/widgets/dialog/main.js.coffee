@@ -32,9 +32,12 @@ define ->
     render: (options) ->
       {widget, content: child}  = options
       {sandbox, $el: el} = widget
+      identifier = child.identifier || child.resource || 'default'
+
       @el = el
 
       el.addClass 'hide'         unless options.autoshow
+      el.addClass 'injecting'
 
       sandbox.inject options.content
 
@@ -45,11 +48,17 @@ define ->
           @hide()
           false
 
-      sandbox.once "#{child.name}.#{child.identifier || 'default'}.started", (widget) =>
+      # Positionate modal after widget insertions, when widget starts
+      # visible
+      @positionate()             if options.autoshow
+
+      # TODO get identifier through sandbox method instead of generating here
+      sandbox.once "#{child.name}.#{identifier}.started", (widget) =>
+        el.removeClass 'injecting'
         @positionate()
 
         # TODO better close html creation and handling
-        el.prepend @close_template
+        el.prepend @close_template if options.closable
 
 
     remove: ->
@@ -62,7 +71,7 @@ define ->
 
   dialog: null
 
-  version: '0.1.0'
+  version: '0.1.1'
 
   options:
 
@@ -80,7 +89,14 @@ define ->
     overlay = require 'component-overlay'
     @sandbox.util.extend dialog.prototype, dialog_extensions
 
+    # Initialize fundamental style
+    @$el.attr 'id', 'dialog'
+    options.size && @$el.addClass options.size
+    options.theme && @$el.addClass options.theme
+
+
     widget_options = @extract_options()
+
     @dialog = new dialog
       widget: @, # TODO forward only element of the widget
       autoshow: options.autoshow
@@ -94,11 +110,11 @@ define ->
     # TODO better dialog implementation
     options.closable && @dialog.closable()
 
-    @identifier = widget_options.name if @identifier == 'default' or @identifier == @name
-    @$el.attr 'id', 'dialog'
-    options.size && @$el.addClass options.size
-    options.theme && @$el.addClass options.theme
-
+    if @identifier == 'default' or @identifier == @name
+      @identifier  = widget_options.name
+      # TODO implement postaljs and filter children widgets by event
+      # emitter instead of widget resources
+      @identifier += '!' + widget_options.resource if widget_options.resource?
 
     # TODO update dialog and remove this code when issue
     # https://github.com/component/dialog/issues/9 is fixed
@@ -111,7 +127,6 @@ define ->
           @hide()
 
         @_overlay = o
-
 
     # TODO add deprecation warning messages to modal commands
     @sandbox.on "modal.#{@identifier}.show"     , @dialog.show  , @dialog

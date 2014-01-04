@@ -102,25 +102,34 @@ define 'aura/extensions/widget/lifecycleable', ->
       lifecycleable.capitalize = core.util.capitalize
 
       # Add injection function for widgets
-      core.inject = (name, options) ->
+      # TODO create a paremeter parser method
+      core.inject = (name, options, parent = core) ->
 
         switch arguments.length
           when 1
             if jQuery.isArray name
               widgets    = name
               injections = core.util._.map widgets, lifecycleable.injection, lifecycleable
-              return core.start injections
+              return parent.start injections
             else
               options = name
-              core.start [lifecycleable.injection name: options.name, options: options]
+              parent.start [lifecycleable.injection name: options.name, options: options]
 
           when 2
             options.name ||= name
-            core.start [lifecycleable.injection name: options.name, options: options]
+            parent.start [lifecycleable.injection name: options.name, options: options]
+          when 3
+            if options?
+              options.name ||= name
+            else
+              options = name
+
+            parent.start [lifecycleable.injection name: options.name, options: options]
 
       # TODO instead of using inject function, overwrite start function
       application.sandbox.inject = (params...) ->
         console.warn 'sandbox.inject will be deprecated, then you will use sandbox.start with object parameters'
+        params[2] = @ if params.length < 3
         core.inject params...
 
       # Add support for element removal after stoping widget
