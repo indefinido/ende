@@ -14,9 +14,9 @@ define 'aura/extensions/widget/napable', ->
       @$el.removeClass 'asleep'
 
   extensions =
-    constructor: (options) ->
-      extensions["super"].constructor.call @, options
-      @sandbox.once "#{@name}.#{@identifier}.started", napable.bind, @
+    constructor: ->
+      extensions["super"].constructor.apply @, arguments
+      napable.bind.call @
 
   # The purpose of this extension is allow parent widget to save
   # memory by sending a sleep command to the child widgets
