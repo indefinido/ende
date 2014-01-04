@@ -10,7 +10,8 @@ define ->
 
     @sandbox.on "content.#{@identifier}.load", @load, @
 
-    if options.autoload
+    # TODO convert options to respective types and remove != 'false' comparison
+    if options.autoload and options.autoload != 'false'
       delete options.autoload
       @sandbox.emit "content.#{@identifier}.load"
 

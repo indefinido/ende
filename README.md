@@ -59,6 +59,7 @@ Extensions List
  - Devise
 - Rivets
 - Widget
+ - Napable   
  - Lifecycleable
  - Eventable
 - Models
