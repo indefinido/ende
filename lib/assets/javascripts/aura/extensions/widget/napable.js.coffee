@@ -13,9 +13,9 @@ define 'aura/extensions/widget/napable', ->
       @$el.addClass 'awake'
       @$el.removeClass 'asleep'
 
-  extensions =
+  napable_extensions =
     constructor: ->
-      extensions["super"].constructor.apply @, arguments
+      napable_extensions["super"].constructor.apply @, arguments
       napable.bind.call @
 
   # The purpose of this extension is allow parent widget to save
@@ -29,5 +29,5 @@ define 'aura/extensions/widget/napable', ->
 
       # Add support for element removal after stoping widget
       # TODO replace Base.extend inheritance to stampit composition
-      core.Widgets.Base = core.Widgets.Base.extend extensions
-      extensions.super  = core.Widgets.Base.__super__
+      core.Widgets.Base = core.Widgets.Base.extend napable_extensions
+      napable_extensions.super  = core.Widgets.Base.__super__
