@@ -211,6 +211,9 @@ define 'aura/extensions/rivets', ->
         else if value?.toString() isnt el.value?.toString()
           el.value = if value? then value else ''
 
+  # TODO isntall formatters from the external custom formatters repo
+  rivets.formatters.is ||= (v, o) -> v == o
+
   rivets.formatters.float ||= (value) ->
     throw new TypeError "Invalid value passed to float formatter: #{value}" unless value?
 
@@ -230,10 +233,18 @@ define 'aura/extensions/rivets', ->
     'R$ ' + rivets.formatters.float value
 
 
-
   (application) ->
 
     initialize: (application) ->
+      observable = require('observable').mixin
+
+      # TODO implement small view interface
+      original_bind = rivets.bind
+      rivets.bind = (selector, presentation) ->
+        for name, model of presentation when not model.observed?
+          presentation[name] = observable model
+
+        original_bind.apply rivets, arguments
 
       extend application.sandbox,
         view: rivets

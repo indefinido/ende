@@ -54,11 +54,16 @@ define 'aura/extensions/states', ['application/states'], (states) ->
             delete options.name
 
           # TODO update aura and use native start method
+          # {domain}  = application
+          # injection = core.inject(widgets).fail flow.failed
           core.inject(widgets).fail flow.failed
+
+          #domain?[transition.to]?.ready = injection.done
 
           # To prevent reinstation upon changing to this state for the
           # second time, delete stored configuration for this state
           delete states[transition.to]
+
 
       failed: (exception) ->
         logger.error "states.flow.failed: Failed autostarting widget! \n Message: #{exception.message}", exception
