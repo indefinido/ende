@@ -212,7 +212,7 @@ define 'aura/extensions/rivets', ->
           el.value = if value? then value else ''
 
   # TODO isntall formatters from the external custom formatters repo
-  rivets.formatters.is ||= (v, o) -> v == o
+  rivets.formatters.is ||= (one, other) -> one == other
 
   rivets.formatters.float ||= (value) ->
     throw new TypeError "Invalid value passed to float formatter: #{value}" unless value?
