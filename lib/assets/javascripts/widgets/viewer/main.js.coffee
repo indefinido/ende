@@ -161,9 +161,11 @@ define [
     @repopulate()
 
   repopulate: ->
-    if @load?
+    unless @fetching?
       @load.stop()
       @load = null
+    else
+      @fetching?.abort()
 
     # TODO store spinner instance, instead of creating a new one every time
     unless @load?
@@ -173,12 +175,12 @@ define [
       @$el.addClass 'idle'
       @$el.removeClass 'loading'
 
-    viewer        = @presentation.viewer
+    {viewer}        = @presentation
 
     # ✔ Generalize this filtering option
     # TODO make scope.all method use scope too, and replace @scope.fetch by it
     options  = @options # TODO better options accessing
-    presented = @scope.fetch null, (records) =>
+    @fetching = @scope.fetch null, (records) =>
 
       # TODO instantiate records before calling this callback
       records = _.map records, @resource, @resource unless records[0]?.resource or records[0]?.itemable
@@ -187,7 +189,7 @@ define [
       # use it here instead of pushing each record
       viewer.items = records
 
-    presented.then (records) =>
+    @fetching.then (records) =>
       if viewer.items.length
         # boo.initialize @$el.find '.results .items'
         @$el.addClass 'filled'
@@ -199,7 +201,7 @@ define [
 
       @sandbox.emit "viewer.#{@identifier}.populated", records
 
-    presented.always =>
+    @fetching.always =>
       # TODO implement status for viewer widget
       @$el.addClass 'idle'
       @$el.removeClass 'loading'

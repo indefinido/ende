@@ -38,11 +38,11 @@ define ->
 
   # TODO move to handlers
   load: (options) ->
-    _.invoke @sandbox._children, 'stop' if @sandbox._children?.length
-    
+
     # TODO move to anoter method
     if @loads > 0
-      @html ''
+      _.invoke @sandbox._children, 'stop' if @sandbox._children?.length
+      @$el.html ''
 
       @loading?.abort()
       @spinner?.stop()
@@ -53,7 +53,7 @@ define ->
     @spinner = @sandbox.ui.loader @$el
     @$el.addClass "loading"
     @$el.removeClass "idle"
-    
+
 
     # TODO remove jQuery dependency
     @loading = $.ajax(@request_options options).done(@loaded).fail(@failed).always(@ended)
