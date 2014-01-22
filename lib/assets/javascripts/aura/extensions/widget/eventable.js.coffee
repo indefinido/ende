@@ -32,7 +32,7 @@ define 'aura/extensions/widget/eventable', ->
     constructor: (options) ->
       matches     = extractor.exec options._ref
       @name       = matches[1]
-      @identifier = options.resource ? matches[2]
+      @identifier = options.identifier or options.resource or matches[2]
 
       eventable.super.constructor.call @, options
 

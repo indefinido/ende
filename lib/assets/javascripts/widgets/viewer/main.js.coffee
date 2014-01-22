@@ -162,8 +162,9 @@ define [
 
   repopulate: ->
     unless @fetching?
-      @load.stop()
-      @load = null
+      if @load?
+        @load.stop()
+        @load = null
     else
       @fetching?.abort()
 
@@ -276,12 +277,13 @@ define [
     @resource      = @sandbox.resource options.resource
     @scope         = model = @resource
     cssify         = @sandbox.util.inflector.cssify
+
     @sandbox.on "viewer.#{@identifier}.scope", @scope_to, @
 
     # Iniitalize plugins
     @plugins options
 
-    @$el.addClass "viewer widget #{cssify(options.resource)} idle clearfix"
+    @$el.addClass "viewer widget #{cssify @identifier} idle clearfix"
 
     # Fetch custom templates
     # TODO better custom templates structure and custom presenter
@@ -306,7 +308,5 @@ define [
 
       # Fetch default data
       @populate handlers
-
-    @sandbox.logger.log "initialized!"
 
     true

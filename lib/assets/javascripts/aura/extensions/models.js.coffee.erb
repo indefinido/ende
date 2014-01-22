@@ -40,6 +40,9 @@ define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
   require 'indefinido-indemma/lib/record/maid'
   require 'indefinido-indemma/lib/record/validatable'
 
+  # TODO create an plurazation interface on indemma, or move
+  # inflector outside it
+  require 'indefinido-indemma/vendor/owl/pluralize'
 
   # Extension definition
   initialize: (application) ->
@@ -49,6 +52,9 @@ define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
       cssify: (sentence) ->  sentence.replace /\//, '-'
       pluralize: indemma.model.pluralize
       singularize: indemma.model.singularize
+      # TODO create an plurazation interface on indemma, or move
+      # inflector outside it
+      define: owl.pluralize.define
 
     # TODO rename core.models and core.domain to core.resources, completely
     core.resources = core.domain = core.models   = sandbox.models = indemma.model
@@ -59,8 +65,13 @@ define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
       throw new Error unless model?
       model
 
-    # TODO rename core.models to core.domain, completely
+    # TODO rename core.models and core.domain, to core.resources, completely
+    # TODO deprecate record usage
     core.domain.record = core.models.record = sandbox.models.record = indemma.record
 
-    # build all model definitions
+    # TODO allow user to create custom definitions before resources
+    # (models) get defined
+    core.util.inflector.define 'measures', 'measures'
+
+    # Build all model definitions
     core.util._.map models, (model) -> indemma.model.call model
