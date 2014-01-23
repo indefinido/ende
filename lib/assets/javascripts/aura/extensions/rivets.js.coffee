@@ -1,4 +1,6 @@
-define 'aura/extensions/rivets', ->
+#= require 'aura/extensions/rivets/formatters'
+
+define 'aura/extensions/rivets', ['extensions/rivets/formatters'], (formatters)->
 
   'use strict';
 
@@ -9,6 +11,9 @@ define 'aura/extensions/rivets', ->
   Rivets = rivets._
 
   observable_configuration = require 'indefinido-observable/lib/adapters/rivets'
+  
+  
+  extend rivets.formatters, formatters
 
   rivets.configure observable_configuration
   rivets.configure
@@ -211,29 +216,12 @@ define 'aura/extensions/rivets', ->
         else if value?.toString() isnt el.value?.toString()
           el.value = if value? then value else ''
 
-  # TODO isntall formatters from the external custom formatters repo
-  rivets.formatters.is ||= (one, other) -> one == other
 
-  rivets.formatters.float ||= (value) ->
-    throw new TypeError "Invalid value passed to float formatter: #{value}" unless value?
 
-    # Blank value and impossible to convert to string
-    (!value || !(value + '')) && (value = 0)
-
-    # Force getter reading on IE
-    value = parseFloat value + ''
-
-    # Handle NaN
-    (isNaN(value)) && (value = 0)
-
-    # Format value
-    value.toFixed(2).toString().replace '.', ','
-
-  rivets.formatters.currency ||= (value) ->
-    'R$ ' + rivets.formatters.float value
-
+  
 
   (application) ->
+    version: '0.1.0'
 
     initialize: (application) ->
       observable = require('observable').mixin
