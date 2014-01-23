@@ -255,7 +255,7 @@ define 'aura/extensions/rivets', ->
             presented = presentation.presented
             delete presentation.presented
 
-          @view = rivets.bind @$el, presentation, options
+          @sandbox._view = @view = rivets.bind @$el, presentation, options
 
           presented(@view) if presented?
 

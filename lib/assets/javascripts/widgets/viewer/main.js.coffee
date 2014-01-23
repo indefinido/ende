@@ -3,10 +3,19 @@
 define [
   './states/index',
   './presenters/default',
+  './presenters/default',
   '/assets/jquery/inview',
   'stampit/stampit'], (templates, presenter, inview, stampit) ->
 
-  observable = require('indefinido-observable').mixin
+  observable   = require('indefinido-observable').mixin
+
+  # TODO define componentjs required packages, as requirejs packages
+  stampit    ||= require 'stampit/stampit'
+
+  scopable = (widget) ->
+    # TODO add widget plug-in as an extension for a widget
+    require ['widgets/viewer/plugins/scopable'], (scopable) ->
+      scopable widget
 
   paginable = stampit
     flip_to: (page) ->
@@ -200,6 +209,9 @@ define [
         @$el.addClass 'empty'
         @$el.removeClass 'filled'
 
+      # Start widgets that may have been created by bindings
+      @sandbox.start @$el
+
       @sandbox.emit "viewer.#{@identifier}.populated", records
 
     @fetching.always =>
@@ -244,8 +256,7 @@ define [
 
       @presentation = @presenter records
 
-      @html templates[@options.resource]
-
+      @$el.html templates[@options.resource]
 
       if records.length
         # boo.initialize @$el.find '.results .items'
@@ -254,7 +265,11 @@ define [
         @$el.addClass 'empty'
 
       # TODO move binders to application
+      @inherit_parent_presentation()
       @bind @presentation, @presenter.presentation
+
+      # Start widgets that may have been created by bindings
+      @sandbox.start @$el
 
       @handles 'click', 'back', '.back'
 
@@ -270,6 +285,38 @@ define [
 
     paginable  widget: @ if options.page
     scrollable widget: @ if options.scroll
+    scopable   @         if options.scope or options.scopable
+
+  # TODO listen for future parent presentation changes
+  inherit_parent_presentation: ->
+    return unless view = @sandbox?._parent?._view
+
+    isDescendant = (parent, child) ->
+      node = child.parentNode
+
+      while (node != null)
+        return true if (node == parent)
+        node = node.parentNode
+
+      false
+
+    models = {}
+    # Copy default models
+    # TODO think if its a good idea to notify about model name conflicts
+    for name, model of view.models
+      @presentation[name] ||= model # By default do not child models with parent models
+
+    for binding in view.bindings
+      # Copy each binding models
+      if binding.iterated
+        for view in binding.iterated
+          if isDescendant view.els[0], @$el.get(0)
+            for name, model of view.models
+              @presentation[name] ||= model
+
+            break
+
+    true
 
 
   initialize: (options) ->
