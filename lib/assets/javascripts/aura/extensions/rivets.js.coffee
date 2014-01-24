@@ -11,12 +11,10 @@ define 'aura/extensions/rivets', ['extensions/rivets/formatters'], (formatters)-
   Rivets = rivets._
 
   observable_configuration = require 'indefinido-observable/lib/adapters/rivets'
-  
-  
-  extend rivets.formatters, formatters
 
   rivets.configure observable_configuration
   rivets.configure
+    formatters: formatters
     templateDelimiters: ['{{', '}}']
 
   # Custom rivets view because we don't want to prefix attributes
@@ -217,9 +215,6 @@ define 'aura/extensions/rivets', ['extensions/rivets/formatters'], (formatters)-
           el.value = if value? then value else ''
 
 
-
-  
-
   (application) ->
     version: '0.1.0'
 
@@ -229,8 +224,12 @@ define 'aura/extensions/rivets', ['extensions/rivets/formatters'], (formatters)-
       # TODO implement small view interface
       original_bind = rivets.bind
       rivets.bind = (selector, presentation) ->
-        for name, model of presentation when not model.observed?
-          presentation[name] = observable model
+        for name, model of presentation
+          unless model?
+            console.warn "Model object not specified for key #{name}"
+            model = {}
+
+          presentation[name] = observable model unless model.observed?
 
         original_bind.apply rivets, arguments
 

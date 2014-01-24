@@ -17,7 +17,6 @@ module Ende
       assets.paths << current_dir.join('vendor', 'assets', 'javascripts').to_s
       assets.paths << current_dir.join('vendor', 'assets', 'stylesheets').to_s
       assets.paths << current_dir.join('vendor', 'assets', 'components' ).to_s
-
     end
 
     # Check if devise exists and extend devise controllers to send

@@ -1,4 +1,4 @@
-define 'extensions/rivets/formatters', 
+define 'extensions/rivets/formatters',
 
   # ### exists
   # ```data-show="user.name | exists"```
@@ -19,14 +19,6 @@ define 'extensions/rivets/formatters',
   #
   # Returns the value date formatted by moment.js
   # date: (v) -> moment(v).format 'MMM DD, YYYY'
-
-  # ### money
-  # ```data-text="user.accountBalance | money"```
-  #
-  # You must include [accounting.js](http://josscrowcroft.github.com/accounting.js/) on your page to use this. It is not bundled.
-  #
-  # Returns the value currency formatted by accounting.js
-  # money: (v) -> accounting.formatMoney v
 
   # ### toNumber
   # ```data-value="user.sweetText | toNumber"```
@@ -141,17 +133,17 @@ define 'extensions/rivets/formatters',
   # Sorts collection in asc or desc order on a field
   sortBy: (arr, field, direction='asc') ->
     reverse = (direction is 'desc')
-    sortFn = (a, b) -> 
-      if a[field] < b[field] 
+    sortFn = (a, b) ->
+      if a[field] < b[field]
         out = -1
       else if a[field] > b[field]
-        out = 1 
-      else 
+        out = 1
+      else
         out = 0
       return out*[1,-1][+!!reverse]
 
     return arr.sort sortFn
-    
+
 
   float: (value) ->
     throw new TypeError "Invalid value passed to float formatter: #{value}" unless value?
@@ -167,6 +159,3 @@ define 'extensions/rivets/formatters',
 
     # Format value
     value.toFixed(2).toString().replace '.', ','
-
-  currency: (value) ->
-    'R$ ' + rivets.formatters.float value

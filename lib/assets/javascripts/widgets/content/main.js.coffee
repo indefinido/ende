@@ -25,6 +25,12 @@ define ->
 
     throw new TypeError "content.initialize: No uri provided to load content" unless normalized_options.uri?
 
+    # In the case of instantiating the widget without uri
+    #
+    # TODO create a event listener that executes only one time and
+    # store the uri on first load
+    @options.uri         ||= normalized_options.uri
+
     normalized_options.url = normalized_options.uri
     delete normalized_options.uri
 
