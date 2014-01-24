@@ -12,9 +12,10 @@ define 'aura/extensions/rivets', ['extensions/rivets/formatters'], (formatters)-
 
   observable_configuration = require 'indefinido-observable/lib/adapters/rivets'
 
+  extend rivets.formatters, formatters
+
   rivets.configure observable_configuration
   rivets.configure
-    formatters: formatters
     templateDelimiters: ['{{', '}}']
 
   # Custom rivets view because we don't want to prefix attributes
