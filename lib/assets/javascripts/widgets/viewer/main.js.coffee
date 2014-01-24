@@ -124,7 +124,7 @@ define [
     viewed: (event, in_view, horizontal, vertical) ->
       boo[if in_view then 'pride' else 'shame'] event.target
 
-  version: '0.2.0'
+  version: '0.2.1'
 
   # TODO better separation of concerns
   # TODO Current remote page that is beign displayed
@@ -199,7 +199,10 @@ define [
       # use it here instead of pushing each record
       viewer.items = records
 
-    @fetching.then (records) =>
+      # Start widgets created by bindings
+      @syncronize_children()
+
+    @fetching.done (records) =>
       if viewer.items.length
         # boo.initialize @$el.find '.results .items'
         @$el.addClass 'filled'
@@ -208,9 +211,6 @@ define [
         # TODO implement state support for viewer widget
         @$el.addClass 'empty'
         @$el.removeClass 'filled'
-
-      # Start widgets that may have been created by bindings
-      @sandbox.start @$el
 
       @sandbox.emit "viewer.#{@identifier}.populated", records
 
@@ -269,7 +269,8 @@ define [
       @bind @presentation, @presenter.presentation
 
       # Start widgets that may have been created by bindings
-      @sandbox.start @$el
+      @sandbox.emit 'aura.sandbox.start', @sandbox
+      @syncronize_children()
 
       @handles 'click', 'back', '.back'
 
@@ -287,6 +288,26 @@ define [
     scrollable widget: @ if options.scroll
     scopable   @         if options.scope or options.scopable
 
+  # TODO move this method to an extension
+  syncronize_children: ->
+    @sandbox._children ||= []
+
+    # Add possible new childs
+    @constructor.startAll(@$el).done (widgets...) =>
+      for widget in widgets
+        widget.sandbox._widget = widget
+        widget.sandbox._parent = @sandbox
+
+      @sandbox._children = @sandbox._children.concat widgets
+
+    # TODO better internal aura widget selection
+    # Prevent other child to be instantiated
+    @$el.find('[data-aura-widget]').each (i, element) ->
+      current = element.getAttribute 'data-aura-widget'
+      element.removeAttribute 'data-aura-widget'
+      element.setAttribute 'aura-widget', current
+
+  # TODO move this method to an extension
   # TODO listen for future parent presentation changes
   inherit_parent_presentation: ->
     return unless view = @sandbox?._parent?._view
