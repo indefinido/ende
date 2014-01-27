@@ -13,9 +13,13 @@ define [
   stampit    ||= require 'stampit/stampit'
 
   scopable = (widget) ->
+    deferred = widget.sandbox.data.deferred()
+
     # TODO add widget plug-in as an extension for a widget
     require ['widgets/viewer/plugins/scopable'], (scopable) ->
-      scopable widget
+      deferred.resolveWith scopable, [scopable widget]
+
+    deferred
 
   paginable = stampit
     flip_to: (page) ->
@@ -167,6 +171,9 @@ define [
 
     @sandbox.emit "viewer.#{@identifier}.scope_changed", @scope
 
+    @view?.update
+      scope_data: observable scope.scope.data
+
     @repopulate()
 
   repopulate: ->
@@ -254,7 +261,7 @@ define [
 
       @load.stop()
 
-      @presentation = @presenter records
+      @presentation = @presenter records, @scope
 
       @$el.html templates[@options.resource]
 
@@ -283,10 +290,13 @@ define [
 
 
   plugins: (options) ->
+    deferreds = []
 
-    paginable  widget: @ if options.page
-    scrollable widget: @ if options.scroll
-    scopable   @         if options.scope or options.scopable
+    deferreds.push paginable  widget: @ if options.page
+    deferreds.push scrollable widget: @ if options.scroll
+    deferreds.push scopable   @         if options.scope or options.scopable
+
+    @sandbox.data.when deferreds...
 
   # TODO move this method to an extension
   syncronize_children: ->
@@ -349,10 +359,14 @@ define [
     @sandbox.on "viewer.#{@identifier}.scope", @scope_to, @
 
     # Iniitalize plugins
-    @plugins options
+    loading = @plugins options
 
     @$el.addClass "viewer widget #{cssify @identifier} idle clearfix"
 
+    loading.done =>
+      @require_custom options
+
+  require_custom: (options) ->
     # Fetch custom templates
     # TODO better custom templates structure and custom presenter
     # TODO better segregation of concerns on this code
