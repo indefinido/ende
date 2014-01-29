@@ -182,7 +182,7 @@ define [
         @load.stop()
         @load = null
     else
-      @fetching?.abort()
+      @fetching?.abort?()
 
     # TODO store spinner instance, instead of creating a new one every time
     unless @load?
