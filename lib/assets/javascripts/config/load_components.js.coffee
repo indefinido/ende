@@ -1,6 +1,5 @@
 #= require require/require
 #= require build
-#= require ./jquery
 # TODO Move this file outside the initializers folder
 
 root = exports ? this
@@ -9,14 +8,18 @@ root = exports ? this
 # it and globalize it, because aurajs does not know we are using
 # component.io loader and thinks jquery must be shipped within it
 # TODO think in away to not use a global jquery
-try
-  root.jQuery = root.$ = require 'component-jquery'
-catch e
+# try
+#   root.jQuery = root.$ = require 'component-jquery'
+# catch e
   # jQuery was not included in the component build, soo the application will fallback to the
   # jquery builded in aurajs
 
+define 'jquery', [], -> require 'component-jquery'
+root.jQuery = root.$ = require 'component-jquery'
+
 # This may be included in build, and loaded before aurajs requires for them
 # TODO also preload underscorejs
+# define 'underscore', require 'lodash'
 # TODO also preload eventemitter2
 # TODO also preload require-jstext
 

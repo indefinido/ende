@@ -171,8 +171,9 @@ define [
 
     @sandbox.emit "viewer.#{@identifier}.scope_changed", @scope
 
-    @view?.update
-      scope_data: observable scope.scope.data
+    if @view? and scope.scope?.data
+      @view.update
+        scope_data: observable scope.scope.data
 
     @repopulate()
 

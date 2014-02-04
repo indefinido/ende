@@ -1,7 +1,7 @@
-root = exports ? @
-
-# TODO figure out a better place to put the crsft token initialization
-# root.$.ajaxSetup
-#   beforeSend: (xhr) ->
-#     token = $('meta[name="csrf-token"]').attr('content')
-#     xhr.setRequestHeader 'X-CSRF-Token', token
+require ['jquery'], ($) ->
+  # TODO use prefilter instead of beforeSend
+  # $.ajaxPrefilter(function(options, originalOptions, xhr){ if ( !options.crossDomain ) { rails.CSRFProtection(xhr); }});
+  $.ajaxSetup
+    beforeSend: (xhr) ->
+      token = $('meta[name="csrf-token"]').attr('content')
+      token and xhr.setRequestHeader 'X-CSRF-Token', token

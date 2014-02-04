@@ -2,15 +2,10 @@ define 'aura/extensions/loader', ->
 
   'use strict';
 
-  try
-    Spinner = require 'seminovos/vendor/assets/javascripts/spin/spin'
-  catch e
-    Spinner = require 'modacad/vendor/assets/javascripts/spin/spin'
-
+  Spinner = null
 
   (application) ->
-    core     = application.core
-    mediator = core.mediator
+    {core}     = application
 
     loader =
 
@@ -41,8 +36,17 @@ define 'aura/extensions/loader', ->
         new Spinner(core.util.extend {}, @options, options).spin target[0]
 
     name: 'loader'
+    version: '0.1.0'
     initialize: (application) ->
-      core.ui ||= {}
-      application.sandbox.ui = core.ui
-      core.ui.loader = ->
-        loader.create arguments...
+      {sandbox}   = application
+
+      # TODO add a default spinner on ende, and add application load
+      # paths
+      try
+        Spinner = require 'seminovos/vendor/assets/javascripts/spin/spin'
+      catch e
+        Spinner = require 'modacad/vendor/assets/javascripts/spin/spin'
+
+      # Extend application
+      sandbox.ui = core.util.extend sandbox.ui, loader: -> loader.create arguments...
+      core.ui    = core.util.extend core.ui   , loader: -> loader.create arguments...
