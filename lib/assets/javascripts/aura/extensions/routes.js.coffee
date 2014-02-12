@@ -5,6 +5,7 @@ define 'aura/extensions/routes', (routes) ->
   # TODO Remove .call null
   # TODO Remove .call null
   loader.require.call null, 'modernizr'
+  # TODO rename from ened to ende
   loader.require.call null, 'ened/vendor/assets/javascripts/lennon/lennon.js'
   query  = loader.require.call null, 'querystring'
   router = null
@@ -28,17 +29,21 @@ define 'aura/extensions/routes', (routes) ->
         # TODO method parsing (get, delete, put, post)
         mediator.emit name, params
 
-    router.location = (href, process = true) ->
-      if Modernizr.history
-        window.history.pushState null, null, href
-      else
-        # TODO parse href and extract path!
-        window.location.hash = href
+    lennon_extensions =
+      location: (href, process = true) ->
+        if Modernizr.history
+          window.history.pushState null, null, href
+        else
+          # TODO parse href and extract path!
+          window.location.hash = href
 
-      process and router.process()
+        process and router.process()
+
+      define: ->
+        return false
 
 
-    application.core.router = router
+    application.core.router = core.util.extend router, lennon_extensions
 
     location = Object.create null,
       # TODO cache query parsing
@@ -53,5 +58,5 @@ define 'aura/extensions/routes', (routes) ->
       application.sandbox.location = location
 
     afterAppStart: (application) ->
-      router.process()
+      # router.process()
 

@@ -7,7 +7,8 @@ define [
   '/assets/jquery/inview',
   'stampit/stampit'], (templates, presenter, inview, stampit) ->
 
-  observable   = require('indefinido-observable').mixin
+  observable   = require('observable').mixin
+  advisable    = require('advisable').mixin
 
   # TODO define componentjs required packages, as requirejs packages
   stampit    ||= require 'stampit/stampit'
@@ -158,7 +159,7 @@ define [
 
     # We extend presentation.selected just to assign all values of the item model
     # TODO call presenter to do this job
-    @sandbox.util.extend @presentation.selected   , item.model
+    @sandbox.util.extend @presentation.selected   , item.model.json?() || item.model
     @sandbox.emit "viewer.#{@identifier}.selected", item.model
 
   scope_to: (scope, child_scope) ->
@@ -171,6 +172,7 @@ define [
 
     @sandbox.emit "viewer.#{@identifier}.scope_changed", @scope
 
+    # TODO better scope data binding, and updating
     if @view? and scope.scope?.data
       @view.update
         scope_data: observable scope.scope.data
@@ -220,7 +222,7 @@ define [
         @$el.addClass 'empty'
         @$el.removeClass 'filled'
 
-      @sandbox.emit "viewer.#{@identifier}.populated", records
+      @sandbox.emit "viewer.#{@identifier}.populated", records, @
 
     @fetching.always =>
       # TODO implement status for viewer widget
@@ -282,7 +284,7 @@ define [
 
       @handles 'click', 'back', '.back'
 
-      @sandbox.emit "viewer.#{@identifier}.populated", records
+      @sandbox.emit "viewer.#{@identifier}.populated", records, @
 
 
     deferred.fail =>
@@ -319,9 +321,50 @@ define [
       element.setAttribute 'aura-widget', current
 
   # TODO move this method to an extension
-  # TODO listen for future parent presentation changes
   inherit_parent_presentation: ->
     return unless view = @sandbox?._parent?._view
+    advisable view unless view.after?
+
+    # TODO move this method to sandbox
+    isDescendant = (parent, child) ->
+      node = child.parentNode
+
+      while (node != null)
+        return true if (node == parent)
+        node = node.parentNode
+
+      false
+
+    inherited = []
+    # Copy default models
+    # TODO think if its a good idea to notify about model name conflicts
+    for name, model of view.models when not @presentation[name] # By default do not override child models with parent models
+      @presentation[name] = model
+      inherited.push name
+
+    # TODO store bindings instead of searching every time
+    for binding in view.bindings when binding.iterated
+      for subview in binding.iterated
+        if isDescendant subview.els[0], @$el.get(0)
+          for name, model of subview.models when not @presentation[name]
+            advisable subview
+            @presentation[name] = model
+            inherited.push name
+
+          break
+
+    # Schedule update of copied models
+    view.after 'update', (models) =>
+      @update_inherited_models view, models, inherited
+
+    subview.after 'update', (models) =>
+      @update_inherited_models view, models, inherited
+
+    true
+
+  update_inherited_models: (parent, models, inherited) ->
+    # Only update inherited models
+    models = @sandbox.util._.pick models, inherited
 
     isDescendant = (parent, child) ->
       node = child.parentNode
@@ -332,24 +375,23 @@ define [
 
       false
 
-    models = {}
     # Copy default models
     # TODO think if its a good idea to notify about model name conflicts
-    for name, model of view.models
-      @presentation[name] ||= model # By default do not child models with parent models
+    for name, model of models
+      @presentation[name] = model
 
-    for binding in view.bindings
-      # Copy each binding models
-      if binding.iterated
-        for view in binding.iterated
-          if isDescendant view.els[0], @$el.get(0)
-            for name, model of view.models
-              @presentation[name] ||= model
+    @view.update models
 
-            break
+    # TODO store bindings instead of searching every time
+    for binding in parent.bindings when binding.iterated
+      for subview in binding.iterated
+        if isDescendant subview.els[0], @$el.get(0)
+          models = @sandbox.util._.pick subview.models, inherited
+          @view.update models
+          @presentation[name] = model for model in models
+          break
 
     true
-
 
   initialize: (options) ->
     # TODO import core extensions in another place

@@ -1,8 +1,8 @@
 {
   "name": "rivets",
   "repo": "mikeric/rivets",
-  "description": "Declarative data binding + templating solution.",
-  "version": "0.6.5",
+  "description": "Declarative data binding facility.",
+  "version": "0.5.12",
   "keywords": [
     "data binding",
     "templating"

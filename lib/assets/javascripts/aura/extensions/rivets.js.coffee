@@ -16,6 +16,7 @@ define 'aura/extensions/rivets', ['extensions/rivets/formatters'], (formatters)-
 
   rivets.configure observable_configuration
   rivets.configure
+    prefix: ''
     templateDelimiters: ['{{', '}}']
 
   # Custom rivets view because we don't want to prefix attributes

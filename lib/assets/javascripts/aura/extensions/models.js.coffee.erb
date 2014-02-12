@@ -61,7 +61,7 @@ define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
     core.resource = core.model  = sandbox.resource = sandbox.model = (name) ->
       # TODO use a Map internally in indemma
       model = indemma.model[name]
-      throw new Error unless model?
+      throw new TypeError "resources: Resource was not defined: #{name}" unless model?
       model
 
     # TODO rename core.models and core.domain, to core.resources, completely

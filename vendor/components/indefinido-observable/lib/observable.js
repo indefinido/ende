@@ -152,10 +152,28 @@ if (requiresDomElement) {
 
 
 observable.unobserve = function (object) {
-    var property;
+  var name, value, subname;
 
-  for (property in mixin) {
-    delete object[property];
+  // TODO remove root setter and root getter and callbacks from
+  // callback thread
+
+  // Remove mixed in properties
+  for (name in mixin) {
+    delete object[name];
+  }
+
+  // Remove array properties overrides
+  for (name in object) {
+    value = object[name];
+    if ($.type(value) == 'array') {
+      delete value.thread;
+      delete value.object;
+      delete value.key;
+
+      for (subname in mutations.overrides) {
+        delete value[subname];
+      }
+    }
   }
 
   delete object.observed;
@@ -255,14 +273,18 @@ generator = {
 
         new_array.thread = array.thread;
         new_array.object = array.object;
-        new_array.key = keypath;
+        new_array.key    = keypath;
 
         while (i--) {
           // TODO remove jquery dependency
-          type = $.type(arguments[i]);
+          type = $.type(new_array[i]);
           if (!new_array[i].observed
-              && (type != 'object' || type != 'array')) {
+
+              // Recursivelly convert objects and arrays to observables
+              && (type == 'object' || type == 'array')) {
+
             new_array[i] = observable(new_array[i]);
+
           }
         }
 

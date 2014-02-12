@@ -1,12 +1,11 @@
 {
   "name": "ened",
   "repo": "indefinido/ened",
-  "description": "Core web application functionality",
-  "version": "0.0.1",
+  "description": "Core web application functionacility",
+  "version": "0.1.0",
   "keywords": [],
   "dependencies": {
-    "mikeric/rivets": "*",
-    "KapIT/observe-utils": "*",
+    "mikeric/rivets": "v0.5.12",
     "segmentio/extend": "*",
     "pluma/assimilate": "*",
     "paulmillr/es6-shim": "*",

@@ -35,48 +35,53 @@ define 'aura/extensions/states', ['application/states'], (states) ->
         unormalized_widget_options = states[transition.to]
 
         # TODO cache rendered widgets!
-
         if unormalized_widget_options
-          widgets = []
-
-          for name, options of unormalized_widget_options
-            widget_name        = options.name || name
-            options.resource ||= name                 unless name == widget_name
-
-            # To allow user controlling the application change the
-            # widget configuration at runtime, we check the transition
-            # for widget options
-            widgets.push
-              name: widget_name
-              options: core.util.extend transition[widget_name], options
-
-            # TODO document why we delete this?
-            delete options.name
+          widgets_options = @normalize_widget_options unormalized_widget_options, transition
 
           # TODO update aura and use native start method
-          # {domain}  = application
-          # injection = core.inject(widgets).fail flow.failed
-          core.inject(widgets).fail flow.failed
+          # TODO move this logic to a domain extension
+          {domain}  = application
 
-          #domain?[transition.to]?.ready = injection.done
+          injection = core.inject(widgets_options).fail flow.failed
+
+          domain?[transition.to]?.ready ||= injection.done
 
           # To prevent reinstation upon changing to this state for the
           # second time, delete stored configuration for this state
           delete states[transition.to]
 
+      normalize_widget_options: (unormalized_widget_options, transition_widgets_options) ->
+        widgets = []
+
+        for name, options of unormalized_widget_options
+          widget_name        = options.name || name
+          options.resource ||= name                 unless name == widget_name
+
+          # To allow user controlling the application change the
+          # widget configuration at runtime, we check the transition
+          # for widget options
+          widgets.push
+            name: widget_name
+            options: core.util.extend transition_widgets_options[widget_name], options
+
+          # TODO document why we delete this?
+          delete options.name
+
+        widgets
 
       failed: (exception) ->
         logger.error "states.flow.failed: Failed autostarting widget! \n Message: #{exception.message}", exception
 
 
-    version: '0.2.2'
+    version: '0.2.3'
 
     initialize: (application) ->
       mediator.on 'state.change' , state.change
       mediator.on 'state.changed', state.changed
 
       # TODO load widgets before state.changed, load on state.change
-      mediator.on 'state.changed', flow.changed
+      # TODO use function hanlder
+      mediator.on 'state.changed', -> flow.changed arguments...
 
       # TODO better integration with router to remove initial states widgets
       mediator.on 'states.list', ->
