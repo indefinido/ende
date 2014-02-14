@@ -3,7 +3,7 @@ define ['./states/index', './presenter'], (templates, presenter) ->
   # If some extension provides you can use the type defined in there
   # to extend your widget. Defaults to Base constructor.
   #
-  # type: 'Base'
+  type: 'Base'
 
 
   # TODO add support for authentication keys

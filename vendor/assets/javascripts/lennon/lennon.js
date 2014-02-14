@@ -41,6 +41,8 @@
 
                 if ( !initialized ) {
 
+                    router.routes = routes
+
                     $(document).on('click', options.linkSelector, function() {
                         var $this = $(this),
                             href = $this.attr('href');

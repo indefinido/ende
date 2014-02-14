@@ -17,6 +17,7 @@ end.compact!
 models_list.each do |model_file|
   require_asset model_file
 end
+
 %>
 
 'use strict'
@@ -61,7 +62,7 @@ define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
     core.resource = core.model  = sandbox.resource = sandbox.model = (name) ->
       # TODO use a Map internally in indemma
       model = indemma.model[name]
-      throw new TypeError "resources: Resource was not defined: #{name}" unless model?
+      throw new TypeError unless model?
       model
 
     # TODO rename core.models and core.domain, to core.resources, completely

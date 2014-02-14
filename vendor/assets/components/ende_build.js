@@ -27469,6 +27469,8 @@ require.register("ened/vendor/assets/javascripts/lennon/lennon.js", function(exp
 
                 if ( !initialized ) {
 
+                    router.routes = routes
+
                     $(document).on('click', options.linkSelector, function() {
                         var $this = $(this),
                             href = $this.attr('href');
