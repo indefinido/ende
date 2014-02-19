@@ -1,4 +1,3 @@
-requirejs.config({
-  baseUrl: '/assets'
-  waitSeconds: 15
-});
+define 'config/initializers/requirejs', ->
+  requirejs.config
+    waitSeconds: 15

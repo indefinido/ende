@@ -89,7 +89,7 @@ define 'aura/extensions/routes', (routes) ->
 
 
         #-- No route has been found, hence, nothing dispatched
-        application.logger.warn('No route dispatched')
+        application.logger.warn 'No route dispatched'
 
       location: (href, process = true) ->
         # TODO load router depending of history api

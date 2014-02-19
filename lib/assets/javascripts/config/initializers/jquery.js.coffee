@@ -1,4 +1,4 @@
-require ['jquery'], ($) ->
+define 'config/initializers/jquery', ['jquery'], ($) ->
   # TODO use prefilter instead of beforeSend
   # $.ajaxPrefilter(function(options, originalOptions, xhr){ if ( !options.crossDomain ) { rails.CSRFProtection(xhr); }});
   $.ajaxSetup
