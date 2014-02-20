@@ -1,8 +1,6 @@
-# TODO bettter require
-stampit    = require 'indefinido-indemma/vendor/stampit.js'
-observable = require('observable').mixin
+'use strict';
 
-define ->
+define ['stampit', 'observable'] (stampit, observable) ->
 
   handlers =
     adapter_loaded: (composable) ->

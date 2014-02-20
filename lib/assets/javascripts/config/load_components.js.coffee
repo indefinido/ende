@@ -37,7 +37,8 @@ define 'config/load_components', ['build'], ->
       loader.require.s       = requirejs.s
 
     initialize: ->
-      extend = require 'segmentio-extend'
+      with_component = 'segmentio-extend'
+      extend = require with_component
       extend loader.require, require
 
       # Override global require for ower one

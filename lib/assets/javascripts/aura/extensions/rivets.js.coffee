@@ -1,16 +1,15 @@
-#= require 'aura/extensions/rivets/formatters'
+'use strict';
 
-define 'aura/extensions/rivets', ['extensions/rivets/formatters'], (formatters)->
+define 'aura/extensions/rivets', ->
 
-  'use strict';
+  formatters     = null
+  extend         = null
+  with_component = 'mikeric-rivets/dist/rivets'
+  rivets         = require with_component
+  Rivets         = rivets._
 
-  extend = require 'segmentio-extend'
-
-  rivets = require 'mikeric-rivets/dist/rivets'
-
-  Rivets = rivets._
-
-  observable_configuration = require 'indefinido-observable/lib/adapters/rivets'
+  with_component           = 'indefinido-observable/lib/adapters/rivets'
+  observable_configuration = require with_component
 
   extend rivets.formatters, formatters
 
@@ -217,34 +216,44 @@ define 'aura/extensions/rivets', ['extensions/rivets/formatters'], (formatters)-
           el.value = if value? then value else ''
 
 
-  (application) ->
-    version: '0.1.0'
+  require:
+    paths:
+      formatters: 'extensions/rivets/formatters'
 
-    initialize: (application) ->
-      observable = require('observable').mixin
+  version: '0.1.1'
 
-      # TODO implement small view interface
-      original_bind = rivets.bind
-      rivets.bind = (selector, presentation) ->
-        for name, model of presentation
-          unless model?
-            console.warn "Model object not specified for key #{name}"
-            model = {}
+  initialize: (application) ->
+    with_aura      = 'formatters'
+    formatters     = require with_aura
 
-          presentation[name] = observable model unless model.observed?
+    with_component = 'observable'
+    observable     = require with_component
 
-        original_bind.apply rivets, arguments
+    with_component = 'segmentio-extend'
+    extend         = require with_component
 
-      extend application.sandbox,
-        view: rivets
+    # TODO implement small view interface
+    original_bind = rivets.bind
+    rivets.bind = (selector, presentation) ->
+      for name, model of presentation
+        unless model?
+          console.warn "Model object not specified for key #{name}"
+          model = {}
 
-      extend application.core.Widgets.Base.prototype,
-        bind: (presentation, options) ->
-          if presentation.presented
-            presented = presentation.presented
-            delete presentation.presented
+        presentation[name] = observable model unless model.observed?
 
-          @sandbox._view = @view = rivets.bind @$el, presentation, options
+      original_bind.apply rivets, arguments
 
-          presented(@view) if presented?
+    extend application.sandbox,
+      view: rivets
+
+    extend application.core.Widgets.Base.prototype,
+      bind: (presentation, options) ->
+        if presentation.presented
+          presented = presentation.presented
+          delete presentation.presented
+
+        @sandbox._view = @view = rivets.bind @$el, presentation, options
+
+        presented(@view) if presented?
 
