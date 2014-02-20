@@ -38,14 +38,8 @@ define 'aura/extensions/loader', ->
     name: 'loader'
     version: '0.1.0'
     initialize: (application) ->
-      {sandbox}   = application
-
-      # TODO add a default spinner on ende, and add application load
-      # paths
-      try
-        Spinner = require 'seminovos/vendor/assets/javascripts/spin/spin'
-      catch e
-        Spinner = require 'modacad/vendor/assets/javascripts/spin/spin'
+      {sandbox} = application
+      Spinner   = require 'spin/spin'
 
       # Extend application
       sandbox.ui = core.util.extend sandbox.ui, loader: -> loader.create arguments...

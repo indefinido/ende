@@ -2,6 +2,7 @@ define 'aura/extensions/widget/eventable', ->
 
   'use strict';
 
+  # TODO think how to resolve conflict between componentjs and r.js optmizer
   extend = require 'segmentio-extend'
 
   extractor = /.*?\$(.*?)@(.*?)\+(.*?)/
