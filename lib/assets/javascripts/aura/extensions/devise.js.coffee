@@ -1,6 +1,6 @@
 root = exports ? this
 
-define 'aura/extensions/devise', () ->
+define 'aura/extensions/devise', ->
 
   'use strict'
 
@@ -40,7 +40,10 @@ define 'aura/extensions/devise', () ->
         @_id = id
         promise
 
-      user_session.route = "/#{user_session.resource}s/sessions"
+      # TODO create an indemma model
+      Object.defineProperty user_session, 'route',
+        value: "/#{user_session.resource}s/sessions"
+        configurable: true
 
       user_session
 
@@ -263,7 +266,7 @@ define 'aura/extensions/devise', () ->
 
   # Extension definition
   name: 'devise'
-  version: '1.0.1'
+  version: '1.0.2'
   initialize: (application) ->
     {core, sandbox} = application
     {mediator} = core
@@ -274,7 +277,10 @@ define 'aura/extensions/devise', () ->
         mediator.emit 'action.unauthorized', sandbox.current_user unless session.restoring
 
     # Define api
-    Object.defineProperty sandbox, 'current_user',
+    #
+    # TODO ask aura to use Object.create to instantiate a new
+    # application, and remove access to the global window.app object
+    Object.defineProperty window.app.sandbox, 'current_user',
       set: (user) -> session.current_user = user
       get: -> session.current_user
 

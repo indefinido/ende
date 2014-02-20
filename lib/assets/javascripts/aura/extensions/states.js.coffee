@@ -98,7 +98,9 @@ define 'aura/extensions/states', ['application/states'], (states) ->
           console.warn 'Getting state through the core object is no longer supported. Use application.state instead.'
           application.state
 
-      Object.defineProperty application, 'state',
+      # TODO ask aura to use Object.create when instantiating a new
+      # application and stop accessing the global object
+      Object.defineProperty window.app, 'state',
         set: (to) ->
           # To use a unified internal api, transform the setter call
           # into the transition api

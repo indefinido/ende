@@ -357,7 +357,7 @@
         // isNaN is broken: it converts its argument to number, so
         // isNaN('foo') => true
         return value !== value;
-      },
+      }
 
     });
 
