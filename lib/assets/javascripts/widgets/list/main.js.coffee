@@ -1,12 +1,14 @@
 # = require lunr/lunr
 
+'use strict';
+
 # TODO reconstruir usando https://github.com/javve/list.js
 define ['./states/index', './presenter'], (templates, presenter) ->
 
   # TODO move lunar and lunr to an extension
   luna =
     index : null
-    store : Map()
+    store : new Map()
     fields: ['name', 'description']
     sandbox:
       search:
