@@ -20,7 +20,7 @@ define ->
 
     @$el.addClass ['tray', 'widget'].concat(names).join(' ')
 
-    @identifier = options.identifier
+    @identifier ||= identifier
 
     # TODO find a way to build the id based on content
     if identifier?
