@@ -1,6 +1,6 @@
 root = exports ? this
 
-define 'config/load_components', ['build'], ->
+define 'config/load_components', ['ende_build'], ->
 
   # if jQuery is already included in the default build, we need to load
   # it and globalize it, because aurajs does not know we are using
