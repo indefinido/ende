@@ -4,10 +4,10 @@ define [
   './states/index',
   './presenters/default',
   './presenters/default',
-  '/assets/jquery/inview',
-  'stampit/stampit'], (templates, presenter, inview, stampit) ->
+  'jquery_inview',
+  'stampit/stampit',
+  'observable'], (templates, presenter, inview, stampit, observable) ->
 
-  observable   = require('observable').mixin
   advisable    = require('advisable').mixin
 
   # TODO define componentjs required packages, as requirejs packages

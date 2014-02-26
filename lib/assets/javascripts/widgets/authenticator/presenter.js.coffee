@@ -1,6 +1,7 @@
 'use strict'
-define ->
-  observable = require('observable').mixin
+
+lazy_require = 'observable'
+define [lazy_require], (observable) ->
 
   (authenticator, recoverer, base) ->
 

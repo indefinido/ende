@@ -1,8 +1,8 @@
+'use strict'
+
 root = exports ? this
 
-define 'aura/extensions/devise', () ->
-
-  'use strict'
+define 'aura/extensions/devise', ->
 
   sandbox  = null
   mediator = null

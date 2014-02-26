@@ -84,9 +84,13 @@ define ->
   initialize: (options) ->
     @sandbox.logger.log "initialized!"
 
-    # TODO integrate component and requirejs
-    dialog  = require('dialog').Dialog
-    overlay = require 'component-overlay'
+    # TODO integrate component and requirejs in a more consize way
+    with_component = 'dialog'
+    dialog  = require(with_component).dialog
+
+    with_component = 'component-overlay'
+    overlay = require with_component
+
     @sandbox.util.extend dialog.prototype, dialog_extensions
 
     # Initialize fundamental style

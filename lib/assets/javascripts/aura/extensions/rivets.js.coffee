@@ -2,14 +2,18 @@
 
 define 'aura/extensions/rivets', ->
 
-  formatters     = null
-  extend         = null
-  with_component = 'mikeric-rivets/dist/rivets'
-  rivets         = require with_component
-  Rivets         = rivets._
+  formatters               = null
+  extend                   = null
+
+  with_component           = 'mikeric-rivets/dist/rivets'
+  rivets                   = require with_component
+  Rivets                   = rivets._
 
   with_component           = 'indefinido-observable/lib/adapters/rivets'
   observable_configuration = require with_component
+
+  with_component = 'segmentio-extend'
+  extend         = require with_component
 
   extend rivets.formatters, formatters
 
@@ -218,7 +222,7 @@ define 'aura/extensions/rivets', ->
 
   require:
     paths:
-      formatters: 'extensions/rivets/formatters'
+      formatters: 'aura/extensions/rivets/formatters'
 
   version: '0.1.1'
 
@@ -228,9 +232,6 @@ define 'aura/extensions/rivets', ->
 
     with_component = 'observable'
     observable     = require with_component
-
-    with_component = 'segmentio-extend'
-    extend         = require with_component
 
     # TODO implement small view interface
     original_bind = rivets.bind

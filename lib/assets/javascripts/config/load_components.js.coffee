@@ -12,8 +12,12 @@ define 'config/load_components', ['ende_build'], ->
     # jQuery was not included in the component build, soo the application will fallback to the
     # jquery builded in aurajs
 
-  define 'jquery', [], -> require 'component-jquery'
+  define 'jquery', require 'component-jquery'
   root.jQuery = root.$ = require 'component-jquery'
+
+#  Object.defineProperty window, 'jQuery',
+#    get: -> require 'component-jquery'
+#    set: -> debugger
 
   # This may be included in build, and loaded before aurajs requires for them
   # TODO also preload underscorejs
