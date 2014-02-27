@@ -28556,7 +28556,6 @@ require.register("ened/vendor/assets/javascripts/jquery/inview.js", function(exp
   setInterval(checkInView, 250);
 })(jQuery);
 });
-<<<<<<< HEAD
 require.register("ened/vendor/assets/javascripts/jquery/inputmask.js", function(exports, require, module){
 /**
 * @license Input Mask plugin for jquery
@@ -30475,7 +30474,7 @@ Optional extensions on the jquery.inputmask base
         }
     });
 })(jQuery);
-=======
+});
 require.register("ened/vendor/assets/javascripts/shims/es6-map-shim.js", function(exports, require, module){
 /**
  * Copyright 2012 Eric Wendelin - MIT License
@@ -30733,7 +30732,6 @@ require.register("ened/vendor/assets/javascripts/shims/es6-map-shim.js", functio
     window.Map = module.Map = window.Map || Map;
 }.call(this, window));
 
->>>>>>> master
 });
 require.alias("mikeric-rivets/dist/rivets.js", "ened/deps/rivets/dist/rivets.js");
 require.alias("mikeric-rivets/dist/rivets.js", "ened/deps/rivets/index.js");
