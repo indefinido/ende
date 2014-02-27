@@ -1,31 +1,51 @@
 root = exports ? this
 
-define 'config/load_components', ['ende_build'], ->
+# Prevent aura from defining jquery erroniously
+define 'jquery'    , ['config/load_components'], -> require 'component-jquery'
+# TODO define 'underscore', ['config/load_components'], -> require 'lodash'
 
-  # if jQuery is already included in the default build, we need to load
-  # it and globalize it, because aurajs does not know we are using
-  # component.io loader and thinks jquery must be shipped within it
-  # TODO think in away to not use a global jquery
-  # try
-  #   root.jQuery = root.$ = require 'component-jquery'
-  # catch e
-    # jQuery was not included in the component build, soo the application will fallback to the
-    # jquery builded in aurajs
+# TODO figure out how to use rjs optmizer to include component builds
+# Use call method to avoid optmization at all
+define 'ende_components', ['ende_build'], {}
+define 'application_components', ['ende_components', 'build'], {}
 
-  define 'jquery', require 'component-jquery'
-  root.jQuery = root.$ = require 'component-jquery'
+requirejs.config
+  shim:
+    build:
+      # FIXME check that the build was loaded in a more elegant way
+      # probably create a undefined plug-in for component builder
+      exports: 'require.modules.seminovos/vendor/loaded'
+      deps: ['ende_build']
+    ende_build:
+      exports: 'require.register'
 
-#  Object.defineProperty window, 'jQuery',
-#    get: -> require 'component-jquery'
-#    set: -> debugger
+# In order to start, application and ende components must be loaded
+define 'config/load_components', ['application_components'], ->
+
+  # TODO remove and use r.js optmizer wrapShim option, when
+  # optimizer gets updated
+  define 'jquery.inview'                  , ['jquery'], ->
+    require 'ened/vendor/assets/javascripts/jquery/inview.js'
+
+  define 'jquery.mask'                    , ['jquery'], ->
+    inner_lazy_require = 'ened/vendor/assets/javascripts/jquery/inputmask.js'
+    require inner_lazy_require
+
+  define 'jquery.mask_extensions'         , ['jquery'], ->
+    inner_lazy_require = 'ened/vendor/assets/javascripts/jquery/inputmask.extensions.js'
+    require inner_lazy_require
+
+  define 'jquery.mask_numeric_extensions' , ['jquery'], ->
+    inner_lazy_require = 'ened/vendor/assets/javascripts/jquery/inputmask.numeric.extensions.js'
+    require inner_lazy_require
+
+  # Object.defineProperty window, 'jQuery',
+  #   get: -> require 'component-jquery'
+  #   set: -> debugger
 
   # This may be included in build, and loaded before aurajs requires for them
-  # TODO also preload underscorejs
-  # define 'underscore', require 'lodash'
   # TODO also preload eventemitter2
   # TODO also preload require-jstext
-
-  # TODO!! Try to improve requirejs and components require integration
 
   # Little object class to merge component require and requirejs require
   loader =

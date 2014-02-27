@@ -3,10 +3,8 @@
 # TODO implement default presenter
 # define ['aura/presenterable'], (presenterable) ->
 #  presenterable()
-# TODO move observable to requirejs
-observable = require('observable').mixin
-
-define ['stampit/stampit'], (stampit) ->
+lazy_require = 'observable'
+define ['stampit/stampit', lazy_require], (stampit, observable) ->
 
   itemable = stampit().enclose -> observable @
 

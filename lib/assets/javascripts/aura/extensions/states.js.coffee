@@ -1,6 +1,6 @@
-define 'aura/extensions/states', ['application/states'], (states) ->
+'use strict'
 
-  'use strict'
+define 'aura/extensions/states', ['application/states'], (states) ->
 
   (application) ->
     {core, logger}  = application

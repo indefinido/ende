@@ -7,27 +7,26 @@ define 'aura/extensions/mask',
   require:
     paths:
       jquery: true
-      mask: 'jquery/inputmask'
-      mask_extensions: 'jquery/inputmask.extensions'
-      mask_numeric_extensions: 'jquery/inputmask.numeric.extensions'
+      'jquery.mask': true
+      'jquery.mask_extensions': true
+      'jquery.mask_numeric_extensions': true
     shim:
       # TODO implement exports option to check for properties
-      mask_extensions: ['mask']
-      mask_numeric_extensions: ['mask', 'mask_extensions']
+      'jquery.mask_extensions': ['jquery.mask']
+      'jquery.mask_numeric_extensions': ['jquery.mask', 'jquery.mask_extensions']
 
   initialize: (application) ->
     {core, sandbox} = application
 
-    $ = require 'jquery'
-
-    with_aura = 'mask'
+    with_aura = 'jquery.mask'
     require with_aura
 
-    with_aura = 'mask_extensions'
+    with_aura = 'jquery.mask_extensions'
     require with_aura
 
-    with_aura = 'mask_numeric_extensions'
+    with_aura = 'jquery.mask_numeric_extensions'
     require with_aura
+
 
     mask = (selector, mask, options) -> $(selector).inputmask mask, options
 

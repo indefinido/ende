@@ -1,6 +1,7 @@
 'use strict';
 
-define ['stampit', 'observable'] (stampit, observable) ->
+lazy_require = 'observable'
+define ['stampit/stampit', lazy_require], (stampit, observable) ->
 
   handlers =
     adapter_loaded: (composable) ->

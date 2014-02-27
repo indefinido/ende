@@ -1,8 +1,9 @@
 'use strict';
 
-define 'aura/extensions/rivets', ->
 
-  formatters               = null
+# TODO require formatters through aura instead of directly loding a module
+define 'aura/extensions/rivets', ['aura/extensions/rivets/formatters'], (formatters) ->
+
   extend                   = null
 
   with_component           = 'mikeric-rivets/dist/rivets'
@@ -222,16 +223,23 @@ define 'aura/extensions/rivets', ->
 
   require:
     paths:
-      formatters: 'aura/extensions/rivets/formatters'
+      # TODO optimize formatters with r.js
+      # formatters: 'aura/extensions/rivets/formatters'
+      observable: true
 
   version: '0.1.1'
 
   initialize: (application) ->
-    with_aura      = 'formatters'
-    formatters     = require with_aura
+    # TODO optimize formatters with r.js, and put module names under
+    # rivets namespace
+    # with_aura      = 'formatters'
+    # formatters     = require with_aura
 
-    with_component = 'observable'
-    observable     = require with_component
+    # TODO check if it is needed to do earliear formatters loading
+    # extend rivets.formatters, formatters
+
+    # TODO implement compatibility between observable and aura loader
+    observable     = requirejs 'observable'
 
     # TODO implement small view interface
     original_bind = rivets.bind

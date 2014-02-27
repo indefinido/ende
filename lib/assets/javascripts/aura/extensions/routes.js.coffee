@@ -1,12 +1,17 @@
+'use strict'
+
 define 'aura/extensions/routes', (routes) ->
 
-  'use strict'
-
   # TODO Remove .call null
-  # TODO Remove .call null
+  # TODO Remove modernizr global variable dependency from this extension
   loader.require.call null, 'modernizr'
   # TODO rename from ened to ende
+  # TODO Remove jquery global variable dependency from this extension
+  with_component = 'jquery'
+  window.jQuery = window.$ = require with_component
+  # TODO Remove .call null
   loader.require.call null, 'ened/vendor/assets/javascripts/lennon/lennon.js'
+
   query  = loader.require.call null, 'querystring'
   router = null
 

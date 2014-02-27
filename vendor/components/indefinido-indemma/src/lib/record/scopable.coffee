@@ -1,13 +1,20 @@
 require './restfulable'
 require './resource'
 
-stampit = require '../../vendor/stampit'
-extend  = require 'assimilate'
-merge   = extend.withStrategy 'deep'
-$       = require 'jquery'
-rest    = require './rest'
+stampit    = require '../../vendor/stampit'
+extend     = require 'assimilate'
+observable = require('observable').mixin
+merge      = extend.withStrategy 'deep'
+$          = require 'jquery'
+rest       = require './rest'
 
+# TODO merge all with fetch and remove this util object
+util =
+  model:
+    map: (records) ->
+      (@build or @).call @, record for record, index in records
 
+# TODO better responsibilty division for this code
 scopable =
   builder: stampit().enclose ->
 
@@ -35,7 +42,13 @@ scopable =
       fail:     []
       declared: []
       fetch: (data, done, fail) ->
+
+        if typeof data == 'function'
+          done = data
+          data = {}
+
         scope = extend {}, @scope.data
+        observable.unobserve scope
 
         if scope.noned?
           deferred = $.Deferred()
@@ -44,8 +57,9 @@ scopable =
           deferred = rest.get.call(@, extend scope, data)
 
         deferred
-          .done(@scope.then.concat done)
-          .fail([@scope.fail, fail])
+          .then(util.model.map)
+          .done(@scope.then.concat [done])
+          .fail(@scope.fail.concat [fail])
 
         @scope.clear()
 
@@ -85,7 +99,12 @@ scopable =
       @scope.data.noned = true
       @
 
+    # TODO merge with all object
     fetch: (data, done, fail) ->
+      if typeof data == 'function'
+        done = data
+        data = null
+
       @scope.fetch.call @, data, done, fail
 
     # TODO optmize this iterations or add support for stampit on associable and merge factories

@@ -1,8 +1,8 @@
-var errorsable, extensions, initializers, manager, messages, observable, root, stampit, type, validatable;
+var errorsable, extensions, initializers, manager, messages, observable, root, stampit, type;
 
 require('./translationable');
 
-root = typeof exports !== "undefined" && exports !== null ? exports : window;
+root = typeof exports !== "undefined" && exports !== null ? exports : this;
 
 stampit = require('../../vendor/stampit');
 
@@ -93,7 +93,7 @@ initializers = {
     });
     this.validated = false;
     this.subscribe('dirty', function(value) {
-      return this.validated = false;
+      return value && (this.validated = false);
     });
     return Object.defineProperty(this, 'valid', {
       get: function() {
@@ -187,7 +187,12 @@ extensions = {
       this.validation.done(doned);
       this.validation.fail(failed);
       this.validation.then(function(record) {
-        return record.validated = true;
+        var old_dirty;
+
+        old_dirty = record.dirty;
+        record.dirty = null;
+        record.validated || (record.validated = true);
+        return record.dirty = old_dirty;
       });
       return this.validation;
     }
@@ -198,15 +203,6 @@ manager = {
   validators: {}
 };
 
-validatable = stampit({
-  validate: function() {
-    throw new Error('Composed factory must override the validate method');
-  },
-  validate_each: function() {
-    throw new Error('Composed factory must override the validate each method');
-  }
-});
-
 model.mix(function(modelable) {
   jQuery.extend(modelable, extensions.model);
   jQuery.extend(modelable.record, extensions.record);
@@ -215,18 +211,14 @@ model.mix(function(modelable) {
   return model.validators = manager.validators;
 });
 
-root.validatable = validatable;
+manager.validators.confirmation = require('./validations/confirmation');
 
-root.manager = manager;
+manager.validators.associated = require('./validations/associated');
 
-require('./validations/confirmation');
+manager.validators.presence = require('./validations/presence');
 
-require('./validations/associated');
+manager.validators.remote = require('./validations/remote');
 
-require('./validations/presence');
+manager.validators.type = require('./validations/type');
 
-require('./validations/remote');
-
-require('./validations/type');
-
-require('./validations/cpf');
+manager.validators.cpf = require('./validations/cpf');

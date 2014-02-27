@@ -86,7 +86,7 @@ define ->
 
     # TODO integrate component and requirejs in a more consize way
     with_component = 'dialog'
-    dialog  = require(with_component).dialog
+    dialog  = require(with_component).Dialog
 
     with_component = 'component-overlay'
     overlay = require with_component
