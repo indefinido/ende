@@ -159,7 +159,16 @@ define [
     @sandbox.emit "viewer.#{@identifier}.selected", item.model
 
   scope_to: (scope, child_scope) ->
-    throw new TypeError "Invalid scope sent to viewer@#{@identifier} sent: #{scope.resource.toString()}, expected: #{@scope.resource.toString()}" if scope.resource.toString() != @scope.resource.toString()
+    # Singuralize in order to accept association scopes, since
+    # association scopes return almost the same kind as of it's
+    # singularized version
+    sent_scope    = @inflector.singularize scope.resource.toString()
+    current_scope = @inflector.singularize @scope.resource.toString()
+
+    if sent_scope != current_scope
+      throw new TypeError "Invalid scope sent to viewer@#{@identifier} sent: '#{sent_scope}', expected: '#{current_scope}'"
+
+    # For sobsequent usages we must store the scope
     @scope = scope
 
     # TODO better hierachical event distribution
@@ -393,22 +402,23 @@ define [
     # TODO import core extensions in another place
     @resource      = @sandbox.resource options.resource
     @scope         = model = @resource
-    cssify         = @sandbox.util.inflector.cssify
+
+    {sandbox: {util: {@inflector}}}   = @
 
     @sandbox.on "viewer.#{@identifier}.scope", @scope_to, @
 
     # Iniitalize plugins
     loading = @plugins options
 
-    @$el.addClass "viewer widget #{cssify @identifier} idle clearfix"
+    @$el.addClass "viewer widget #{@inflector.cssify @identifier} idle clearfix"
 
-    loading.done =>
-      @require_custom options
+    loading.done => @require_custom options
 
   require_custom: (options) ->
     # Fetch custom templates
     # TODO better custom templates structure and custom presenter
     # TODO better segregation of concerns on this code
+    # TODO handle case where custom presenter does not exist!
     require [
       "text!./widgets/viewer/templates/default/#{options.resource}.html"
       "./widgets/viewer/presenters/#{options.resource}"

@@ -20,8 +20,9 @@ define ->
 
     @$el.addClass ['tray', 'widget'].concat(names).join(' ')
 
-    @identifier = options.identifier
-    # TODO find a way to build the id beased on content
+    @identifier ||= identifier
+
+    # TODO find a way to build the id based on content
     if identifier?
       @identifier = identifier
       @$el.attr 'id', identifier
@@ -31,6 +32,7 @@ define ->
   add: (name, options) ->
 
     # TODO add widgets as childrens of the tray widget sandbox
+    # TODO remove jquery dependency, and use documentFragment to build widgets
     element     = jQuery '<div class="widget"></div>'
     options.el  = element
     @$el.append   element

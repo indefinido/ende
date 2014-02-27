@@ -32,12 +32,14 @@ define 'aura/extensions/routes', (routes) ->
         mediator.emit name, params
 
       process: ->
-        context = {}
+        context    = {}
+        {location} = window
 
         if history
-          path = window.location.pathname
+          path   = location.pathname
+          search = location.search
         else
-          path = window.location.hash.replace('#!', '') || '/'
+          path = location.hash.replace('#!', '') || '/'
           [path, search]  = path.split('?') if path.indexOf('?') != -1
 
         #-- If we land on the page with a hash value and history is enabled, redirect to the non-hash page
@@ -133,8 +135,3 @@ define 'aura/extensions/routes', (routes) ->
     initialize: (application) ->
       {logger} = application
       application.sandbox.location = location
-
-      # TODO pull request on aura to add info method on logger
-      # TODO better argument checking
-      logger._info = (-> console.info arguments[0], arguments[1], arguments[2]) || logger._log
-      logger.info  = -> this.write this._info, arguments
