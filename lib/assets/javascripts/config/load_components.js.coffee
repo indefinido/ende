@@ -2,6 +2,7 @@ root = exports ? this
 
 # Prevent aura from defining jquery erroniously
 define 'jquery'    , ['config/load_components'], -> require 'component-jquery'
+define 'modernizr' , ['config/load_components'], -> require 'modernizr'
 # TODO define 'underscore', ['config/load_components'], -> require 'lodash'
 
 # TODO figure out how to use rjs optmizer to include component builds
