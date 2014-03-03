@@ -1,17 +1,11 @@
 root = exports ? this
 
-# Prevent aura from defining jquery erroniously
-define 'jquery'    , ['config/load_components'], -> require 'component-jquery'
-define 'modernizr' , ['config/load_components'], -> require 'modernizr'
-# TODO define 'underscore', ['config/load_components'], -> require 'lodash'
-
-# TODO figure out how to use rjs optmizer to include component builds
-# Use call method to avoid optmization at all
-define 'ende_components', ['ende_build'], {}
-define 'application_components', ['ende_components', 'build'], {}
-
 requirejs.config
   shim:
+    'jquery.ujs':
+      deps: ['jquery', 'config/load_components']
+      exports: 'jQuery.rails'
+
     build:
       # FIXME check that the build was loaded in a more elegant way
       # probably create a undefined plug-in for component builder
@@ -19,6 +13,21 @@ requirejs.config
       deps: ['ende_build']
     ende_build:
       exports: 'require.register'
+
+  paths:
+    'jquery.ujs': 'jquery_ujs'
+
+# Prevent aura from defining jquery erroniously
+define 'jquery'    , ['config/load_components'], ->
+  window.jQuery = window.$ = require 'component-jquery'
+
+define 'modernizr' , ['config/load_components'], -> require 'modernizr'
+# TODO define 'underscore', ['config/load_components'], -> require 'lodash'
+
+# TODO figure out how to use rjs optmizer to include component builds
+# Use call method to avoid optmization at all
+define 'ende_components', ['ende_build'], {}
+define 'application_components', ['ende_components', 'build'], {}
 
 # In order to start, application and ende components must be loaded
 define 'config/load_components', ['application_components'], ->

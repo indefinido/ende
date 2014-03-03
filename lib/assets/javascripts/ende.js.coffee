@@ -1,7 +1,7 @@
 # TODO think if require jquery and jquery inview in this place is actualy a good idead
 
 # TODO use requirejs alias / packing modules definition for this
-define 'ende', ['config/load_components', 'config/initializers'], ->
+define 'ende', ['config/load_components', 'config/initializers', 'jquery.ujs'], ->
 
   # Override defaults components definition
   # TODO better way to forward component modules to application

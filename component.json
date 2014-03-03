@@ -22,14 +22,11 @@
   "scripts": [
     "vendor/assets/javascripts/lennon/lennon.js",
     "vendor/assets/javascripts/stampit/stampit.js",
-
     "vendor/assets/javascripts/spin/spin.js",
-
     "vendor/assets/javascripts/jquery/inview.js",
     "vendor/assets/javascripts/jquery/inputmask.js",
     "vendor/assets/javascripts/jquery/inputmask.extensions.js",
     "vendor/assets/javascripts/jquery/inputmask.numeric.extensions.js",
-
     "vendor/assets/javascripts/polyfills/es5-shim.js",
     "vendor/assets/javascripts/polyfills/es6-map-shim.js"
   ],

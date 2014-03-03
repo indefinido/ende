@@ -1,4 +1,5 @@
 // TODO Better keypath support
+// TODO Convert to coffeescript
 
 // Shim older browsers
 if (!Object.create          ) require('../vendor/shims/object.create');
@@ -183,8 +184,8 @@ observable.unobserve = function (object) {
 check = function (keypath, value) {
   this.observed[keypath] = value;
 
-  // TODO implement subscription
-  (this.dirty === false) && (this.dirty = true);
+  // TODO implement subscription to any change, using Object.observe
+  (this.dirty === false && keypath != 'dirty') && (this.dirty = true);
   return true;
 };
 

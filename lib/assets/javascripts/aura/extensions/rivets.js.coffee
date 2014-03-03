@@ -13,8 +13,8 @@ define 'aura/extensions/rivets', ['aura/extensions/rivets/formatters'], (formatt
   with_component           = 'indefinido-observable/lib/adapters/rivets'
   observable_configuration = require with_component
 
-  with_component = 'segmentio-extend'
-  extend         = require with_component
+  with_component           = 'segmentio-extend'
+  extend                   = require with_component
 
   extend rivets.formatters, formatters
 

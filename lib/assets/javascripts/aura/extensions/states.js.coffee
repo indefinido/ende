@@ -29,6 +29,7 @@ define 'aura/extensions/states', ['application/states'], (states) ->
     dom.find('html').addClass state.current
 
     # Application flow control
+    # TODO think of a more specific name, like a machine!
     flow =
 
       changed: (transition) ->
@@ -73,7 +74,7 @@ define 'aura/extensions/states', ['application/states'], (states) ->
         logger.error "states.flow.failed: Failed autostarting widget! \n Message: #{exception.message}", exception
 
 
-    version: '0.2.3'
+    version: '0.2.4'
 
     initialize: (application) ->
       mediator.on 'state.change' , state.change
@@ -124,4 +125,13 @@ define 'aura/extensions/states', ['application/states'], (states) ->
 
         get: -> state.current
 
-    afterAppStart: (application) -> application.state = "default"
+    afterAppStart: (application) ->
+      # TODO Change the application to default state in flows extension
+      if (application.startOptions.widgets)
+        application.state = "default"
+      else
+        current_start = application.core.start
+        application.core.start = ->
+          application.state = "default"
+          application.core.start = current_start
+          current_start.apply @, arguments
