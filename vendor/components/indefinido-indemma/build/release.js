@@ -26,14 +26,10 @@ function require(path, parent, orig) {
   // perform real require()
   // by invoking the module's
   // registered function
-  if (!module._resolving && !module.exports) {
-    var mod = {};
-    mod.exports = {};
-    mod.client = mod.component = true;
-    module._resolving = true;
-    module.call(this, mod.exports, require.relative(resolved), mod);
-    delete module._resolving;
-    module.exports = mod.exports;
+  if (!module.exports) {
+    module.exports = {};
+    module.client = module.component = true;
+    module.call(this, module.exports, require.relative(resolved), module);
   }
 
   return module.exports;
@@ -26129,15 +26125,15 @@ extensions = {
       this.validation = jQuery.when.apply(jQuery, results);
       this.validation.done(doned);
       this.validation.fail(failed);
-      this.validation.then(function(record) {
+      return this.validation.done(function(record) {
         var old_dirty;
 
         old_dirty = record.dirty;
         record.dirty = null;
         record.validated || (record.validated = true);
-        return record.dirty = old_dirty;
+        record.dirty = old_dirty;
+        return record;
       });
-      return this.validation;
     }
   }
 };
@@ -26193,24 +26189,11 @@ model.rivets = function() {
 };
 
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 require.alias("pluma-assimilate/dist/assimilate.js", "indemma/deps/assimilate/dist/assimilate.js");
 require.alias("pluma-assimilate/dist/assimilate.js", "indemma/deps/assimilate/index.js");
 require.alias("pluma-assimilate/dist/assimilate.js", "assimilate/index.js");
 require.alias("pluma-assimilate/dist/assimilate.js", "pluma-assimilate/index.js");
+
 require.alias("component-type/index.js", "indemma/deps/type/index.js");
 require.alias("component-type/index.js", "type/index.js");
 
@@ -26268,4 +26251,6 @@ require.alias("chaijs-chai/index.js", "chai/index.js");
 require.alias("chaijs-assertion-error/index.js", "chaijs-chai/deps/assertion-error/index.js");
 require.alias("chaijs-assertion-error/index.js", "chaijs-chai/deps/assertion-error/index.js");
 require.alias("chaijs-assertion-error/index.js", "chaijs-assertion-error/index.js");
+
 require.alias("chaijs-chai/index.js", "chaijs-chai/index.js");
+

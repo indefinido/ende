@@ -2,7 +2,7 @@
   "name": "ened",
   "repo": "indefinido/ened",
   "description": "Core web application functionacility",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "keywords": [],
   "dependencies": {
     "mikeric/rivets": "v0.5.12",
