@@ -116,6 +116,7 @@ define 'config/load_components', ['application_components'], ->
 
       catch e
         console.warn 'Failed to load \'', params[0], "' with #{using}: Error: '", e.message, '\'. Trying with requirejs.'
+        console.error params[0]
         loader.activate 'requirejs'
         module = loader.loaders.discovered.apply @, params unless module
 
