@@ -337,8 +337,9 @@ restful =
         # TODO create association reflection for god sake!
         nested = @nested_attributes.indexOf(name) != -1
 
-        # Skip association attributes that are note nested
-        continue if not nested and (definition.belongs_to.indexOf(name) != -1 or definition.has_one.indexOf(name) != -1)
+        # Skip association attributes that are note nested TODO create
+        # an associations array
+        continue if not nested and (definition.belongs_to.indexOf(name) != -1 or definition.has_one.indexOf(name) != -1 or definition.has_many.indexOf(name) != -1)
 
         # TODO Bypass only undefined values so we can erase data on server
         value = @[name]
@@ -354,7 +355,11 @@ restful =
 
           # Serialize complex type values
           else if value.toJSON? || value.json?
+            # FIXME sometimes wrong pluralization occurs and we cannot
+            # skip association objects, so detect them and skip here
+            continue if value.resource
 
+            # TODO rename json to toJSON
             if value.json?
               json[name] = value.json methods[name]
             else
@@ -395,6 +400,7 @@ restful =
 
       delete json.validated
       delete json.validation
+      delete json.errors
 
       json
 

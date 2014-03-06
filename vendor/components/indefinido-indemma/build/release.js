@@ -21129,7 +21129,7 @@ restful = {
           continue;
         }
         nested = this.nested_attributes.indexOf(name) !== -1;
-        if (!nested && (definition.belongs_to.indexOf(name) !== -1 || definition.has_one.indexOf(name) !== -1)) {
+        if (!nested && (definition.belongs_to.indexOf(name) !== -1 || definition.has_one.indexOf(name) !== -1 || definition.has_many.indexOf(name) !== -1)) {
           continue;
         }
         value = this[name];
@@ -21143,6 +21143,9 @@ restful = {
           if (nested) {
             json["" + name + "_attributes"] = value.json(methods[name]);
           } else if ((value.toJSON != null) || (value.json != null)) {
+            if (value.resource) {
+              continue;
+            }
             if (value.json != null) {
               json[name] = value.json(methods[name]);
             } else {
@@ -21172,6 +21175,7 @@ restful = {
       delete json.lock;
       delete json.validated;
       delete json.validation;
+      delete json.errors;
       return json;
     }
   }
