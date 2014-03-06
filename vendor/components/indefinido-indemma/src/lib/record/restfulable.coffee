@@ -305,20 +305,40 @@ restful =
       # Finish saving
       @saving = false
 
+    # TODO move to record.coffee
     toString: ->
       serialized = {}
       serialized[@resource] = @json()
-      JSON.stringify serialized
 
+      try
+        # TODO figure out why it throws circular references sometines
+        JSON.stringify serialized
+      catch e
+        console.warn "restfulable.toString: Failed to stringify record: #{e.message}. retrying..."
+
+        for name, property of serialized
+          delete serialized[name] if typeof property == 'object'
+
+        JSON.stringify serialized
+
+    # TODO move this to serializable module
+    # TODO figure out why sometimes is rendering a circular referenced json
+    # TODO rename to toJSON
     json: (methods = {}) ->
       json = {}
 
       definition = model[@resource.toString()]
 
-      for name of @ when type(value)
+      for name of @
+        # TODO smarter way to ignore Dom node fix properties
+        continue if observable.ignores.indexOf(name) != -1
+
         # TODO treat other associations to!
         # TODO create association reflection for god sake!
-        continue if definition.belongs_to.indexOf(name) != -1 and @nested_attributes.indexOf(name) == -1
+        nested = @nested_attributes.indexOf(name) != -1
+
+        # Skip association attributes that are note nested
+        continue if not nested and (definition.belongs_to.indexOf(name) != -1 or definition.has_one.indexOf(name) != -1)
 
         # TODO Bypass only undefined values so we can erase data on server
         value = @[name]
@@ -327,22 +347,26 @@ restful =
 
         if type(value) == 'object'
 
-          if value.toJSON?
+          if nested
+            # TODO move nested attributes to model definition and
+            # implement toJSON there
+            json["#{name}_attributes"] = value.json methods[name]
 
-            json[name] = value.toJSON(methods[name])
+          # Serialize complex type values
+          else if value.toJSON? || value.json?
 
-          else
-
-            # TODO move nested attributes to model definition
-            # TODO and implement toJSON there
-            for attribute in @nested_attributes when attribute == name
-              json["#{name}_attributes"] = value.json(methods[name])
+            if value.json?
+              json[name] = value.json methods[name]
+            else
+              json[name] = value.toJSON methods[name]
 
         else
 
+          # Serialize primitive type values
           json[name] = value
 
-      observable.unobserve json
+      # Remove observable methods and dom node properties
+      json = observable.unobserve json
 
       # TODO Store reserved words in a array
       # TODO Use _.omit function
@@ -373,6 +397,7 @@ restful =
       delete json.validation
 
       json
+
 
 # TODO put deprecation warning on json method
 # TODO rename json method to toJSON

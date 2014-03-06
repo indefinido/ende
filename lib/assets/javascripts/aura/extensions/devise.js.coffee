@@ -1,7 +1,5 @@
 'use strict'
 
-root = exports ? this
-
 define 'aura/extensions/devise', ->
 
   sandbox  = null

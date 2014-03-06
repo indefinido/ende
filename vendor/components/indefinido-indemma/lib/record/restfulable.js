@@ -321,14 +321,26 @@ restful = {
       return this.saving = false;
     },
     toString: function() {
-      var serialized;
+      var e, name, property, serialized;
 
       serialized = {};
       serialized[this.resource] = this.json();
-      return JSON.stringify(serialized);
+      try {
+        return JSON.stringify(serialized);
+      } catch (_error) {
+        e = _error;
+        console.warn("restfulable.toString: Failed to stringify record: " + e.message + ". retrying...");
+        for (name in serialized) {
+          property = serialized[name];
+          if (typeof property === 'object') {
+            delete serialized[name];
+          }
+        }
+        return JSON.stringify(serialized);
+      }
     },
     json: function(methods) {
-      var attribute, definition, json, name, value, _i, _len, _ref;
+      var definition, json, name, nested, value;
 
       if (methods == null) {
         methods = {};
@@ -336,10 +348,11 @@ restful = {
       json = {};
       definition = model[this.resource.toString()];
       for (name in this) {
-        if (!(type(value))) {
+        if (observable.ignores.indexOf(name) !== -1) {
           continue;
         }
-        if (definition.belongs_to.indexOf(name) !== -1 && this.nested_attributes.indexOf(name) === -1) {
+        nested = this.nested_attributes.indexOf(name) !== -1;
+        if (!nested && (definition.belongs_to.indexOf(name) !== -1 || definition.has_one.indexOf(name) !== -1)) {
           continue;
         }
         value = this[name];
@@ -350,22 +363,20 @@ restful = {
           continue;
         }
         if (type(value) === 'object') {
-          if (value.toJSON != null) {
-            json[name] = value.toJSON(methods[name]);
-          } else {
-            _ref = this.nested_attributes;
-            for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-              attribute = _ref[_i];
-              if (attribute === name) {
-                json["" + name + "_attributes"] = value.json(methods[name]);
-              }
+          if (nested) {
+            json["" + name + "_attributes"] = value.json(methods[name]);
+          } else if ((value.toJSON != null) || (value.json != null)) {
+            if (value.json != null) {
+              json[name] = value.json(methods[name]);
+            } else {
+              json[name] = value.toJSON(methods[name]);
             }
           }
         } else {
           json[name] = value;
         }
       }
-      observable.unobserve(json);
+      json = observable.unobserve(json);
       delete json.dirty;
       delete json.resource;
       delete json.route;

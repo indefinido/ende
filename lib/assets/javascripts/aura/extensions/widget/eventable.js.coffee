@@ -1,6 +1,6 @@
-define 'aura/extensions/widget/eventable', ->
+'use strict';
 
-  'use strict';
+define 'aura/extensions/widget/eventable', ['es6-map-shim'], ->
 
   extractor = /.*?\$(.*?)@(.*?)\+(.*?)/
 
@@ -38,6 +38,8 @@ define 'aura/extensions/widget/eventable', ->
 
       @
 
+
+  version: '0.1.0'
 
   initialize: (application) ->
     with_component = 'segmentio-extend'

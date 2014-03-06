@@ -132,6 +132,18 @@ define 'aura/extensions/states', ['application/states'], (states) ->
       else
         current_start = application.core.start
         application.core.start = ->
+          # If any initialized flow changed the application state
+          # before the widgets initialization, store its state pass
+          # through the default state and go back to the old state
+          # created by the flows
+          #
+          # TODO initialize the first flow in flows extension
+          current_state = application.state if application.state != 'initialization'
           application.state = "default"
+
           application.core.start = current_start
-          current_start.apply @, arguments
+          startup = current_start.apply @, arguments
+
+          application.state = current_state if current_state?
+
+          startup

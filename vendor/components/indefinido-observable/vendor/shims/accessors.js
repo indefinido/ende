@@ -70,7 +70,10 @@
           changed_value = object[property];
           descriptor.set.call(object, changed_value);
 
-          // Restore get function if it exists and there's no falsey value
+          // Restore get function if:
+          //  it was mentioned on definition
+          //  there's no falsey value, in that case we just need to return falsey value
+          //  current toString is not the getter, to prevent further unecessary redefinitions
           if (descriptor.get && descriptor.value && descriptor.value.toString != descriptor.bound_getter) {
             // TODO if (descriptor.get + '' === 'undefined') descriptor.get = '';        // Handle undefined getter
             descriptor.value.toString = descriptor.bound_getter
@@ -88,33 +91,37 @@
       }
 
       return setter;
-    }
+    };
 
     // Shim define property with apropriated fail cases exceptions
     Object.defineProperty = function (obj, prop, descriptor) {
       var fix;
 
-      if (!obj.attachEvent) throw new TypeError('Object.defineProperty: First parameter must be a dom element.');
+      if (!prop)
 
-      if (!fix && !inDocument(obj)) throw new TypeError('Object.defineProperty: Dom element must be attached in document.');
+      if (descriptor.set) {
+        if (!obj.attachEvent) throw new TypeError('Object.defineProperty: First parameter must be a dom element. When descriptor has \'set\' property.');
+
+        if (!fix && !inDocument(obj)) throw new TypeError('Object.defineProperty: Dom element must be attached in document.');
+      }
 
       if (!descriptor) throw new TypeError('Object.defineProperty (object, property, descriptor): Descriptor must be an object, was \'' + descriptor + '\'.');
 
-      if ((descriptor.get || descriptor.set) && descriptor.value) throw new TypeError('Object.defineProperty: Descriptor must have only getters and setters or value.');
-
       // Store current value in descriptor
+      // TODO only try to set descriptor value if it was passed as parameter
       descriptor.value = descriptor.value || (descriptor.get && descriptor.get.call(obj)) || obj[prop];
 
-      if (descriptor.get || descriptor.set) {
+      if (descriptor.set) {
         // Detach old listeners if any
         detach = true;
         obj[prop] = 'detaching';
         detach = false;
 
         if (descriptor.get) {
+          // TODO remove jquery dependency
           descriptor.bound_getter   = $.extend($.proxy(descriptor.get, obj), descriptor.get);
 
-          // We only bind the getter when we have a non falsey value
+          // Why? we only bind the getter when we have a non falsey value
           if (descriptor.value) descriptor.value.toString = descriptor.bound_getter;
 
           // Although its not allowed for convention to have getters
@@ -125,6 +132,16 @@
 
         (fix || obj).attachEvent("onpropertychange", generate_setter(obj, prop, descriptor));
 
+      } else if (descriptor.get) {
+        descriptor.bound_getter   = $.extend($.proxy(descriptor.get, obj), descriptor.get);
+
+        // Why? we only bind the getter when we have a non falsey value
+        if (descriptor.value) descriptor.value.toString = descriptor.bound_getter;
+
+        // Although its not allowed for convention to have getters
+        // and setters with the descriptor value, here we just reuse
+        // the descriptor stored value
+        obj[prop] = descriptor.value;
       } else {
         obj[prop] = descriptor.value;
       }
@@ -146,7 +163,52 @@
         }
       }
     };
-  }
+
+    ObjectCreate = Object.create;
+    baseElement  = document.createElement('fix');
+
+    Object.create = function (prototype, properties) {
+      var complexDescriptor, fix, descriptor, name;
+
+      for (name in properties) {
+        descriptor = properties[name]
+        if (descriptor instanceof Object) {
+          complexDescriptor = !!(descriptor.get || descriptor.set)
+
+          if (complexDescriptor) {
+            break;
+          }
+        }
+      }
+
+      if (complexDescriptor || prototype.nodeName === 'fix' || properties && properties._shim) {
+        properties && delete properties._shim;
+
+        if (typeof object != 'function') {
+          fix = document.createElement('fix');
+          document.appendChild(fix);
+
+          // Copy over prototype properties
+          for (name in prototype) {
+            try {
+              if (name in baseElement) continue;
+              fix[name] = prototype[name];
+            } catch (e) {
+              console.warn("Object.create: Invalid shimmed property: " + name + ", with error " + e);
+            }
+          }
+
+          Object.defineProperties(fix, properties);
+        } else {
+          throw new TypeError('Functions with complex descriptors not implemented yet');
+        }
+        return fix;
+      } else {
+        return ObjectCreate(prototype, properties)
+      }
+    }
+  };
+
 
   /* TODO Use define Property, and only define if
      non-enumerable properties are allowed

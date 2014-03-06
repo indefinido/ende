@@ -7,11 +7,12 @@ if (!Array.prototype.indexOf) require('../vendor/shims/array.indexOf');
 
 // Object.defineProperty (for ie5+)
 if (typeof require != 'undefined') {
-  require('../vendor/shims/accessors.js');
-
   // __lookup*__ and __define*__ for browsers with defineProperty support
   // TODO Figure out why gives an infinity loop
   require('../vendor/shims/accessors-legacy.js');
+
+  // Creates Object.defineProperty
+  require('../vendor/shims/accessors.js');
 }
 
 // Require Dependencies
@@ -88,9 +89,10 @@ mixin = {
 if (requiresDomElement) {
 
   observable = function (object) {
+    var fix;
 
     // observable() or observable(object)
-      if (this.document && this.location) {
+    if (this.document && this.location) {
       if (!object) {
         object = {};
       }
@@ -105,15 +107,28 @@ if (requiresDomElement) {
       }
     }
 
+    // TODO better documentation
     if (!jQuery.isReady) throw new Error('observable.call: For compatibility reasons, observable can only be called when dom is loaded.');
-    var fix = document.createElement('fix');
 
-    if (!jQuery.isReady) $(function () {document.body.appendChild(fix);});
-    else document.body.appendChild(fix);
+    // Create dom element if object isn't one
+    if (!(typeof object.nodeName === 'string')) {
+      fix = document.createElement('fix');
 
-    if (!object.observed) generator.observable_for(fix);
+      if (!jQuery.isReady) $(function () {document.body.appendChild(fix);});
+      else document.body.appendChild(fix);
 
-    return $.extend(fix, object, mixin);
+      // Replace object with dom node
+      object = fix;
+    }
+
+    // Observe element if it is not observed
+    // TODO remove jquery dependency
+    if (!object.observed) {
+      generator.observable_for(object);
+      object = $.extend(object, mixin);
+    }
+
+    return object;
   };
 
   var ignores = document.createElement('fix'), fix_ignores = [], property;
@@ -151,9 +166,8 @@ if (requiresDomElement) {
   observable.ignores = [];
 }
 
-
 observable.unobserve = function (object) {
-  var name, value, subname;
+  var name, value, subname, unobserved = {};
 
   // TODO remove root setter and root getter and callbacks from
   // callback thread
@@ -166,6 +180,7 @@ observable.unobserve = function (object) {
   // Remove array properties overrides
   for (name in object) {
     value = object[name];
+
     if ($.type(value) == 'array') {
       delete value.thread;
       delete value.object;
@@ -177,8 +192,16 @@ observable.unobserve = function (object) {
     }
   }
 
+  for (name in object) {
+    // TODO put Array.indexOf as a dependency
+    if (observable.ignores && observable.ignores.indexOf(name) == -1) {
+      unobserved[name] = object[name];
+    }
+  }
+
   delete object.observed;
-  return true;
+
+  return unobserved;
 };
 
 check = function (keypath, value) {
@@ -190,7 +213,8 @@ check = function (keypath, value) {
 };
 
 generator = {
-  observe: function(keypath, callback) {
+  // TODO pass object as parameter
+  observe: function (keypath, callback) {
     return Object.defineProperty(this, keypath, {
       get: generator.getter.call(this, keypath),
       set: generator.setter.call(this, keypath, callback),
@@ -199,10 +223,20 @@ generator = {
   },
 
   observable_for: function (object) {
-    return Object.defineProperty(object, 'observed', {
+    Object.defineProperty(object, 'observed', {
       configurable: true,
       enumerable: false,
       value: {}
+    });
+
+    // TODO call the current object.toJSON after this method
+    return Object.defineProperty(object, 'toJSON', {
+      enumerable: false,
+      value: function () {
+        // TODO remove underscore dependency
+        return observable.unobserve(_.omit(this, observable.ignores));
+        // old_to_json()
+      }
     });
   },
 

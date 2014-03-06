@@ -45,7 +45,9 @@ merge      = require('assimilate').withStrategy 'deep'
     # instance = record.call extend data, @record # TODO remove @record from outside scop
     after_initialize = (data.after_initialize || []).concat(@record.after_initialize)
 
-    creation = extend Object.create(data), @record, creation, after_initialize: after_initialize
+    # TODO only shim in older browsers
+    # TODO try to remove _shim need
+    creation = extend Object.create(data, {_shim: {}}), @record, creation, after_initialize: after_initialize
 
     # TODO use deferred instead of before_initialize array
     for callback, index in @record.before_initialize

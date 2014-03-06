@@ -18458,7 +18458,9 @@ this.model = (function() {
     data.route || (data.route = this.route);
     data.nested_attributes = this.nested_attributes || [];
     after_initialize = (data.after_initialize || []).concat(this.record.after_initialize);
-    creation = extend(Object.create(data), this.record, creation, {
+    creation = extend(Object.create(data, {
+      _shim: {}
+    }), this.record, creation, {
       after_initialize: after_initialize
     });
     _ref = this.record.before_initialize;
@@ -18653,11 +18655,15 @@ subscribers = {
 modifiers = {
   belongs_to: {
     associated_loader: function() {
-      var association_name,
+      var association_name, definition, temporary_observed,
         _this = this;
 
       association_name = this.resource.toString();
-      return Object.defineProperty(this.owner, association_name, {
+      if (this.owner.observed == null) {
+        this.owner.observed = {};
+        temporary_observed = true;
+      }
+      definition = Object.defineProperty(this.owner, association_name, {
         set: function(associated) {
           return this.observed[association_name] = associated;
         },
@@ -18690,6 +18696,10 @@ modifiers = {
         configurable: true,
         enumerable: true
       });
+      if (temporary_observed) {
+        delete this.owner.observed;
+      }
+      return definition;
     }
   }
 };
@@ -19511,14 +19521,26 @@ restful = {
       return this.saving = false;
     },
     toString: function() {
-      var serialized;
+      var e, name, property, serialized;
 
       serialized = {};
       serialized[this.resource] = this.json();
-      return JSON.stringify(serialized);
+      try {
+        return JSON.stringify(serialized);
+      } catch (_error) {
+        e = _error;
+        console.warn("restfulable.toString: Failed to stringify record: " + e.message + ". retrying...");
+        for (name in serialized) {
+          property = serialized[name];
+          if (typeof property === 'object') {
+            delete serialized[name];
+          }
+        }
+        return JSON.stringify(serialized);
+      }
     },
     json: function(methods) {
-      var attribute, definition, json, name, value, _i, _len, _ref;
+      var definition, json, name, nested, value;
 
       if (methods == null) {
         methods = {};
@@ -19526,10 +19548,11 @@ restful = {
       json = {};
       definition = model[this.resource.toString()];
       for (name in this) {
-        if (!(type(value))) {
+        if (observable.ignores.indexOf(name) !== -1) {
           continue;
         }
-        if (definition.belongs_to.indexOf(name) !== -1 && this.nested_attributes.indexOf(name) === -1) {
+        nested = this.nested_attributes.indexOf(name) !== -1;
+        if (!nested && (definition.belongs_to.indexOf(name) !== -1 || definition.has_one.indexOf(name) !== -1)) {
           continue;
         }
         value = this[name];
@@ -19540,22 +19563,20 @@ restful = {
           continue;
         }
         if (type(value) === 'object') {
-          if (value.toJSON != null) {
-            json[name] = value.toJSON(methods[name]);
-          } else {
-            _ref = this.nested_attributes;
-            for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-              attribute = _ref[_i];
-              if (attribute === name) {
-                json["" + name + "_attributes"] = value.json(methods[name]);
-              }
+          if (nested) {
+            json["" + name + "_attributes"] = value.json(methods[name]);
+          } else if ((value.toJSON != null) || (value.json != null)) {
+            if (value.json != null) {
+              json[name] = value.json(methods[name]);
+            } else {
+              json[name] = value.toJSON(methods[name]);
             }
           }
         } else {
           json[name] = value;
         }
       }
-      observable.unobserve(json);
+      json = observable.unobserve(json);
       delete json.dirty;
       delete json.resource;
       delete json.route;
@@ -24801,11 +24822,12 @@ if (!Array.prototype.indexOf) require('../vendor/shims/array.indexOf');
 
 // Object.defineProperty (for ie5+)
 if (typeof require != 'undefined') {
-  require('../vendor/shims/accessors.js');
-
   // __lookup*__ and __define*__ for browsers with defineProperty support
   // TODO Figure out why gives an infinity loop
   require('../vendor/shims/accessors-legacy.js');
+
+  // Creates Object.defineProperty
+  require('../vendor/shims/accessors.js');
 }
 
 // Require Dependencies
@@ -24882,9 +24904,10 @@ mixin = {
 if (requiresDomElement) {
 
   observable = function (object) {
+    var fix;
 
     // observable() or observable(object)
-      if (this.document && this.location) {
+    if (this.document && this.location) {
       if (!object) {
         object = {};
       }
@@ -24899,15 +24922,28 @@ if (requiresDomElement) {
       }
     }
 
+    // TODO better documentation
     if (!jQuery.isReady) throw new Error('observable.call: For compatibility reasons, observable can only be called when dom is loaded.');
-    var fix = document.createElement('fix');
 
-    if (!jQuery.isReady) $(function () {document.body.appendChild(fix);});
-    else document.body.appendChild(fix);
+    // Create dom element if object isn't one
+    if (!(typeof object.nodeName === 'string')) {
+      fix = document.createElement('fix');
 
-    if (!object.observed) generator.observable_for(fix);
+      if (!jQuery.isReady) $(function () {document.body.appendChild(fix);});
+      else document.body.appendChild(fix);
 
-    return $.extend(fix, object, mixin);
+      // Replace object with dom node
+      object = fix;
+    }
+
+    // Observe element if it is not observed
+    // TODO remove jquery dependency
+    if (!object.observed) {
+      generator.observable_for(object);
+      object = $.extend(object, mixin);
+    }
+
+    return object;
   };
 
   var ignores = document.createElement('fix'), fix_ignores = [], property;
@@ -24945,9 +24981,8 @@ if (requiresDomElement) {
   observable.ignores = [];
 }
 
-
 observable.unobserve = function (object) {
-  var name, value, subname;
+  var name, value, subname, unobserved = {};
 
   // TODO remove root setter and root getter and callbacks from
   // callback thread
@@ -24960,6 +24995,7 @@ observable.unobserve = function (object) {
   // Remove array properties overrides
   for (name in object) {
     value = object[name];
+
     if ($.type(value) == 'array') {
       delete value.thread;
       delete value.object;
@@ -24971,8 +25007,16 @@ observable.unobserve = function (object) {
     }
   }
 
+  for (name in object) {
+    // TODO put Array.indexOf as a dependency
+    if (observable.ignores && observable.ignores.indexOf(name) == -1) {
+      unobserved[name] = object[name];
+    }
+  }
+
   delete object.observed;
-  return true;
+
+  return unobserved;
 };
 
 check = function (keypath, value) {
@@ -24984,7 +25028,8 @@ check = function (keypath, value) {
 };
 
 generator = {
-  observe: function(keypath, callback) {
+  // TODO pass object as parameter
+  observe: function (keypath, callback) {
     return Object.defineProperty(this, keypath, {
       get: generator.getter.call(this, keypath),
       set: generator.setter.call(this, keypath, callback),
@@ -24993,10 +25038,20 @@ generator = {
   },
 
   observable_for: function (object) {
-    return Object.defineProperty(object, 'observed', {
+    Object.defineProperty(object, 'observed', {
       configurable: true,
       enumerable: false,
       value: {}
+    });
+
+    // TODO call the current object.toJSON after this method
+    return Object.defineProperty(object, 'toJSON', {
+      enumerable: false,
+      value: function () {
+        // TODO remove underscore dependency
+        return observable.unobserve(_.omit(this, observable.ignores));
+        // old_to_json()
+      }
     });
   },
 
@@ -25146,7 +25201,9 @@ exports.adapter = {
     if (record == null) {
       throw new TypeError('observable.adapters.rivets.subscribe: No record provided for subscription');
     }
-    return record.subscribe(attribute_path, callback);
+    if (attribute_path) {
+      return record.subscribe(attribute_path, callback);
+    }
   },
   unsubscribe: function(record, attribute_path, callback) {
     if (record == null) {
@@ -25242,7 +25299,10 @@ require.register("indefinido-observable/vendor/shims/accessors.js", function(exp
           changed_value = object[property];
           descriptor.set.call(object, changed_value);
 
-          // Restore get function if it exists and there's no falsey value
+          // Restore get function if:
+          //  it was mentioned on definition
+          //  there's no falsey value, in that case we just need to return falsey value
+          //  current toString is not the getter, to prevent further unecessary redefinitions
           if (descriptor.get && descriptor.value && descriptor.value.toString != descriptor.bound_getter) {
             // TODO if (descriptor.get + '' === 'undefined') descriptor.get = '';        // Handle undefined getter
             descriptor.value.toString = descriptor.bound_getter
@@ -25260,33 +25320,37 @@ require.register("indefinido-observable/vendor/shims/accessors.js", function(exp
       }
 
       return setter;
-    }
+    };
 
     // Shim define property with apropriated fail cases exceptions
     Object.defineProperty = function (obj, prop, descriptor) {
       var fix;
 
-      if (!obj.attachEvent) throw new TypeError('Object.defineProperty: First parameter must be a dom element.');
+      if (!prop)
 
-      if (!fix && !inDocument(obj)) throw new TypeError('Object.defineProperty: Dom element must be attached in document.');
+      if (descriptor.set) {
+        if (!obj.attachEvent) throw new TypeError('Object.defineProperty: First parameter must be a dom element. When descriptor has \'set\' property.');
+
+        if (!fix && !inDocument(obj)) throw new TypeError('Object.defineProperty: Dom element must be attached in document.');
+      }
 
       if (!descriptor) throw new TypeError('Object.defineProperty (object, property, descriptor): Descriptor must be an object, was \'' + descriptor + '\'.');
 
-      if ((descriptor.get || descriptor.set) && descriptor.value) throw new TypeError('Object.defineProperty: Descriptor must have only getters and setters or value.');
-
       // Store current value in descriptor
+      // TODO only try to set descriptor value if it was passed as parameter
       descriptor.value = descriptor.value || (descriptor.get && descriptor.get.call(obj)) || obj[prop];
 
-      if (descriptor.get || descriptor.set) {
+      if (descriptor.set) {
         // Detach old listeners if any
         detach = true;
         obj[prop] = 'detaching';
         detach = false;
 
         if (descriptor.get) {
+          // TODO remove jquery dependency
           descriptor.bound_getter   = $.extend($.proxy(descriptor.get, obj), descriptor.get);
 
-          // We only bind the getter when we have a non falsey value
+          // Why? we only bind the getter when we have a non falsey value
           if (descriptor.value) descriptor.value.toString = descriptor.bound_getter;
 
           // Although its not allowed for convention to have getters
@@ -25297,6 +25361,16 @@ require.register("indefinido-observable/vendor/shims/accessors.js", function(exp
 
         (fix || obj).attachEvent("onpropertychange", generate_setter(obj, prop, descriptor));
 
+      } else if (descriptor.get) {
+        descriptor.bound_getter   = $.extend($.proxy(descriptor.get, obj), descriptor.get);
+
+        // Why? we only bind the getter when we have a non falsey value
+        if (descriptor.value) descriptor.value.toString = descriptor.bound_getter;
+
+        // Although its not allowed for convention to have getters
+        // and setters with the descriptor value, here we just reuse
+        // the descriptor stored value
+        obj[prop] = descriptor.value;
       } else {
         obj[prop] = descriptor.value;
       }
@@ -25318,7 +25392,52 @@ require.register("indefinido-observable/vendor/shims/accessors.js", function(exp
         }
       }
     };
-  }
+
+    ObjectCreate = Object.create;
+    baseElement  = document.createElement('fix');
+
+    Object.create = function (prototype, properties) {
+      var complexDescriptor, fix, descriptor, name;
+
+      for (name in properties) {
+        descriptor = properties[name]
+        if (descriptor instanceof Object) {
+          complexDescriptor = !!(descriptor.get || descriptor.set)
+
+          if (complexDescriptor) {
+            break;
+          }
+        }
+      }
+
+      if (complexDescriptor || prototype.nodeName === 'fix' || properties && properties._shim) {
+        properties && delete properties._shim;
+
+        if (typeof object != 'function') {
+          fix = document.createElement('fix');
+          document.appendChild(fix);
+
+          // Copy over prototype properties
+          for (name in prototype) {
+            try {
+              if (name in baseElement) continue;
+              fix[name] = prototype[name];
+            } catch (e) {
+              console.warn("Object.create: Invalid shimmed property: " + name + ", with error " + e);
+            }
+          }
+
+          Object.defineProperties(fix, properties);
+        } else {
+          throw new TypeError('Functions with complex descriptors not implemented yet');
+        }
+        return fix;
+      } else {
+        return ObjectCreate(prototype, properties)
+      }
+    }
+  };
+
 
   /* TODO Use define Property, and only define if
      non-enumerable properties are allowed

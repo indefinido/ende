@@ -67,7 +67,7 @@ define 'aura/extensions/routes', (routes) ->
                     context[paramKeys[j - 1].replace(/:/g, '')] = params[j]
                     j++
 
-                if ( @current_route )
+                if @current_route
 
                     #-- Don't dispatch the route we are already on
                     if ( @current_route.path == route.path && @current_route.search == search)
@@ -79,20 +79,22 @@ define 'aura/extensions/routes', (routes) ->
                         application.logger.info('Exiting', @current_route.path, 'with', context || {})
 
                         #-- Execute the callback
-                        if ( 'function' == typeof @current_route.exitEventName )
-                            @current_route.exitEventName(context || {})
+                        if 'function' == typeof @current_route.exitEventName
+                            @current_route.exitEventName context || {}
+                        else
                         #-- Run the publish event
-                            options.publishEvent(@current_route.exitEventName, context || {})
+                            @publishEvent(@current_route.exitEventName, context || {})
 
                 #-- Update the current route
                 @last_route    = @current_route
                 @current_route = route
 
                 #-- Update the current route search string
-                @current_route.search = search
+                @current_route.search                   = search
+                @current_route.last_contextualized_path = path
 
                 #-- Dispatch
-                return @dispatch(route, context)
+                return @dispatch route, context
 
 
         #-- No route has been found, hence, nothing dispatched
@@ -113,7 +115,6 @@ define 'aura/extensions/routes', (routes) ->
       # TODO implement logger api for lennon or change lennon library
       # logger: application.logger
       publishEvent: lennon_extensions.publishEvent
-
 
     application.core.router = core.util.extend router, lennon_extensions
 

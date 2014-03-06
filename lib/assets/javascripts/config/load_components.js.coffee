@@ -60,24 +60,28 @@ define 'config/load_components', ['application_components'], ->
   # Little object class to merge component require and requirejs require
   loader =
     shim: ->
+      component = require
+
       # Store loaders functions
-      loader.loaders.component = require
+      loader.loaders.component = component
       loader.loaders.requirejs = requirejs
       loader.activate.define   = root.define
 
       # Expand require fuction with requirejs configurations
       # so we can require without great problems
-      loader.require.config  = requirejs.config
-      loader.require.s       = requirejs.s
+      aliases = ['config', 's']
+      loader.require[alias] = requirejs[alias] for alias in aliases
+
+      aliases = ['aliases', 'modules', 'alias', 'normalize', 'resolve', 'relative', 'register']
+      loader.require[alias] = component[alias] for alias in aliases
+
 
     initialize: ->
-      with_component = 'segmentio-extend'
-      extend = require with_component
-      extend loader.require, require
-
-      # Override global require for ower one
+      # Override global require for ouer one
       root.require = loader.require
-      root.loader = loader
+
+      # TODO remove global loader and use requirejs instead
+      root.loader  = @
 
     # Resource loaders compatibility
     loaders:
@@ -92,7 +96,9 @@ define 'config/load_components', ['application_components'], ->
       else
         requirer = 'component'
 
-      @activate (requirer) and requirer
+      @activate requirer
+
+      requirer
 
     activate: (requirer) ->
       switch requirer
@@ -115,8 +121,9 @@ define 'config/load_components', ['application_components'], ->
         module = loader.loaders.discovered.apply @, params
 
       catch e
-        console.warn 'Failed to load \'', params[0], "' with #{using}: Error: '", e.message, '\'. Trying with requirejs.'
-        console.error params[0]
+        # TODO better loggin support
+        (app?.logger || console).warn "loader: Failed to load '#{params[0]}' with #{using}: \n Exception: '#{e.message}'. Trying with requirejs."
+
         loader.activate 'requirejs'
         module = loader.loaders.discovered.apply @, params unless module
 

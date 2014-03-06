@@ -1,6 +1,5 @@
 'use strict';
 
-
 # TODO require formatters through aura instead of directly loding a module
 define 'aura/extensions/rivets', ['aura/extensions/rivets/formatters'], (formatters) ->
 
@@ -23,6 +22,23 @@ define 'aura/extensions/rivets', ['aura/extensions/rivets/formatters'], (formatt
     prefix: ''
     templateDelimiters: ['{{', '}}']
 
+
+  # Create Node Types list for legacy browsers
+  #
+  # TODO externalize this to a shims file and pehaps put it on
+  # platform extension
+  try
+    throw true if (Node.ELEMENT_NODE != 1)
+  catch e
+    window.Node = document.Node =
+      ELEMENT_NODE          : 1
+      ATTRIBUTE_NODE        : 2
+      TEXT_NODE             : 3
+      CDATA_SECTION_NODE    : 4
+      ENTITY_REFERENCE_NODE : 5
+      ENTITY_NODE           : 6
+
+  # TOOD move rivets view to another file
   # Custom rivets view because we don't want to prefix attributes
   # Rivets.View
   # -----------

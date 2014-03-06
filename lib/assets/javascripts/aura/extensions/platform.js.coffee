@@ -2,6 +2,9 @@
 
 define 'aura/extensions/platform', ->
 
+  # TODO require shims, and other fixes here, and make it part of ende
+  # inestead of an extension
+
   name: 'platform'
   version: '0.1.0'
   initialize: (application) ->
