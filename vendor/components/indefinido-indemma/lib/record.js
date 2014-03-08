@@ -24,7 +24,7 @@ this.model = (function() {
       after_initialize: [],
       before_initialize: []
     },
-    all: function() {
+    every: function() {
       return this.cache;
     },
     create: function() {

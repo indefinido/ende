@@ -19984,7 +19984,7 @@ this.model = (function() {
       after_initialize: [],
       before_initialize: []
     },
-    all: function() {
+    every: function() {
       return this.cache;
     },
     create: function() {
@@ -20607,7 +20607,7 @@ queryable = {
     }
     return this.storage.store(key);
   },
-  all: function() {
+  every: function() {
     return this.storage.values();
   },
   where: function() {
@@ -20830,7 +20830,7 @@ restful = {
       }
       return $.when.apply($, savings);
     },
-    all: function(conditions, doned, failed) {
+    every: function(conditions, doned, failed) {
       if (conditions == null) {
         conditions = {};
       }
@@ -20853,7 +20853,7 @@ restful = {
       namespaced = conditions[this.resource] || {};
       namespaced.limit = 1;
       namespaced.order = 'desc';
-      return this.all(conditions, callback);
+      return this.every(conditions, callback);
     },
     get: function(action, data) {
       var default_route, old_route, payload, promise, resource;
@@ -21117,7 +21117,7 @@ restful = {
       }
     },
     json: function(methods) {
-      var definition, json, name, nested, value;
+      var definition, json, name, nature, nested, value;
 
       if (methods == null) {
         methods = {};
@@ -21136,11 +21136,16 @@ restful = {
         if (value == null) {
           continue;
         }
-        if (type(value) === 'function') {
+        nature = type(value);
+        if (nature === 'function') {
           continue;
         }
-        if (type(value) === 'object') {
+        if (nature === 'object' || nature === 'element') {
           if (nested) {
+            if (!value.json) {
+              console.warn("json: Tryied to serialize nested attribute '" + name + "' without serialization method!");
+              continue;
+            }
             json["" + name + "_attributes"] = value.json(methods[name]);
           } else if ((value.toJSON != null) || (value.json != null)) {
             if (value.resource) {
@@ -21151,6 +21156,8 @@ restful = {
             } else {
               json[name] = value.toJSON(methods[name]);
             }
+          } else {
+            continue;
           }
         } else {
           json[name] = value;
@@ -21485,7 +21492,7 @@ if (model.associable) {
     });
   });
   model.associable.mix(function(singular_association, plural_association) {
-    plural_association.all = plural_association.reload = function(data, done, fail) {
+    plural_association.every = plural_association.reload = function(data, done, fail) {
       var promises, reload;
 
       if (this.parent != null) {

@@ -33,7 +33,7 @@ restful =
 
     # returns a promise
     # TODO move to scopable
-    all: (conditions = {}, doned, failed) ->
+    every: (conditions = {}, doned, failed) ->
       if typeof conditions == 'function'
         doned      = conditions
         conditions = {}
@@ -58,7 +58,7 @@ restful =
       namespaced.order = 'desc'
 
       # TODO should fail when server returns more then one record
-      @all conditions, callback
+      @every conditions, callback
 
     # TODO better treating of arguments
     get: (action, data = {}) ->
@@ -344,11 +344,17 @@ restful =
         # TODO Bypass only undefined values so we can erase data on server
         value = @[name]
         continue unless value?
-        continue if type(value) == 'function'
 
-        if type(value) == 'object'
+        nature = type value
+        continue if nature == 'function'
+
+        if nature == 'object' or nature == 'element'
 
           if nested
+            unless value.json
+              console.warn "json: Tryied to serialize nested attribute '#{name}' without serialization method!"
+              continue
+
             # TODO move nested attributes to model definition and
             # implement toJSON there
             json["#{name}_attributes"] = value.json methods[name]
@@ -364,6 +370,12 @@ restful =
               json[name] = value.json methods[name]
             else
               json[name] = value.toJSON methods[name]
+
+          # It is a complex type value without serializtion support so
+          # we just ignore it
+          else
+            # TODO maybe log warning based on debug or info flag here?
+            continue
 
         else
 

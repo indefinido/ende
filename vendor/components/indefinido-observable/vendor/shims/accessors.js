@@ -7,10 +7,12 @@
   hasOwnProp = ObjectProto.hasOwnProperty,
   getProp    = Object.getOwnPropertyDescriptor,
   defineProp = Object.defineProperty,
+  objectCreate = Object.create,
   toStrings = [],
   features = null,
   stack = [], detach,
-  prototypeBase = [Object, String, Array, Function, Boolean, Number, RegExp, Date, Error];
+  fixedOwnProperty,
+   prototypeBase = [Object, String, Array, Function, Boolean, Number, RegExp, Date, Error];
 
   // IE7 Does not have Element and Window defined, so only add them if
   // they exists check here
@@ -164,8 +166,12 @@
       }
     };
 
-    ObjectCreate = Object.create;
-    baseElement  = document.createElement('fix');
+    baseElement      = document.createElement('fix');
+    fixedOwnProperty = function (name) {
+      if (name in baseElement) return false;
+      return hasOwnProp.call(this, name);
+    };
+
 
     Object.create = function (prototype, properties) {
       var complexDescriptor, fix, descriptor, name;
@@ -198,13 +204,20 @@
             }
           }
 
+          // Ensure most normalized for loops to work property, by
+          // skiping the dom element properties on own property
+          // checking.
+          //
+          // TODO ensure other own property methods checking
+          fix.hasOwnProperty = fixedOwnProperty
+
           Object.defineProperties(fix, properties);
         } else {
           throw new TypeError('Functions with complex descriptors not implemented yet');
         }
         return fix;
       } else {
-        return ObjectCreate(prototype, properties)
+        return objectCreate(prototype, properties)
       }
     }
   };

@@ -256,7 +256,7 @@ define [
 
     else if @options.autofetch
 
-      deferred = @scope.all()
+      deferred = @scope.every()
 
     else
 

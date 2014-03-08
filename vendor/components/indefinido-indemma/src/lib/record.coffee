@@ -15,7 +15,7 @@ merge      = require('assimilate').withStrategy 'deep'
       after_initialize: []
       # TODO usar deferred
       before_initialize: []
-    all: ->
+    every: ->
       # TODO transform model in a array like object and store cache in root
       @cache
     # TODO better find support

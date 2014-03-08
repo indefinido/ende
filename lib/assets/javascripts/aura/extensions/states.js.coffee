@@ -33,23 +33,34 @@ define 'aura/extensions/states', ['application/states'], (states) ->
     flow =
 
       changed: (transition) ->
+        {domain}                   = application
         unormalized_widget_options = states[transition.to]
+
+        # TODO update aura and use native start method
+        # TODO move domain flow logic to a domain extension
+        #
+        domain_flow                = domain?[transition.to]
 
         # TODO cache rendered widgets!
         if unormalized_widget_options
           widgets_options = @normalize_widget_options unormalized_widget_options, transition
 
-          # TODO update aura and use native start method
-          # TODO move this logic to a domain extension
-          {domain}  = application
-
           injection = core.inject(widgets_options).fail flow.failed
 
-          domain?[transition.to]?.ready ||= injection.done
+          # TODO let this code more legible
+          domain_flow?.ready ||= injection.then((widgets...) ->
+            # TODO use es6-shim promises
+            $.Deferred().resolveWith domain_flow, widgets
+          ).done
 
           # To prevent reinstation upon changing to this state for the
           # second time, delete stored configuration for this state
           delete states[transition.to]
+
+        if domain_flow and not domain_flow.ready
+          # TODO use es6-shim promises
+          domain_flow.ready = $.Deferred().resolveWith(domain_flow, []).done
+
 
       normalize_widget_options: (unormalized_widget_options, transition_widgets_options) ->
         widgets = []
@@ -130,8 +141,7 @@ define 'aura/extensions/states', ['application/states'], (states) ->
       if (application.startOptions.widgets)
         application.state = "default"
       else
-        current_start = application.core.start
-        application.core.start = ->
+        application.core.metabolize = ->
           # If any initialized flow changed the application state
           # before the widgets initialization, store its state pass
           # through the default state and go back to the old state
@@ -141,8 +151,7 @@ define 'aura/extensions/states', ['application/states'], (states) ->
           current_state = application.state if application.state != 'initialization'
           application.state = "default"
 
-          application.core.start = current_start
-          startup = current_start.apply @, arguments
+          startup = application.core.start.apply @, arguments
 
           application.state = current_state if current_state?
 

@@ -1,7 +1,9 @@
 define ->
 
   type: 'Base'
+
   version: '0.1.1'
+
   options:
     autoload: true
 

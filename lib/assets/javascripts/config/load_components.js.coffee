@@ -121,13 +121,19 @@ define 'config/load_components', ['application_components'], ->
         module = loader.loaders.discovered.apply @, params
 
       catch e
-        # TODO better loggin support
-        (app?.logger || console).warn "loader: Failed to load '#{params[0]}' with #{using}: \n Exception: '#{e.message}'. Trying with requirejs."
+        if e.require
+          # TODO better loggin support
+          if app.debug
+            (app?.logger || console).warn "loader: Failed to load '#{params[0]}' with #{using}: \n Exception: '#{e.message}'. Trying with requirejs."
 
-        loader.activate 'requirejs'
-        module = loader.loaders.discovered.apply @, params unless module
+          # Since it failed to load with component, try to load with requirejs
+          loader.activate 'requirejs'
+          unless module
+            module = loader.loaders.discovered.apply @, params
+        else
+          throw e
 
-      # Always let requirjs active by default
+        # Always let requirejs active by default
       loader.activate 'requirejs'
 
       module

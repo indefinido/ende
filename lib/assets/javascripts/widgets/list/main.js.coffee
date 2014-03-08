@@ -61,7 +61,7 @@ define ['./states/index', './presenter'], (templates, presenter) ->
 
     # Forward the models to the presenter
 
-    model.all (records) ->
+    model.every (records) ->
 
       # Bind presenter to template
       presentation = presenter records, luna

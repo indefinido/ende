@@ -118,7 +118,7 @@ if (requiresDomElement) {
       else document.body.appendChild(fix);
 
       // Replace object with dom node
-      object = fix;
+      object = $.extend(fix, object);
     }
 
     // Observe element if it is not observed
