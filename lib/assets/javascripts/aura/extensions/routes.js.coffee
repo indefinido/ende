@@ -44,11 +44,11 @@ define 'aura/extensions/routes', (routes) ->
 
         #-- If we land on the page with a hash value and history is enabled, redirect to the non-hash page
         if ( window.location.hash.indexOf('#!') != -1 && history )
-            window.location.href = window.location.hash.replace('#!', '')
+            return window.location.href = window.location.hash.replace('#!', '')
 
         #-- If we land on the page with a path and history is disabled, redirect to the hash page
         else if ( '/' != window.location.pathname && !history )
-            window.location.href = '/#!' + window.location.pathname
+            return window.location.href = '/#!' + window.location.pathname
 
 
         #-- Process the route

@@ -11,6 +11,7 @@ requirejs.config
       # probably create a undefined plug-in for component builder
       exports: 'require.modules.seminovos/vendor/loaded'
       deps: ['ende_build']
+
     ende_build:
       exports: 'require.register'
 
@@ -21,7 +22,10 @@ requirejs.config
 define 'jquery'    , ['config/load_components'], ->
   window.jQuery = window.$ = require 'component-jquery'
 
-define 'modernizr' , ['config/load_components'], -> require 'modernizr'
+define 'modernizr' , ['config/load_components'], ->
+  require 'modernizr'
+  window.Modernizr
+
 # TODO define 'underscore', ['config/load_components'], -> require 'lodash'
 
 # TODO figure out how to use rjs optmizer to include component builds

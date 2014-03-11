@@ -2,7 +2,7 @@
 
 define 'aura/extensions/mask',
 
-  version: '0.1.1'
+  version: '0.1.2'
 
   require:
     paths:
@@ -26,7 +26,6 @@ define 'aura/extensions/mask',
 
     with_aura = 'jquery.mask_numeric_extensions'
     require with_aura
-
 
     mask = (selector, mask, options) -> $(selector).inputmask mask, options
 
@@ -71,5 +70,9 @@ define 'aura/extensions/mask',
 
         phone:
           mask           : '(99) 9999[9]-9999'
+
+
+  afterAppStart: ->
+    @extend()
 
 

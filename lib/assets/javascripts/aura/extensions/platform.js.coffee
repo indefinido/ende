@@ -14,4 +14,4 @@ define 'aura/extensions/platform', ->
     application.core    = Object.create application.core, descriptors
     application.sandbox = Object.create application.sandbox, descriptors
 
-  # TODO copy other properties to the main application
+    # TODO copy other properties to the main application
