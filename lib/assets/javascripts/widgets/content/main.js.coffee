@@ -82,13 +82,14 @@ define
       # abort
       when 0
         # TODO default abort message
-        @sandbox.emit "content.#{@identifier}.loading_aborted"
+        # TODO better abort check: http://ilikestuffblog.com/2009/11/30/how-to-distinguish-a-user-aborted-ajax-call-from-an-error/
+        @sandbox.emit "content.#{@identifier}.loading_aborted", @
       # forbidden
       when 401
         # TODO default forbidden message
-        @sandbox.emit "content.#{@identifier}.loading_unauthorized"
+        @sandbox.emit "content.#{@identifier}.loading_unauthorized", @
       else
-        @sandbox.emit "content.#{@identifier}.loading_failed"
+        @sandbox.emit "content.#{@identifier}.loading_failed", @
 
         # TODO better debugging code location
         if @sandbox.debug.enabled
