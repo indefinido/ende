@@ -42,7 +42,6 @@ restful =
       # if @parent and not @parent._id
       #   return callback.call @model, []
 
-
       $.when(rest.get.call @, conditions)
        .then(util.model.map             )
        .done(doned                      )

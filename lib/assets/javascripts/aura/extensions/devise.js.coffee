@@ -150,11 +150,7 @@ define 'aura/extensions/devise', ->
 
       session.instance.destroy().done(succeeded)
         .fail (xhr, status) ->
-          switch (xhr.status)
-            when 12152
-              succeeded.call @, xhr.responseText, status, xhr
-            else
-              mediator.emit 'session.destruction_failed', @
+          mediator.emit 'session.destruction_failed', @
 
 
   #      user_password POST   /users/password(.:format)                 devise/passwords#create
