@@ -9,7 +9,7 @@ module.exports =
 
 
 # TODO move to serialization module
-data_for = ->
+data_for = (data) ->
   param_name = @resource.param_name || @resource.toString()
 
   # TODO optmize this serialization lookup

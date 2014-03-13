@@ -19175,8 +19175,8 @@ module.exports = {
   }
 };
 
-data_for = function() {
-  var data, param_name;
+data_for = function(data) {
+  var param_name;
 
   param_name = this.resource.param_name || this.resource.toString();
   if (!data && this.json) {

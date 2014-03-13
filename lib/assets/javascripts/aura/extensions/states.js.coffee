@@ -153,6 +153,14 @@ define 'aura/extensions/states', ['states'], (states) ->
 
           startup = application.core.start.apply @, arguments
 
+          # TODO move to domain extension
+          # TODO let this code more legible
+          domain_flow = application.domain.default
+          domain_flow?.ready ||= injection.then((widgets...) ->
+            # TODO use es6-shim promises
+            $.Deferred().resolveWith domain_flow, widgets
+          ).done
+
           application.state = current_state if current_state?
 
           startup
