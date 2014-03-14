@@ -43,12 +43,17 @@ define 'aura/extensions/routes', (routes) ->
           [path, search]  = path.split('?') if path.indexOf('?') != -1
 
         #-- If we land on the page with a hash value and history is enabled, redirect to the non-hash page
-        if ( window.location.hash.indexOf('#!') != -1 && history )
-            return window.location.href = window.location.hash.replace('#!', '')
+        if location.hash.indexOf('#!') != -1 && history
+          return location.href = location.hash.replace '#!', ''
 
         #-- If we land on the page with a path and history is disabled, redirect to the hash page
-        else if ( '/' != window.location.pathname && !history )
-            return window.location.href = '/#!' + window.location.pathname
+        else if '/' != location.pathname && !history
+
+          part  = location.pathname
+          part += location.search   if location.search
+          part += location.hash     if location.hash
+
+          return location.href = '/#!' + part
 
 
         #-- Process the route

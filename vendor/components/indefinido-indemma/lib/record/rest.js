@@ -1,4 +1,4 @@
-var $, data_for, request;
+var $, request;
 
 $ = require('jquery');
 
@@ -17,7 +17,7 @@ module.exports = {
   }
 };
 
-data_for = function(data) {
+request = function(method, url, data) {
   var param_name;
 
   param_name = this.resource.param_name || this.resource.toString();
@@ -29,11 +29,6 @@ data_for = function(data) {
     delete data[param_name]['id'];
     delete data[param_name]['_id'];
   }
-  return data;
-};
-
-request = function(method, url, data) {
-  data = data_for.call(this, data);
   return $.ajax({
     url: url,
     data: data,
