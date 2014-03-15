@@ -97,7 +97,7 @@ define 'aura/extensions/states', ['states'], (states) ->
 
       # TODO better integration with router to remove initial states widgets
       mediator.on 'states.list', ->
-        mediator.emit 'states.listed', states
+        @emit 'states.listed', states
 
       # TODO store meta information about application states
       # application.states = Object.keys states

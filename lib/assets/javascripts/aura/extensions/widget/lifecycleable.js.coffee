@@ -70,6 +70,10 @@ define 'aura/extensions/widget/lifecycleable', ->
 
       recyclable.super.constructor.call @, options
 
+      # TODO think how to initialize widgets with elements out of dom
+      if options?.el?.length and not @$el?.length
+        @$el = options.el
+
       @initialized()
 
     inject: (name, options) ->
