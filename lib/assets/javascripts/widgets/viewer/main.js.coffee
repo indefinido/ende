@@ -129,7 +129,7 @@ define [
     viewed: (event, in_view, horizontal, vertical) ->
       boo[if in_view then 'pride' else 'shame'] event.target
 
-  version: '0.2.1'
+  version: '0.2.2'
 
   # TODO better separation of concerns
   # TODO Current remote page that is beign displayed
@@ -160,7 +160,15 @@ define [
     # We extend presentation.selected just to assign all values of the item model
     # TODO call presenter to do this job
     @sandbox.util.extend @presentation.selected   , item.model.json?() || item.model
+
+    # TODO change paramters to item, item.model
     @sandbox.emit "viewer.#{@identifier}.selected", item.model
+
+  # Called when hover in and out from model
+  hover: (item) ->
+    # TODO call presenter to do this job
+    # @sandbox.util.extend @presentation.hovered   , item.model.json?() || item.model
+    @sandbox.emit "viewer.#{@identifier}.hovered", item, item && item.model
 
   scope_to: (scope, child_scope) ->
     # Singuralize in order to accept association scopes, since
@@ -313,6 +321,7 @@ define [
   # TODO move this method to an extension
   syncronize_children: ->
     @sandbox._children ||= []
+    @sandbox._widget   ||= @
 
     # Add possible new childs
     @constructor.startAll(@$el).done (widgets...) =>
@@ -321,6 +330,12 @@ define [
         widget.sandbox._parent = @sandbox
 
       @sandbox._children = @sandbox._children.concat widgets
+
+      for widget in widgets
+        # TODO emit this event only when all siblings have initialized
+        @sandbox.emit "#{widget.name}.#{widget.identifier}.siblings_initialized", @sandbox._children
+
+      true
 
     # TODO better internal aura widget selection
     # Prevent other child to be instantiated
@@ -429,8 +444,17 @@ define [
       ], (custom_default_template, custom_presenter) =>
 
       # TODO Better way to preserve widgets handlers
+      # TODO Move each handler to independent features
       handlers     =
         item:
+          hover: (event, models) =>
+            if event.type == 'mouseenter'
+              @hover models.item
+            else if event.type == 'mouseleave'
+              @hover null
+            else
+              throw new TypeError 'viewer.handlers.hover: Event type incompatible with hovering.'
+
           clicked: (event, models) =>
             @select models.item
 

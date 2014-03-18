@@ -74,6 +74,9 @@ define 'aura/extensions/widget/lifecycleable', ->
       core.inject name, options
 
     initialized: ->
+      # TODO think how to access parent widget in children ones
+      @sandbox._widget ||= @
+
       @sandbox.emit "#{@name}.#{@identifier}.initialized", @
 
     started: ->
@@ -82,6 +85,7 @@ define 'aura/extensions/widget/lifecycleable', ->
     # TODO Remove when updating to aura 0.9
     stopped: ->
       @$el.remove()
+
 
   (application) ->
 
