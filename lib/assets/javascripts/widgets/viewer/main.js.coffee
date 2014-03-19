@@ -177,15 +177,13 @@ define [
     sent_scope    = @inflector.singularize scope.resource.toString()
     current_scope = @inflector.singularize @scope.resource.toString()
 
+    deferred      = @sandbox.data.deferred()
+
     if sent_scope != current_scope
       throw new TypeError "Invalid scope sent to viewer@#{@identifier} sent: '#{sent_scope}', expected: '#{current_scope}'"
 
     # For sobsequent usages we must store the scope
     @scope = scope
-
-    # TODO better hierachical event distribution
-    for { _widget: widget } in @sandbox._children?
-      widget.scope_to? child_scope
 
     @sandbox.emit "viewer.#{@identifier}.scope_changed", @scope
 
@@ -195,6 +193,15 @@ define [
         scope_data: observable scope.scope.data
 
     @repopulate()
+
+  # TODO rename this method
+  # TODO also move this to an external tag
+  statused: (status) ->
+    if status
+      @status = status
+      @sandbox.emit "viewer.#{@identifier}.status_changed", status
+    else
+      @status
 
   repopulate: ->
     unless @fetching?
@@ -209,6 +216,7 @@ define [
       @load   = @sandbox.ui.loader @$el.find '.results .items'
 
       # TODO implement status for viewer widget
+      @statused 'loading'
       @$el.addClass 'idle'
       @$el.removeClass 'loading'
 
@@ -243,6 +251,7 @@ define [
 
     @fetching.always =>
       # TODO implement status for viewer widget
+      @statused 'loading'
       @$el.addClass 'idle'
       @$el.removeClass 'loading'
 
@@ -257,6 +266,7 @@ define [
     @load   = @sandbox.ui.loader @$results
 
     # TODO implement status for viewer widget
+    @statused 'loading'
     @$el.removeClass 'idle'
     @$el.addClass 'loading'
 
@@ -310,7 +320,7 @@ define [
 
 
   plugins: (options) ->
-    deferreds = []
+    deferreds = [@]
 
     deferreds.push paginable  widget: @ if options.page
     deferreds.push scrollable widget: @ if options.scroll
@@ -426,21 +436,27 @@ define [
 
     @sandbox.on "viewer.#{@identifier}.scope", @scope_to, @
 
-    # Iniitalize plugins
+    # Initalize plugins
+    # TODO think how to implement plugins api
     loading = @plugins options
 
+    @statused 'idle'
     @$el.addClass "viewer widget #{@inflector.cssify @identifier} idle clearfix"
 
-    loading.done => @require_custom options
+    loading.done (widget) ->
+      widget.require_custom options.resource
 
-  require_custom: (options) ->
+  # TODO externalize this code to an extension
+  require_custom: (resource) ->
+    deferred = @sandbox.data.deferred()
+
     # Fetch custom templates
     # TODO better custom templates structure and custom presenter
     # TODO better segregation of concerns on this code
     # TODO handle case where custom presenter does not exist!
     require [
-      "text!./widgets/viewer/templates/default/#{options.resource}.html"
-      "./widgets/viewer/presenters/#{options.resource}"
+      "text!./widgets/viewer/templates/default/#{resource}.html"
+      "./widgets/viewer/presenters/#{resource}"
       ], (custom_default_template, custom_presenter) =>
 
       # TODO Better way to preserve widgets handlers
@@ -460,12 +476,19 @@ define [
 
       presenter.handlers = handlers
 
-      custom_default_template and templates[options.resource] = custom_default_template
-      @presenter = @sandbox.util.extend custom_presenter, presenter if custom_presenter
+      custom_default_template and templates[resource] = custom_default_template
+      @presenter  = @sandbox.util.extend custom_presenter, presenter if custom_presenter
 
-      @$results = @$el.find '.results .items'
+      @$results ||= @$el.find '.results .items'
 
       # Fetch default data
       @populate handlers
 
-    true
+      deferred.resolveWith @, [resource]
+
+    , (error) =>
+      # TODO handle other status codes with xhr error
+      @sandbox.logger.error "Error when loading presenter and template for resource '#{resource}':\n\n", error.message + "\n\n", error
+      deferred.rejectWith @, arguments
+
+    deferred
