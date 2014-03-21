@@ -26,14 +26,10 @@ function require(path, parent, orig) {
   // perform real require()
   // by invoking the module's
   // registered function
-  if (!module._resolving && !module.exports) {
-    var mod = {};
-    mod.exports = {};
-    mod.client = mod.component = true;
-    module._resolving = true;
-    module.call(this, mod.exports, require.relative(resolved), mod);
-    delete module._resolving;
-    module.exports = mod.exports;
+  if (!module.exports) {
+    module.exports = {};
+    module.client = module.component = true;
+    module.call(this, module.exports, require.relative(resolved), module);
   }
 
   return module.exports;
@@ -25038,21 +25034,31 @@ generator = {
   },
 
   observable_for: function (object) {
+    var toJSON;
+
     Object.defineProperty(object, 'observed', {
       configurable: true,
       enumerable: false,
       value: {}
     });
 
-    // TODO call the current object.toJSON after this method
-    return Object.defineProperty(object, 'toJSON', {
-      enumerable: false,
-      value: function () {
-        // TODO remove underscore dependency
-        return observable.unobserve(_.omit(this, observable.ignores));
-        // old_to_json()
-      }
-    });
+    // TODO remove json in favor of the toJSON convention
+    toJSON = object.json || object.toJSON
+
+    if (toJSON) {
+      return Object.defineProperty(object, 'toJSON', {
+        enumerable: false,
+        value: function () {
+          var json;
+
+          // TODO remove underscore dependency
+          // TODO ? move toJSON and observed to other methods
+          json = toJSON.apply(this, arguments);
+          return observable.unobserve(_.omit(json, observable.ignores, ['toJSON', 'observed']));
+        }
+      });
+
+    }
   },
 
   // TODO improve readability
@@ -32246,54 +32252,11 @@ require.register("ened/vendor/assets/javascripts/polyfills/es6-map-shim.js", fun
 }.call(this, window));
 
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 require.alias("mikeric-rivets/dist/rivets.js", "ened/deps/rivets/dist/rivets.js");
 require.alias("mikeric-rivets/dist/rivets.js", "ened/deps/rivets/index.js");
 require.alias("mikeric-rivets/dist/rivets.js", "rivets/index.js");
 require.alias("mikeric-rivets/dist/rivets.js", "mikeric-rivets/index.js");
+
 require.alias("segmentio-extend/index.js", "ened/deps/extend/index.js");
 require.alias("segmentio-extend/index.js", "extend/index.js");
 
@@ -32301,10 +32264,12 @@ require.alias("pluma-assimilate/dist/assimilate.js", "ened/deps/assimilate/dist/
 require.alias("pluma-assimilate/dist/assimilate.js", "ened/deps/assimilate/index.js");
 require.alias("pluma-assimilate/dist/assimilate.js", "assimilate/index.js");
 require.alias("pluma-assimilate/dist/assimilate.js", "pluma-assimilate/index.js");
+
 require.alias("paulmillr-es6-shim/es6-shim.js", "ened/deps/es6-shim/es6-shim.js");
 require.alias("paulmillr-es6-shim/es6-shim.js", "ened/deps/es6-shim/index.js");
 require.alias("paulmillr-es6-shim/es6-shim.js", "es6-shim/index.js");
 require.alias("paulmillr-es6-shim/es6-shim.js", "paulmillr-es6-shim/index.js");
+
 require.alias("component-type/index.js", "ened/deps/type/index.js");
 require.alias("component-type/index.js", "type/index.js");
 
@@ -32322,6 +32287,7 @@ require.alias("components-modernizr/modernizr.js", "ened/deps/modernizr/moderniz
 require.alias("components-modernizr/modernizr.js", "ened/deps/modernizr/index.js");
 require.alias("components-modernizr/modernizr.js", "modernizr/index.js");
 require.alias("components-modernizr/modernizr.js", "components-modernizr/index.js");
+
 require.alias("indefinido-indemma/index.js", "ened/deps/indemma/index.js");
 require.alias("indefinido-indemma/vendor/stampit.js", "ened/deps/indemma/vendor/stampit.js");
 require.alias("indefinido-indemma/vendor/sinon.js", "ened/deps/indemma/vendor/sinon.js");
@@ -32350,6 +32316,7 @@ require.alias("indefinido-indemma/index.js", "indemma/index.js");
 require.alias("pluma-assimilate/dist/assimilate.js", "indefinido-indemma/deps/assimilate/dist/assimilate.js");
 require.alias("pluma-assimilate/dist/assimilate.js", "indefinido-indemma/deps/assimilate/index.js");
 require.alias("pluma-assimilate/dist/assimilate.js", "pluma-assimilate/index.js");
+
 require.alias("component-type/index.js", "indefinido-indemma/deps/type/index.js");
 
 require.alias("component-bind/index.js", "indefinido-indemma/deps/bind/index.js");
@@ -32424,4 +32391,6 @@ require.alias("component-value/index.js", "component-dom/deps/value/index.js");
 require.alias("component-type/index.js", "component-value/deps/type/index.js");
 
 require.alias("component-value/index.js", "component-value/index.js");
+
 require.alias("component-query/index.js", "component-dom/deps/query/index.js");
+

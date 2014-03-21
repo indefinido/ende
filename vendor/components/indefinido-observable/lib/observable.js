@@ -223,21 +223,31 @@ generator = {
   },
 
   observable_for: function (object) {
+    var toJSON;
+
     Object.defineProperty(object, 'observed', {
       configurable: true,
       enumerable: false,
       value: {}
     });
 
-    // TODO call the current object.toJSON after this method
-    return Object.defineProperty(object, 'toJSON', {
-      enumerable: false,
-      value: function () {
-        // TODO remove underscore dependency
-        return observable.unobserve(_.omit(this, observable.ignores));
-        // old_to_json()
-      }
-    });
+    // TODO remove json in favor of the toJSON convention
+    toJSON = object.json || object.toJSON
+
+    if (toJSON) {
+      return Object.defineProperty(object, 'toJSON', {
+        enumerable: false,
+        value: function () {
+          var json;
+
+          // TODO remove underscore dependency
+          // TODO ? move toJSON and observed to other methods
+          json = toJSON.apply(this, arguments);
+          return observable.unobserve(_.omit(json, observable.ignores, ['toJSON', 'observed']));
+        }
+      });
+
+    }
   },
 
   // TODO improve readability
