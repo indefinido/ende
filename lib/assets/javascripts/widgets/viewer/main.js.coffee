@@ -129,7 +129,32 @@ define [
     viewed: (event, in_view, horizontal, vertical) ->
       boo[if in_view then 'pride' else 'shame'] event.target
 
-  version: '0.2.2'
+
+  # TODO Move each handler to independent features
+  handleable = stampit
+    handleables:
+      item:
+        hover: (event, models) ->
+          if event.type == 'mouseenter'
+            @hover models.item
+          else if event.type == 'mouseleave'
+            @hover null
+          else
+            throw new TypeError 'viewer.handlers.hover: Event type incompatible with hovering.'
+
+        clicked: (event, models) -> @select models.item
+
+  , {}, ->
+
+    throw new TypeError "Widget property is mandatory for handleable stamp" unless @widget?
+
+    @handlers =
+      item:
+        clicked: $.proxy @handleables.item.clicked, @widget
+        hover  : $.proxy @handleables.item.hover  , @widget
+
+    @
+  version: '0.2.4'
 
   # TODO better separation of concerns
   # TODO Current remote page that is beign displayed
@@ -213,7 +238,7 @@ define [
 
     # TODO store spinner instance, instead of creating a new one every time
     unless @load?
-      @load   = @sandbox.ui.loader @$el.find '.results .items'
+      @load   = @sandbox.ui.loader @$results
 
       # TODO implement status for viewer widget
       @statused 'loading'
@@ -260,10 +285,8 @@ define [
         @load = null
 
 
-  populate: (handlers) ->
-    sandbox = @sandbox
-
-    @load   = @sandbox.ui.loader @$results
+  populate: ->
+    @load   = @sandbox.ui.loader @$el
 
     # TODO implement status for viewer widget
     @statused 'loading'
@@ -291,9 +314,12 @@ define [
 
       @load.stop()
 
-      @presentation = @presenter records, @scope
+      # TODO do not send records as parameter
+      @presentation = @presenter records, @scope, @handleable
 
+      # Initialize elements
       @$el.html templates[@options.resource]
+      @$results = @$el.find '.results .items'
 
       if records.length
         # boo.initialize @$el.find '.results .items'
@@ -430,7 +456,12 @@ define [
   initialize: (options) ->
     # TODO import core extensions in another place
     @resource      = @sandbox.resource options.resource
-    @scope         = model = @resource
+    @scope         = @resource
+
+    # Instantiate it's on handleable factory
+    widget         = @
+    widgetable     = stampit().enclose -> @widget = widget; @
+    @handleable    = stampit.compose widgetable, handleable
 
     {sandbox: {util: {@inflector}}}   = @
 
@@ -459,30 +490,16 @@ define [
       "./widgets/viewer/presenters/#{resource}"
       ], (custom_default_template, custom_presenter) =>
 
-      # TODO Better way to preserve widgets handlers
-      # TODO Move each handler to independent features
-      handlers     =
-        item:
-          hover: (event, models) =>
-            if event.type == 'mouseenter'
-              @hover models.item
-            else if event.type == 'mouseleave'
-              @hover null
-            else
-              throw new TypeError 'viewer.handlers.hover: Event type incompatible with hovering.'
-
-          clicked: (event, models) =>
-            @select models.item
-
-      presenter.handlers = handlers
+      unless presenter.hasOwnProperty 'handlers'
+        Object.defineProperty presenter, 'handlers',
+          get: -> throw new Error "presenter.hanlder is deprecated, please compose upon handleable"
+          set: -> throw new Error "presenter.hanlder is deprecated, please compose upon handleable"
 
       custom_default_template and templates[resource] = custom_default_template
       @presenter  = @sandbox.util.extend custom_presenter, presenter if custom_presenter
 
-      @$results ||= @$el.find '.results .items'
-
       # Fetch default data
-      @populate handlers
+      @populate()
 
       deferred.resolveWith @, [resource]
 
