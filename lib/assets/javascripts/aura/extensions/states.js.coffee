@@ -1,6 +1,6 @@
-define 'aura/extensions/states', ['application/states'], (states) ->
+'use strict'
 
-  'use strict'
+define 'aura/extensions/states', ['states'], (states) ->
 
   (application) ->
     {core, logger}  = application
@@ -29,26 +29,38 @@ define 'aura/extensions/states', ['application/states'], (states) ->
     dom.find('html').addClass state.current
 
     # Application flow control
+    # TODO think of a more specific name, like a machine!
     flow =
 
       changed: (transition) ->
+        {domain}                   = application
         unormalized_widget_options = states[transition.to]
+
+        # TODO update aura and use native start method
+        # TODO move domain flow logic to a domain extension
+        #
+        domain_flow                = domain?[transition.to]
 
         # TODO cache rendered widgets!
         if unormalized_widget_options
           widgets_options = @normalize_widget_options unormalized_widget_options, transition
 
-          # TODO update aura and use native start method
-          # TODO move this logic to a domain extension
-          {domain}  = application
-
           injection = core.inject(widgets_options).fail flow.failed
 
-          domain?[transition.to]?.ready ||= injection.done
+          # TODO let this code more legible
+          domain_flow?.ready ||= injection.then((widgets...) ->
+            # TODO use es6-shim promises
+            $.Deferred().resolveWith domain_flow, widgets
+          ).done
 
           # To prevent reinstation upon changing to this state for the
           # second time, delete stored configuration for this state
           delete states[transition.to]
+
+        if domain_flow and not domain_flow.ready
+          # TODO use es6-shim promises
+          domain_flow.ready = $.Deferred().resolveWith(domain_flow, []).done
+
 
       normalize_widget_options: (unormalized_widget_options, transition_widgets_options) ->
         widgets = []
@@ -73,7 +85,7 @@ define 'aura/extensions/states', ['application/states'], (states) ->
         logger.error "states.flow.failed: Failed autostarting widget! \n Message: #{exception.message}", exception
 
 
-    version: '0.2.3'
+    version: '0.2.4'
 
     initialize: (application) ->
       mediator.on 'state.change' , state.change
@@ -85,7 +97,7 @@ define 'aura/extensions/states', ['application/states'], (states) ->
 
       # TODO better integration with router to remove initial states widgets
       mediator.on 'states.list', ->
-        mediator.emit 'states.listed', states
+        @emit 'states.listed', states
 
       # TODO store meta information about application states
       # application.states = Object.keys states
@@ -124,4 +136,31 @@ define 'aura/extensions/states', ['application/states'], (states) ->
 
         get: -> state.current
 
-    afterAppStart: (application) -> application.state = "default"
+    afterAppStart: (application) ->
+      # TODO Change the application to default state in flows extension
+      if (application.startOptions.widgets)
+        application.state = "default"
+      else
+        application.core.metabolize = ->
+          # If any initialized flow changed the application state
+          # before the widgets initialization, store its state pass
+          # through the default state and go back to the old state
+          # created by the flows
+          #
+          # TODO initialize the first flow in flows extension
+          current_state = application.state if application.state != 'initialization'
+          application.state = "default"
+
+          startup = application.core.start.apply @, arguments
+
+          # TODO move to domain extension
+          # TODO let this code more legible
+          domain_flow = application.domain.default
+          domain_flow?.ready ||= injection.then((widgets...) ->
+            # TODO use es6-shim promises
+            $.Deferred().resolveWith domain_flow, widgets
+          ).done
+
+          application.state = current_state if current_state?
+
+          startup

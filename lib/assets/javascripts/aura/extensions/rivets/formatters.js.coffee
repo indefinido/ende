@@ -1,4 +1,8 @@
-define 'extensions/rivets/formatters',
+'use strict'
+
+
+# TODO unifiy extension plug-in api
+define 'aura/extensions/rivets/formatters',
 
   # ### exists
   # ```data-show="user.name | exists"```

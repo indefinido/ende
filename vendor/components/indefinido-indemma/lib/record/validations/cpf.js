@@ -1,6 +1,4 @@
-var composed, cpfable, stampit, validations;
-
-validations = require('../validatable');
+var composed, cpfable, stampit;
 
 stampit = require('../../../vendor/stampit');
 
@@ -20,7 +18,7 @@ cpfable = stampit({
     d1 = 0;
     v = false;
     i = 0;
-    for (i = _i = 1; _i <= 9; i = ++_i) {
+    for (i = _i = 0; _i <= 9; i = ++_i) {
       d1 += c.charAt(i) * (10 - i);
     }
     if (d1 === 0) {
@@ -34,7 +32,7 @@ cpfable = stampit({
       return false;
     }
     d1 *= 2;
-    for (i = _j = 1; _j <= 9; i = ++_j) {
+    for (i = _j = 0; _j <= 9; i = ++_j) {
       d1 += c.charAt(i) * (11 - i);
     }
     d1 = 11 - (d1 % 11);
@@ -53,8 +51,8 @@ cpfable = stampit({
   }
 });
 
-composed = stampit.compose(validations.validatable, cpfable);
+composed = stampit.compose(require('./validatorable'), cpfable);
 
 composed.definition_key = 'validates_cpf_format';
 
-validations.manager.validators.cpf = composed;
+module.exports = composed;

@@ -79,26 +79,22 @@ singular = {
 subscribers = {
   belongs_to: {
     foreign_key: function(resource_id) {
-      var associated, association_name, current_resource_id, resource, _ref;
+      var association_name, current_resource_id, resource, _ref;
 
       association_name = this.resource.toString();
-      if (resource_id === null || resource_id === void 0) {
+      if (!resource_id) {
         this.dirty = true;
         this.owner[association_name] = resource_id;
         return resource_id;
       }
-      current_resource_id = (_ref = this.owner[association_name]) != null ? _ref._id : void 0;
+      current_resource_id = (_ref = this.owner.observed[association_name]) != null ? _ref._id : void 0;
       if (resource_id !== current_resource_id) {
         resource = model[association_name];
         if (!resource) {
           console.warn("subscribers.belongs_to.foreign_key: associated factory not found for model: " + association_name);
           return resource_id;
         }
-        associated = resource.find(resource_id);
-        associated || (associated = resource({
-          _id: resource_id
-        }));
-        this.owner.observed[association_name] = associated;
+        this.owner.observed[association_name] = null;
       }
       return resource_id;
     },
@@ -111,11 +107,15 @@ subscribers = {
 modifiers = {
   belongs_to: {
     associated_loader: function() {
-      var association_name,
+      var association_name, definition, temporary_observed,
         _this = this;
 
       association_name = this.resource.toString();
-      return Object.defineProperty(this.owner, association_name, {
+      if (this.owner.observed == null) {
+        this.owner.observed = {};
+        temporary_observed = true;
+      }
+      definition = Object.defineProperty(this.owner, association_name, {
         set: function(associated) {
           return this.observed[association_name] = associated;
         },
@@ -136,16 +136,22 @@ modifiers = {
             return associated;
           }
           associated = resource.find(associated_id || associated._id);
+          if (associated) {
+            return _this.owner.observed[association_name] = associated;
+          }
           associated || (associated = resource({
             _id: associated_id
           }));
-          resource.storage.store(associated._id, associated);
           associated.reload();
           return _this.owner.observed[association_name] = associated;
         },
         configurable: true,
         enumerable: true
       });
+      if (temporary_observed) {
+        delete this.owner.observed;
+      }
+      return definition;
     }
   }
 };
@@ -161,8 +167,8 @@ callbacks = {
         for (_i = 0, _len = association_names.length; _i < _len; _i++) {
           association_name = association_names[_i];
           associations_attributes = this["" + association_name + "_attributes"];
+          association = this[model.pluralize(association_name)];
           if (associations_attributes && associations_attributes.length) {
-            association = this[model.pluralize(association_name)];
             if (!association) {
               message = "has_many.nest_attributes: Association not found for " + association_name + ". \n";
               message += "did you set it on model declaration? \n  has_many: " + association_name + " ";
@@ -252,7 +258,7 @@ associable = {
       return true;
     },
     create_after_hooks: function(definition) {
-      var association_name, association_proxy, old_resource_id, options, resource, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _results;
+      var association_attributes, association_name, association_proxy, old_dirty, old_resource_id, options, resource, _i, _j, _k, _len, _len1, _len2, _name, _ref, _ref1, _ref2, _results;
 
       options = model[this.resource.name || this.resource.toString()];
       if (options.has_many) {
@@ -265,6 +271,11 @@ associable = {
             parent: this
           };
           association_name = model.pluralize(resource);
+          association_attributes = this[association_name] || [];
+          this[_name = "" + association_name + "_attributes"] || (this[_name] = []);
+          if (association_attributes.length) {
+            this["" + association_name + "_attributes"] = this["" + association_name + "_attributes"].concat(association_attributes);
+          }
           this[association_name] = $.extend(association_proxy, plural);
         }
         this.after('saved', callbacks.has_many.update_association);
@@ -300,15 +311,12 @@ associable = {
           this["build_" + resource] = $.proxy(singular.build, association_proxy);
           this["create_" + resource] = $.proxy(singular.create, association_proxy);
           old_resource_id = this["" + resource + "_id"];
+          old_dirty = this.dirty;
           this["" + resource + "_id"] = null;
           this.subscribe("" + resource + "_id", $.proxy(subscribers.belongs_to.foreign_key, association_proxy));
           this.subscribe(resource.toString(), $.proxy(subscribers.belongs_to.associated_changed, association_proxy));
-          this.resource_id = old_resource_id;
-          if (this["" + resource + "_id"] && !this[resource]) {
-            _results.push(this.publish("" + resource + "_id", this["" + resource + "_id"]));
-          } else {
-            _results.push(void 0);
-          }
+          this["" + resource + "_id"] = old_resource_id;
+          _results.push(this.dirty = old_dirty);
         }
         return _results;
       }

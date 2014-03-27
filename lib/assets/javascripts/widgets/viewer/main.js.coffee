@@ -1,17 +1,13 @@
 'use strict';
 
+lazy_requires = ['observable', 'advisable']
 define [
   './states/index',
   './presenters/default',
-  './presenters/default',
-  '/assets/jquery/inview',
-  'stampit/stampit'], (templates, presenter, inview, stampit) ->
-
-  observable   = require('observable').mixin
-  advisable    = require('advisable').mixin
-
-  # TODO define componentjs required packages, as requirejs packages
-  stampit    ||= require 'stampit/stampit'
+  'jquery.inview',
+  'stampit/stampit',
+  lazy_requires[0],
+  lazy_requires[1]], (templates, presenter, inview, stampit, observable, advisable) ->
 
   scopable = (widget) ->
     deferred = widget.sandbox.data.deferred()
@@ -301,7 +297,7 @@ define [
 
     else if @options.autofetch
 
-      deferred = @scope.all()
+      deferred = @scope.every()
 
     else
 

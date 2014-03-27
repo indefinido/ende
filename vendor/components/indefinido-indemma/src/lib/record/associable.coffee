@@ -20,7 +20,6 @@ plural = # has_many ## TODO embeds_many
   build: (data = {}) ->
     data.parent_resource = @parent_resource
 
-
     # TODO Setup a before save callback to generate route when there is no id
     data.route ||= "#{@parent.route}/#{@parent._id}/#{model.pluralize @resource.toString()}" if @parent?
     throw "associable.has_many: cannot redefine route of association #{@parent_resource}.#{@resource} from #{@route} to #{data.route}" if @route isnt data.route and @route
@@ -54,15 +53,15 @@ subscribers =
       association_name = @resource.toString()
 
       # TODO faster nullifing association check
-      # TODO only allow nullifying with null
-      if resource_id == null or resource_id == undefined
+      # TODO check if its usefull to only allow disassociating with null
+      unless resource_id
         @dirty = true
         @owner[association_name] = resource_id
         return resource_id
 
       # TODO Discover and update inverse side of association
       # associated[@owner.resource.toString()] = @owner
-      current_resource_id = @owner[association_name]?._id
+      current_resource_id = @owner.observed[association_name]?._id
       if resource_id != current_resource_id
         # Update association with blank resource that will update
         resource = model[association_name]
@@ -71,10 +70,13 @@ subscribers =
           return resource_id
 
         # TODO remote find or local find automatically, and implement find_or_initialize_by
-        associated   = resource.find resource_id
-        associated ||= resource _id: resource_id
+        # this code is not needed, since the association loader already loads the associated record when trying to get it
+        # associated   = resource.find resource_id
+        # associated ||= resource _id: resource_id
 
-        @owner.observed[association_name] = associated
+        # Nullify associated object, so next time user accesses it,
+        # association loader loads the new object
+        @owner.observed[association_name] = null
 
       resource_id
 
@@ -83,13 +85,23 @@ subscribers =
       @owner.observed["#{@resource.toString()}_id"] = if associated then associated._id else null
 
 modifiers =
-  # Called before record initialization to create the a lazy loader
+# Called before record initialization to create the a lazy loader
   # for other records
   belongs_to:
     associated_loader: ->
       association_name = @resource.toString()
 
-      Object.defineProperty @owner, association_name,
+      unless @owner.observed?
+        # When initializing a owner record in legacy browsers, we will
+        # run the getter to set the default value for the associate
+        # property
+        #
+        # TODO in the accessors shim, better way of getting the
+        # default value for further usage
+        @owner.observed    = {}
+        temporary_observed = true
+
+      definition = Object.defineProperty @owner, association_name,
         # Observable already sets property for us
         set: (associated) ->
           @observed[association_name] = associated
@@ -102,7 +114,7 @@ modifiers =
           # resource and on retrievability of the resource
           return associated unless associated?._id? or associated_id
 
-          # Retunrs imediatelly for resources on storage
+          # Returns imediatelly for resources on storage
           # TODO make this extenxible
           return associated if associated?.sustained
 
@@ -111,16 +123,25 @@ modifiers =
             console.warn "subscribers.belongs_to.foreign_key: associated factory not found for model: #{association_name}"
             return associated
 
+          # Search through stored resources to see if it is stored
           associated   = resource.find associated_id || associated._id
-          associated ||= resource _id: associated_id
 
-          resource.storage.store associated._id, associated
-          associated.reload()
+          # Found associated in storage, update this model and return associated
+          return @owner.observed[association_name] = associated if associated
 
+          # Not found associated in storage
+          associated ||= resource _id: associated_id  # initialize and store a new record
+          associated.reload()                         # fetch resource
+
+          # Store temporary unloaded resource in this model
           @owner.observed[association_name] = associated
 
         configurable: true
         enumerable: true
+
+      delete @owner.observed if temporary_observed
+
+      definition
 
 callbacks =
   has_many:
@@ -133,9 +154,14 @@ callbacks =
       association_names = model[@resource].has_many
       if association_names
         for association_name in association_names
+
+          # Instantiate new records for the association attributes
+          # TODO DO not support '_attributes' property on instantiating!
+          # TODO define setter for attributes
           associations_attributes = @["#{association_name}_attributes"]
+          association = @[model.pluralize association_name]
+
           if associations_attributes and associations_attributes.length
-            association = @[model.pluralize association_name]
 
             unless association
               message  = "has_many.nest_attributes: Association not found for #{association_name}. \n"
@@ -232,9 +258,19 @@ associable =
           # @resource = model[resource].resource
 
           # TODO Remember to clear association proxy when object is destroyed
-          association_proxy   = resource: resource, parent_resource: @resource, parent: @
-          association_name    = model.pluralize resource
-          @[association_name] = $.extend association_proxy, plural
+          association_proxy      = resource: resource, parent_resource: @resource, parent: @
+          association_name       = model.pluralize resource
+
+          # When deserializing has many associated resources from
+          # server, it is common to send as the association without
+          # suffix
+          association_attributes = @[association_name] ||  []
+          @["#{association_name}_attributes"]          ||= []
+          @["#{association_name}_attributes"]            = @["#{association_name}_attributes"].concat association_attributes if association_attributes.length
+
+          # Create or Override sent attributes by the association proxy
+          @[association_name]    = $.extend association_proxy, plural
+
 
         # Update association attribute
         @after 'saved', callbacks.has_many.update_association
@@ -273,7 +309,7 @@ associable =
           # TODO see why this code is here, since we have the owner key
           association_proxy[@resource.toString()] = @
 
-          @["build_#{resource}" ] = $.proxy singular.build , association_proxy
+          @["build_#{resource}"]  = $.proxy singular.build , association_proxy
           @["create_#{resource}"] = $.proxy singular.create, association_proxy
 
           # TODO copy from active record and better modularization of
@@ -281,19 +317,21 @@ associable =
           # To prevent association loading request we must nullify the
           # association when subscribing
           old_resource_id     = @["#{resource}_id"]
+          old_dirty           = @dirty
           @["#{resource}_id"] = null
 
           @subscribe "#{resource}_id"   , $.proxy subscribers.belongs_to.foreign_key, association_proxy
           @subscribe resource.toString(), $.proxy subscribers.belongs_to.associated_changed, association_proxy
 
           # Restore id after loader prevention has passed
-          @resource_id = old_resource_id
+          @["#{resource}_id"] = old_resource_id
+          @dirty = old_dirty
 
           # Execute relation attributes binding
           # TODO validate bindings! When @resource._id != @["#{resource}_id"]
           # TODO write test for this case
-          if @["#{resource}_id"] and not @[resource]
-            @publish "#{resource}_id", @["#{resource}_id"]
+          # if @["#{resource}_id"] and not @[resource]
+          #   @publish "#{resource}_id", @["#{resource}_id"]
 
     # TODO better organization of this code, probably transforming the
     # association into a composable object inside this function: @ =

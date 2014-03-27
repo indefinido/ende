@@ -1,4 +1,4 @@
-var model, resource, resourceable, stampit;
+var descriptors, model, resource, resourceable, stampit;
 
 stampit = require('../../vendor/stampit');
 
@@ -25,6 +25,30 @@ resource = stampit({
   return this;
 });
 
+descriptors = {
+  route: {
+    get: function() {
+      var route;
+
+      if (typeof this.resource === 'string') {
+        this.resource = {
+          name: this.resource
+        };
+      }
+      route = '/';
+      if (this.parent != null) {
+        route += "" + this.parent.route + "/" + this.parent._id + "/";
+      }
+      if (this.resource.scope != null) {
+        route += this.resource.scope + '/';
+      }
+      route += this.resource.singular ? this.resource.name : model.pluralize(this.resource.name);
+      return this.route = route;
+    },
+    configurable: true
+  }
+};
+
 resourceable = {
   pluralize: function(word, count, plural) {
     if (!(word && word.length)) {
@@ -46,53 +70,9 @@ resourceable = {
       return word;
     }
   },
-  route: {
-    get: function() {
-      var route;
-
-      if (this.initial_route != null) {
-        return this.initial_route;
-      }
-      if (typeof this.resource === 'string') {
-        this.resource = {
-          name: this.resource
-        };
-      }
-      route = '/';
-      if (this.parent != null) {
-        route += "" + this.parent.route + "/" + this.parent._id + "/";
-      }
-      if (this.resource.scope != null) {
-        route += this.resource.scope + '/';
-      }
-      route += this.resource.singular ? this.resource.name : model.pluralize(this.resource.name);
-      this.initial_route = route;
-      return route;
-    },
-    set: function(value) {
-      return this.initial_route = value;
-    }
-  },
-  parent_id: {
-    get: function() {
-      if (this[this.parent_resource]) {
-        return this[this.parent_resource]._id;
-      }
-    },
-    set: function() {
-      return console.error('Warning changing associations throught parent_id not allowed for security and style guide purposes');
-    }
-  },
   initialize: function() {
     var resource_definition, _ref;
 
-    if (this.parent_resource) {
-      Object.defineProperty(this, "" + this.parent_resource + "_id", {
-        value: resourceable.parent_id,
-        configurable: true,
-        enumerable: true
-      });
-    }
     resource_definition = {};
     if (typeof this.resource === 'string') {
       resource_definition = {
@@ -105,7 +85,7 @@ resourceable = {
     }
     resource_definition.parent = this.parent_resource;
     this.resource = resource(resource_definition);
-    return (_ref = this.route) != null ? _ref : Object.defineProperty(this, 'route', resourceable.route);
+    return (_ref = this.route) != null ? _ref : Object.defineProperty(this, 'route', descriptors.route);
   }
 };
 

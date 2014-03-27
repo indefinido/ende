@@ -30,9 +30,10 @@ define ->
       @emit 'showed'
 
     render: (options) ->
-      {widget, content: child}  = options
-      {sandbox, $el: el} = widget
-      identifier = child.identifier || child.resource || 'default'
+      {widget, content: child} = options
+      {sandbox, $el: el}       = widget
+      identifier               = child.identifier || child.resource || 'default'
+      @initialization          = sandbox.data.deferred()
 
       @el = el
 
@@ -53,18 +54,24 @@ define ->
       @positionate()             if options.autoshow
 
       # TODO get identifier through sandbox method instead of generating here
-      sandbox.once "#{child.name}.#{identifier}.started", (widget) =>
+
+      sandbox.once "#{child.name}.#{identifier}.started", (widget) ->
         el.removeClass 'injecting'
         @positionate()
 
         # TODO better close html creation and handling
         el.prepend @close_template if options.closable
+      , @
 
+      sandbox.once "#{child.name}.#{identifier}.initialized", (widget) ->
+        @initialization.resolveWith @
+      , @
 
     remove: ->
-      @emit 'hide'
-      @el.detach()
-      @
+      @initialization.done ->
+        @emit 'hide'
+        @el.detach()
+        @
 
 
   type: 'Base'
@@ -84,9 +91,13 @@ define ->
   initialize: (options) ->
     @sandbox.logger.log "initialized!"
 
-    # TODO integrate component and requirejs
-    dialog  = require('dialog').Dialog
-    overlay = require 'component-overlay'
+    # TODO integrate component and requirejs in a more consize way
+    with_component = 'dialog'
+    dialog  = require(with_component).Dialog
+
+    with_component = 'component-overlay'
+    overlay = require with_component
+
     @sandbox.util.extend dialog.prototype, dialog_extensions
 
     # Initialize fundamental style
