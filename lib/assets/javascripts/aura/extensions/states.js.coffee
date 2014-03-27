@@ -151,7 +151,7 @@ define 'aura/extensions/states', ['states'], (states) ->
           current_state = application.state if application.state != 'initialization'
           application.state = "default"
 
-          startup = application.core.start.apply @, arguments
+          startup = application.core.start arguments...
 
           # TODO move to domain extension
           # TODO let this code more legible
