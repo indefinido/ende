@@ -3,11 +3,12 @@ type       = require 'type'
 observable = require('observable').mixin
 $          = require 'jquery' # TODO remove jquery dependency and use simple promises implementation
 rest       = require './rest.js'
+root       = exports ? @
 
 util =
   model:
-    map: (models) ->
-      @ model for model in models
+    map: (records) ->
+      @ record for record in records
 
 
 restful =
@@ -32,19 +33,19 @@ restful =
 
     # returns a promise
     # TODO move to scopable
-    all: (conditions = {}, callback) ->
+    every: (conditions = {}, doned, failed) ->
       if typeof conditions == 'function'
-        callback   = conditions
+        doned      = conditions
         conditions = {}
 
       # TODO Consider parent resources
       # if @parent and not @parent._id
       #   return callback.call @model, []
 
-
       $.when(rest.get.call @, conditions)
        .then(util.model.map             )
-       .done callback
+       .done(doned                      )
+       .fail failed
 
     first: (conditions = {}, callback) ->
       if typeof conditions == 'function'
@@ -56,14 +57,20 @@ restful =
       namespaced.order = 'desc'
 
       # TODO should fail when server returns more then one record
-      @all conditions, callback
+      @every conditions, callback
 
     # TODO better treating of arguments
     get: (action, data = {}) ->
       # TODO better way to override route
-      old_route  = @route
-      @route     = "/#{model.pluralize @resource.name}"
-      @route    += "/#{action}" if action
+      old_route     = @route
+      default_route = "/#{model.pluralize @resource.name}"
+      @route        = default_route unless default_route == @route
+
+      if action
+        # TODO Get own property descriptor, or better way do override route
+        Object.defineProperty @, 'route',
+          value: "#{default_route}/#{action}"
+          configurable: true
 
       # TODO not allow resource overriding
       resource   = data.resource
@@ -76,7 +83,10 @@ restful =
 
       promise = rest.get.call @, data
 
-      route   = old_route
+      # TODO Get own property descriptor, or better way do override route
+      Object.defineProperty @, 'route',
+        value: old_route
+        configurable: true
 
       promise
 
@@ -84,6 +94,7 @@ restful =
     delete: rest.delete
 
   record:
+    ready: (callback) -> callback.call @
     reload: (params...) ->
 
       # TODO better signature implementation
@@ -93,6 +104,12 @@ restful =
       promise = rest.get.call @, data || {}
       promise.done @assign_attributes
       promise.fail @failed
+
+      @reloading = promise
+      # Assign ready callback before, to allow promise override
+      @ready = ->
+        console.warn "resource.ready was deprecated, please use resource.reloading.done"
+        promise.done arguments...
 
       # Bind one time save callbacks
       promise.done param for param in params
@@ -163,8 +180,14 @@ restful =
 
       # Assign remaining attributes
       # TODO see if it is a best practice not overriding unchanged attributes
-      for attribute of attributes when attribute isnt @[attribute]
-        @[attribute] = attributes[attribute]
+      # TODO rename attributes for properties
+      for name, attribute of attributes when attribute isnt @[name]
+        # TODO faster object property assignment, get from model definition, instead of checking every attribute
+        # TODO implement custom comparator for each object when es7 is out
+        if type(attribute) == 'object'
+          @[name] = attributes[name] if JSON.stringify(attribute) != JSON.stringify @[name]
+        else
+          @[name] = attributes[name]
 
     destroy: (doned, failed, data) ->
       throw new Error 'Can\'t delete record without id!' unless @id? or @_id?
@@ -182,18 +205,28 @@ restful =
     saving: false
     salvation: null
     save: (doned, failed, data) ->
-      return @salvation if @saving
+      lock = JSON.stringify @json()
+
+      # When saving and receive save command again check if the model
+      # has changed, then abort the salvation operation and send a new
+      # save request
+      # TODO check dirty property instead of lock!
+      if @saving
+        if @lock == lock
+          return @salvation
+        else
+          @salvation.abort()
 
       # TODO better lock generation
-      @lock = JSON.stringify @json()
+      @lock = lock
 
       # TODO remove jquery dependency
       # TODO think with wich value makes more sense to resolve the
       # absence of need to save the model
       salvation   = $.Deferred().resolveWith @, null unless @dirty
+      @saving     = true
       salvation ||= rest[if @_id then 'put' else 'post'].call @, data
       @salvation  = salvation
-      @saving     = true
 
       salvation.done @saved
       salvation.fail @failed
@@ -211,9 +244,6 @@ restful =
       if @lock == JSON.stringify(@json())
         @dirty = false
         delete @lock
-      # Delayed optimistic lock
-      else
-        return @save()
 
       @assign_attributes data if data?
 
@@ -225,13 +255,22 @@ restful =
       try payload ||= JSON.parse(xhr.responseText) catch e
       payload     ||= xhr.responseText
 
-
       # When client fail
       switch xhr.status
         # TODO move to validatable
+        when 0
+          message = status or xhr.statusText
+          switch message
+            when 'abort'
+              console.info "salvation probably aborted"
+            when 'error'
+              console.info "server probably unreachable"
+            else
+              throw new Error 'Unhandled status code for xhr'
+
         when 422
 
-          definition = model[@resource]
+          definition = model[@resource.toString()]
 
           for attribute_name, messages of payload.errors
 
@@ -258,41 +297,92 @@ restful =
         else
           message  = "Fail in #{@resource}.save:\n"
           message += "Record: #{@}\n"
-          message += "Status: #{status} (#{payload.status || xhr.status})\n"
+          message += "Status: #{status} (#{(payload || xhr).status})\n"
           message += "Error : #{payload.error || payload.message || payload}"
+          console.log message
 
       # Finish saving
       @saving = false
 
+    # TODO move to record.coffee
     toString: ->
       serialized = {}
       serialized[@resource] = @json()
-      JSON.stringify serialized
 
+      try
+        # TODO figure out why it throws circular references sometines
+        JSON.stringify serialized
+      catch e
+        console.warn "restfulable.toString: Failed to stringify record: #{e.message}. retrying..."
+
+        for name, property of serialized
+          delete serialized[name] if typeof property == 'object'
+
+        JSON.stringify serialized
+
+    # TODO move this to serializable module
+    # TODO figure out why sometimes is rendering a circular referenced json
+    # TODO rename to toJSON
     json: (methods = {}) ->
       json = {}
 
-      for name, value of @ when type(value) isnt 'function'
-        continue unless value?  # Bypass null, and undefined values
+      definition = model[@resource.toString()]
 
-        if type(value) == 'object'
+      for name of @
+        # TODO smarter way to ignore Dom node fix properties
+        continue if observable.ignores.indexOf(name) != -1
 
-          if value.toJSON?
+        # TODO treat other associations to!
+        # TODO create association reflection for god sake!
+        nested = @nested_attributes.indexOf(name) != -1
 
-            json[name] = value.toJSON(methods[name])
+        # Skip association attributes that are note nested TODO create
+        # an associations array
+        continue if not nested and (definition.belongs_to.indexOf(name) != -1 or definition.has_one.indexOf(name) != -1 or definition.has_many.indexOf(name) != -1)
 
+        # TODO Bypass only undefined values so we can erase data on server
+        value = @[name]
+        continue unless value?
+
+        nature = type value
+        continue if nature == 'function'
+
+        if nature == 'object' or nature == 'element'
+
+          if nested
+            unless value.json
+              console.warn "json: Tryied to serialize nested attribute '#{name}' without serialization method!"
+              continue
+
+            # TODO move nested attributes to model definition and
+            # implement toJSON there
+            json["#{name}_attributes"] = value.json methods[name]
+
+          # Serialize complex type values
+          else if value.toJSON? || value.json?
+            # FIXME sometimes wrong pluralization occurs and we cannot
+            # skip association objects, so detect them and skip here
+            continue if value.resource
+
+            # TODO rename json to toJSON
+            if value.json?
+              json[name] = value.json methods[name]
+            else
+              json[name] = value.toJSON methods[name]
+
+          # It is a complex type value without serializtion support so
+          # we just ignore it
           else
-
-            # TODO move nested attributes to model definition
-            # TODO and implement toJSON there
-            for attribute in @nested_attributes when attribute == name
-              json["#{name}_attributes"] = value.json(methods[name])
+            # TODO maybe log warning based on debug or info flag here?
+            continue
 
         else
 
+          # Serialize primitive type values
           json[name] = value
 
-      observable.unobserve json
+      # Remove observable methods and dom node properties
+      json = observable.unobserve json
 
       # TODO Store reserved words in a array
       # TODO Use _.omit function
@@ -302,20 +392,29 @@ restful =
       delete json.resource
       delete json.route
       delete json.initial_route # TODO implement better initial_route and remove attribute from here
+
       delete json.after_initialize
       delete json.before_initialize
       delete json.parent_resource
       delete json.nested_attributes
+
+      delete json.reloading
+      delete json.ready
+
       delete json.saving
       delete json.salvation
       delete json.sustained
+
       delete json.element
       delete json.default
       delete json.lock
+
       delete json.validated
       delete json.validation
+      delete json.errors
 
       json
+
 
 # TODO put deprecation warning on json method
 # TODO rename json method to toJSON

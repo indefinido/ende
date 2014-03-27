@@ -1,12 +1,17 @@
+'use strict'
+
 define 'aura/extensions/routes', (routes) ->
 
-  'use strict'
-
   # TODO Remove .call null
-  # TODO Remove .call null
+  # TODO Remove modernizr global variable dependency from this extension
   loader.require.call null, 'modernizr'
   # TODO rename from ened to ende
+  # TODO Remove jquery global variable dependency from this extension
+  with_component = 'jquery'
+  window.jQuery = window.$ = require with_component
+  # TODO Remove .call null
   loader.require.call null, 'ened/vendor/assets/javascripts/lennon/lennon.js'
+
   query  = loader.require.call null, 'querystring'
   router = null
 
@@ -38,12 +43,17 @@ define 'aura/extensions/routes', (routes) ->
           [path, search]  = path.split('?') if path.indexOf('?') != -1
 
         #-- If we land on the page with a hash value and history is enabled, redirect to the non-hash page
-        if ( window.location.hash.indexOf('#!') != -1 && history )
-            window.location.href = window.location.hash.replace('#!', '')
+        if location.hash.indexOf('#!') != -1 && history
+          return location.href = location.hash.replace '#!', ''
 
         #-- If we land on the page with a path and history is disabled, redirect to the hash page
-        else if ( '/' != window.location.pathname && !history )
-            window.location.href = '/#!' + window.location.pathname
+        else if '/' != location.pathname && !history
+
+          part  = location.pathname
+          part += location.search   if location.search
+          part += location.hash     if location.hash
+
+          return location.href = '/#!' + part
 
 
         #-- Process the route
@@ -62,7 +72,7 @@ define 'aura/extensions/routes', (routes) ->
                     context[paramKeys[j - 1].replace(/:/g, '')] = params[j]
                     j++
 
-                if ( @current_route )
+                if @current_route
 
                     #-- Don't dispatch the route we are already on
                     if ( @current_route.path == route.path && @current_route.search == search)
@@ -74,24 +84,26 @@ define 'aura/extensions/routes', (routes) ->
                         application.logger.info('Exiting', @current_route.path, 'with', context || {})
 
                         #-- Execute the callback
-                        if ( 'function' == typeof @current_route.exitEventName )
-                            @current_route.exitEventName(context || {})
+                        if 'function' == typeof @current_route.exitEventName
+                            @current_route.exitEventName context || {}
+                        else
                         #-- Run the publish event
-                            options.publishEvent(@current_route.exitEventName, context || {})
+                            @publishEvent(@current_route.exitEventName, context || {})
 
                 #-- Update the current route
                 @last_route    = @current_route
                 @current_route = route
 
                 #-- Update the current route search string
-                @current_route.search = search
+                @current_route.search                   = search
+                @current_route.last_contextualized_path = path
 
                 #-- Dispatch
-                return @dispatch(route, context)
+                return @dispatch route, context
 
 
         #-- No route has been found, hence, nothing dispatched
-        application.logger.warn('No route dispatched')
+        application.logger.warn 'No route dispatched'
 
       location: (href, process = true) ->
         # TODO load router depending of history api
@@ -108,7 +120,6 @@ define 'aura/extensions/routes', (routes) ->
       # TODO implement logger api for lennon or change lennon library
       # logger: application.logger
       publishEvent: lennon_extensions.publishEvent
-
 
     application.core.router = core.util.extend router, lennon_extensions
 

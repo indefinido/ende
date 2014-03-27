@@ -1,4 +1,4 @@
-var $, builders, defaults, extend, merge, model, record, rest, scopable, stampit,
+var $, builders, defaults, extend, merge, model, observable, record, rest, scopable, stampit, util,
   __slice = [].slice;
 
 require('./restfulable');
@@ -9,11 +9,28 @@ stampit = require('../../vendor/stampit');
 
 extend = require('assimilate');
 
+observable = require('observable').mixin;
+
 merge = extend.withStrategy('deep');
 
 $ = require('jquery');
 
 rest = require('./rest');
+
+util = {
+  model: {
+    map: function(records) {
+      var index, record, _i, _len, _results;
+
+      _results = [];
+      for (index = _i = 0, _len = records.length; _i < _len; index = ++_i) {
+        record = records[index];
+        _results.push((this.build || this).call(this, record));
+      }
+      return _results;
+    }
+  }
+};
 
 scopable = {
   builder: stampit().enclose(function() {
@@ -45,14 +62,19 @@ scopable = {
       fetch: function(data, done, fail) {
         var deferred, scope;
 
+        if (typeof data === 'function') {
+          done = data;
+          data = {};
+        }
         scope = extend({}, this.scope.data);
+        observable.unobserve(scope);
         if (scope.noned != null) {
           deferred = $.Deferred();
           deferred.resolveWith(this, [[]]);
         } else {
           deferred = rest.get.call(this, extend(scope, data));
         }
-        deferred.done(this.scope.then.concat(done)).fail([this.scope.fail, fail]);
+        deferred.then(util.model.map).done(this.scope.then.concat([done])).fail(this.scope.fail.concat([fail]));
         this.scope.clear();
         return deferred;
       },
@@ -95,6 +117,10 @@ scopable = {
       return this;
     },
     fetch: function(data, done, fail) {
+      if (typeof data === 'function') {
+        done = data;
+        data = null;
+      }
       return this.scope.fetch.call(this, data, done, fail);
     },
     forward_scopes_to_associations: function() {
@@ -243,7 +269,7 @@ if (model.associable) {
     });
   });
   model.associable.mix(function(singular_association, plural_association) {
-    plural_association.all = plural_association.reload = function(data, done, fail) {
+    plural_association.every = plural_association.reload = function(data, done, fail) {
       var promises, reload;
 
       if (this.parent != null) {

@@ -1,4 +1,4 @@
-var $, merge, model, observable, record, rest, restful, type, util,
+var $, merge, model, observable, record, rest, restful, root, type, util,
   __slice = [].slice;
 
 merge = require('assimilate').withStrategy('deep');
@@ -11,15 +11,17 @@ $ = require('jquery');
 
 rest = require('./rest.js');
 
+root = typeof exports !== "undefined" && exports !== null ? exports : this;
+
 util = {
   model: {
-    map: function(models) {
-      var model, _i, _len, _results;
+    map: function(records) {
+      var record, _i, _len, _results;
 
       _results = [];
-      for (_i = 0, _len = models.length; _i < _len; _i++) {
-        model = models[_i];
-        _results.push(this(model));
+      for (_i = 0, _len = records.length; _i < _len; _i++) {
+        record = records[_i];
+        _results.push(this(record));
       }
       return _results;
     }
@@ -51,15 +53,15 @@ restful = {
       }
       return $.when.apply($, savings);
     },
-    all: function(conditions, callback) {
+    every: function(conditions, doned, failed) {
       if (conditions == null) {
         conditions = {};
       }
       if (typeof conditions === 'function') {
-        callback = conditions;
+        doned = conditions;
         conditions = {};
       }
-      return $.when(rest.get.call(this, conditions)).then(util.model.map).done(callback);
+      return $.when(rest.get.call(this, conditions)).then(util.model.map).done(doned).fail(failed);
     },
     first: function(conditions, callback) {
       var namespaced;
@@ -74,18 +76,24 @@ restful = {
       namespaced = conditions[this.resource] || {};
       namespaced.limit = 1;
       namespaced.order = 'desc';
-      return this.all(conditions, callback);
+      return this.every(conditions, callback);
     },
     get: function(action, data) {
-      var old_route, payload, promise, resource, route;
+      var default_route, old_route, payload, promise, resource;
 
       if (data == null) {
         data = {};
       }
       old_route = this.route;
-      this.route = "/" + (model.pluralize(this.resource.name));
+      default_route = "/" + (model.pluralize(this.resource.name));
+      if (default_route !== this.route) {
+        this.route = default_route;
+      }
       if (action) {
-        this.route += "/" + action;
+        Object.defineProperty(this, 'route', {
+          value: "" + default_route + "/" + action,
+          configurable: true
+        });
       }
       resource = data.resource;
       if (data && data.json) {
@@ -97,13 +105,19 @@ restful = {
         data[resource] = payload;
       }
       promise = rest.get.call(this, data);
-      route = old_route;
+      Object.defineProperty(this, 'route', {
+        value: old_route,
+        configurable: true
+      });
       return promise;
     },
     put: rest.put,
     "delete": rest["delete"]
   },
   record: {
+    ready: function(callback) {
+      return callback.call(this);
+    },
     reload: function() {
       var data, param, params, promise, _i, _len;
 
@@ -115,6 +129,11 @@ restful = {
       promise = rest.get.call(this, data || {});
       promise.done(this.assign_attributes);
       promise.fail(this.failed);
+      this.reloading = promise;
+      this.ready = function() {
+        console.warn("resource.ready was deprecated, please use resource.reloading.done");
+        return promise.done.apply(promise, arguments);
+      };
       for (_i = 0, _len = params.length; _i < _len; _i++) {
         param = params[_i];
         promise.done(param);
@@ -122,7 +141,7 @@ restful = {
       return promise;
     },
     assign_attributes: function(attributes) {
-      var association, association_attributes, association_name, associations_attributes, attribute, message, singular_resource, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _results;
+      var association, association_attributes, association_name, associations_attributes, attribute, message, name, singular_resource, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _results;
 
       _ref = model[this.resource.toString()].has_many;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -167,9 +186,18 @@ restful = {
         }
       }
       _results = [];
-      for (attribute in attributes) {
-        if (attribute !== this[attribute]) {
-          _results.push(this[attribute] = attributes[attribute]);
+      for (name in attributes) {
+        attribute = attributes[name];
+        if (attribute !== this[name]) {
+          if (type(attribute) === 'object') {
+            if (JSON.stringify(attribute) !== JSON.stringify(this[name])) {
+              _results.push(this[name] = attributes[name]);
+            } else {
+              _results.push(void 0);
+            }
+          } else {
+            _results.push(this[name] = attributes[name]);
+          }
         }
       }
       return _results;
@@ -190,18 +218,23 @@ restful = {
     saving: false,
     salvation: null,
     save: function(doned, failed, data) {
-      var salvation;
+      var lock, salvation;
 
+      lock = JSON.stringify(this.json());
       if (this.saving) {
-        return this.salvation;
+        if (this.lock === lock) {
+          return this.salvation;
+        } else {
+          this.salvation.abort();
+        }
       }
-      this.lock = JSON.stringify(this.json());
+      this.lock = lock;
       if (!this.dirty) {
         salvation = $.Deferred().resolveWith(this, null);
       }
+      this.saving = true;
       salvation || (salvation = rest[this._id ? 'put' : 'post'].call(this, data));
       this.salvation = salvation;
-      this.saving = true;
       salvation.done(this.saved);
       salvation.fail(this.failed);
       salvation.always(function() {
@@ -217,8 +250,6 @@ restful = {
       if (this.lock === JSON.stringify(this.json())) {
         this.dirty = false;
         delete this.lock;
-      } else {
-        return this.save();
       }
       if (data != null) {
         this.assign_attributes(data);
@@ -244,8 +275,21 @@ restful = {
       }
       payload || (payload = xhr.responseText);
       switch (xhr.status) {
+        case 0:
+          message = status || xhr.statusText;
+          switch (message) {
+            case 'abort':
+              console.info("salvation probably aborted");
+              break;
+            case 'error':
+              console.info("server probably unreachable");
+              break;
+            default:
+              throw new Error('Unhandled status code for xhr');
+          }
+          break;
         case 422:
-          definition = model[this.resource];
+          definition = model[this.resource.toString()];
           _ref = payload.errors;
           for (attribute_name in _ref) {
             messages = _ref[attribute_name];
@@ -270,50 +314,79 @@ restful = {
         default:
           message = "Fail in " + this.resource + ".save:\n";
           message += "Record: " + this + "\n";
-          message += "Status: " + status + " (" + (payload.status || xhr.status) + ")\n";
+          message += "Status: " + status + " (" + (payload || xhr).status + ")\n";
           message += "Error : " + (payload.error || payload.message || payload);
+          console.log(message);
       }
       return this.saving = false;
     },
     toString: function() {
-      var serialized;
+      var e, name, property, serialized;
 
       serialized = {};
       serialized[this.resource] = this.json();
-      return JSON.stringify(serialized);
+      try {
+        return JSON.stringify(serialized);
+      } catch (_error) {
+        e = _error;
+        console.warn("restfulable.toString: Failed to stringify record: " + e.message + ". retrying...");
+        for (name in serialized) {
+          property = serialized[name];
+          if (typeof property === 'object') {
+            delete serialized[name];
+          }
+        }
+        return JSON.stringify(serialized);
+      }
     },
     json: function(methods) {
-      var attribute, json, name, value, _i, _len, _ref;
+      var definition, json, name, nature, nested, value;
 
       if (methods == null) {
         methods = {};
       }
       json = {};
+      definition = model[this.resource.toString()];
       for (name in this) {
-        value = this[name];
-        if (!(type(value) !== 'function')) {
+        if (observable.ignores.indexOf(name) !== -1) {
           continue;
         }
+        nested = this.nested_attributes.indexOf(name) !== -1;
+        if (!nested && (definition.belongs_to.indexOf(name) !== -1 || definition.has_one.indexOf(name) !== -1 || definition.has_many.indexOf(name) !== -1)) {
+          continue;
+        }
+        value = this[name];
         if (value == null) {
           continue;
         }
-        if (type(value) === 'object') {
-          if (value.toJSON != null) {
-            json[name] = value.toJSON(methods[name]);
-          } else {
-            _ref = this.nested_attributes;
-            for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-              attribute = _ref[_i];
-              if (attribute === name) {
-                json["" + name + "_attributes"] = value.json(methods[name]);
-              }
+        nature = type(value);
+        if (nature === 'function') {
+          continue;
+        }
+        if (nature === 'object' || nature === 'element') {
+          if (nested) {
+            if (!value.json) {
+              console.warn("json: Tryied to serialize nested attribute '" + name + "' without serialization method!");
+              continue;
             }
+            json["" + name + "_attributes"] = value.json(methods[name]);
+          } else if ((value.toJSON != null) || (value.json != null)) {
+            if (value.resource) {
+              continue;
+            }
+            if (value.json != null) {
+              json[name] = value.json(methods[name]);
+            } else {
+              json[name] = value.toJSON(methods[name]);
+            }
+          } else {
+            continue;
           }
         } else {
           json[name] = value;
         }
       }
-      observable.unobserve(json);
+      json = observable.unobserve(json);
       delete json.dirty;
       delete json.resource;
       delete json.route;
@@ -322,6 +395,8 @@ restful = {
       delete json.before_initialize;
       delete json.parent_resource;
       delete json.nested_attributes;
+      delete json.reloading;
+      delete json.ready;
       delete json.saving;
       delete json.salvation;
       delete json.sustained;
@@ -330,6 +405,7 @@ restful = {
       delete json.lock;
       delete json.validated;
       delete json.validation;
+      delete json.errors;
       return json;
     }
   }

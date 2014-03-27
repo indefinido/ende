@@ -1,6 +1,12 @@
 #= require accounting/accounting
 
-define 'aura/extensions/rivets/accounting', ['vendor/accounting'], (accounting) ->
+# TODO remove require from sprockets from this file
+# TODO manage dependencies through aura, remove dependencies from this define call
+
+'use strict'
+
+# TODO unifiy extension plug-in api
+define 'aura/extensions/rivets/accounting', ['aura/extensions/rivets', 'vendor/accounting'], (parent, accounting) ->
 
   rivets = require 'mikeric-rivets/dist/rivets'
 

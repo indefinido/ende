@@ -4,7 +4,6 @@
 # TODO implement method
 # model[resource].validators_on 'field' # Get all validators related to this field
 
-validations = require '../validatable'
 stampit     = require '../../../vendor/stampit'
 
 cpfable = stampit
@@ -24,7 +23,7 @@ cpfable = stampit
     v  = false
     i  = 0
 
-    for i in [1..9]
+    for i in [0..9]
       d1 += c.charAt(i) * (10 - i)
 
     return false if d1 == 0
@@ -35,7 +34,7 @@ cpfable = stampit
     return false if +dv.charAt(0) != d1
 
     d1 *= 2
-    for i in [1..9]
+    for i in [0..9]
       d1 += c.charAt(i) * (11 - i)
 
 
@@ -53,6 +52,6 @@ cpfable = stampit
 
 
 
-composed = stampit.compose validations.validatable, cpfable
+composed = stampit.compose require('./validatorable'), cpfable
 composed.definition_key = 'validates_cpf_format'
-validations.manager.validators.cpf = composed
+module.exports = composed

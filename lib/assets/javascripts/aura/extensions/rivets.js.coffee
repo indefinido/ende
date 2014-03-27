@@ -1,16 +1,19 @@
-#= require 'aura/extensions/rivets/formatters'
+'use strict';
 
-define 'aura/extensions/rivets', ['extensions/rivets/formatters'], (formatters)->
+# TODO require formatters through aura instead of directly loding a module
+define 'aura/extensions/rivets', ['aura/extensions/rivets/formatters'], (formatters) ->
 
-  'use strict';
+  extend                   = null
 
-  extend = require 'segmentio-extend'
+  with_component           = 'mikeric-rivets/dist/rivets'
+  rivets                   = require with_component
+  Rivets                   = rivets._
 
-  rivets = require 'mikeric-rivets/dist/rivets'
+  with_component           = 'indefinido-observable/lib/adapters/rivets'
+  observable_configuration = require with_component
 
-  Rivets = rivets._
-
-  observable_configuration = require 'indefinido-observable/lib/adapters/rivets'
+  with_component           = 'segmentio-extend'
+  extend                   = require with_component
 
   extend rivets.formatters, formatters
 
@@ -19,6 +22,23 @@ define 'aura/extensions/rivets', ['extensions/rivets/formatters'], (formatters)-
     prefix: ''
     templateDelimiters: ['{{', '}}']
 
+
+  # Create Node Types list for legacy browsers
+  #
+  # TODO externalize this to a shims file and pehaps put it on
+  # platform extension
+  try
+    throw true if (Node.ELEMENT_NODE != 1)
+  catch e
+    window.Node = document.Node =
+      ELEMENT_NODE          : 1
+      ATTRIBUTE_NODE        : 2
+      TEXT_NODE             : 3
+      CDATA_SECTION_NODE    : 4
+      ENTITY_REFERENCE_NODE : 5
+      ENTITY_NODE           : 6
+
+  # TOOD move rivets view to another file
   # Custom rivets view because we don't want to prefix attributes
   # Rivets.View
   # -----------
@@ -217,34 +237,48 @@ define 'aura/extensions/rivets', ['extensions/rivets/formatters'], (formatters)-
           el.value = if value? then value else ''
 
 
-  (application) ->
-    version: '0.1.0'
+  require:
+    paths:
+      # TODO optimize formatters with r.js
+      # formatters: 'aura/extensions/rivets/formatters'
+      observable: true
 
-    initialize: (application) ->
-      observable = require('observable').mixin
+  version: '0.1.1'
 
-      # TODO implement small view interface
-      original_bind = rivets.bind
-      rivets.bind = (selector, presentation) ->
-        for name, model of presentation
-          unless model?
-            console.warn "Model object not specified for key #{name}"
-            model = {}
+  initialize: (application) ->
+    # TODO optimize formatters with r.js, and put module names under
+    # rivets namespace
+    # with_aura      = 'formatters'
+    # formatters     = require with_aura
 
-          presentation[name] = observable model unless model.observed?
+    # TODO check if it is needed to do earliear formatters loading
+    # extend rivets.formatters, formatters
 
-        original_bind.apply rivets, arguments
+    # TODO implement compatibility between observable and aura loader
+    observable     = requirejs 'observable'
 
-      extend application.sandbox,
-        view: rivets
+    # TODO implement small view interface
+    original_bind = rivets.bind
+    rivets.bind = (selector, presentation) ->
+      for name, model of presentation
+        unless model?
+          console.warn "Model object not specified for key #{name}"
+          model = {}
 
-      extend application.core.Widgets.Base.prototype,
-        bind: (presentation, options) ->
-          if presentation.presented
-            presented = presentation.presented
-            delete presentation.presented
+        presentation[name] = observable model unless model.observed?
 
-          @sandbox._view = @view = rivets.bind @$el, presentation, options
+      original_bind.apply rivets, arguments
 
-          presented(@view) if presented?
+    extend application.sandbox,
+      view: rivets
+
+    extend application.core.Widgets.Base.prototype,
+      bind: (presentation, options) ->
+        if presentation.presented
+          presented = presentation.presented
+          delete presentation.presented
+
+        @sandbox._view = @view = rivets.bind @$el, presentation, options
+
+        presented(@view) if presented?
 

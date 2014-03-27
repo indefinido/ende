@@ -1,10 +1,12 @@
+'use strict'
+
 define 'aura/extensions/widget/lifecycleable', ->
 
-  'use strict'
-
   # TODO Remove jquery and use core dependencies
-  jQuery = require 'jquery'
-  core   = null
+  with_component = 'jquery'
+  jQuery         = require with_component
+
+  core           = null
 
   lifecycleable =
     injection: (definition) ->
@@ -101,7 +103,14 @@ define 'aura/extensions/widget/lifecycleable', ->
       # Cache usefull methods
       lifecycleable.sources    = application.config.widgets.sources
       lifecycleable.find       = core.dom.find
-      lifecycleable.root       = core.dom.find app.startOptions.widgets
+
+      # TODO Keep searching for root until found, and only throw
+      # exception if someone tries to initialize widgets in root
+      # without a valid root selector
+      lifecycleable.root       = core.dom.find app.startOptions.widgets || 'body'
+
+      throw new TypeError "No root node found for selector '#{app.startOptions.widgets}'." unless lifecycleable.root.length != 0
+
       lifecycleable.decamelize = core.util.decamelize
       lifecycleable.capitalize = core.util.capitalize
 

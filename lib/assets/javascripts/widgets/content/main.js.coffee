@@ -1,7 +1,11 @@
-define ->
+'use strict';
+
+define
 
   type: 'Base'
-  version: '0.1.1'
+
+  version: '0.1.2'
+
   options:
     autoload: true
 
@@ -68,14 +72,25 @@ define ->
 
   # Executed upon successfully loaded
   loaded: (response) ->
-    # Will also initialize sandbox!
+    # Will also initialize sandbox in this element, also firing any
+    # other widget in the responded html
     @html response
 
+  # Executed upon failure loaded
   failed: (xhr) ->
     switch xhr.status
+      # abort
+      when 0
+        # TODO default abort message
+        # TODO better abort check: http://ilikestuffblog.com/2009/11/30/how-to-distinguish-a-user-aborted-ajax-call-from-an-error/
+        @sandbox.emit "content.#{@identifier}.loading_aborted", @
+      # forbidden
       when 401
-        @sandbox.emit "content.#{@identifier}.loading_unauthorized"
+        # TODO default forbidden message
+        @sandbox.emit "content.#{@identifier}.loading_unauthorized", @
       else
+        @sandbox.emit "content.#{@identifier}.loading_failed", @
+
         # TODO better debugging code location
         if @sandbox.debug.enabled
           html  = "<h2>Content Widget: Failed to load Content. Click to retry.</h2>"
@@ -92,6 +107,7 @@ define ->
 
         @html html
 
+  # Always executed after the load temptative
   ended: ->
     @$el.removeClass "loading"
     @$el.addClass "idle"

@@ -1,13 +1,13 @@
 'use strict'
-observable = require('indefinido-observable').mixin
 
-define (model) ->
+define ->
 
   (items, luna) ->
 
     resource = items[0].resource
 
-    searcher: observable
+    # TODO create view_model
+    searcher:
       query: ''
       search: (event, models) ->
 
@@ -22,8 +22,7 @@ define (model) ->
 
         false
 
-    # TODO create view_model
-    list: observable Object.create null,
+    list: Object.create null,
       resource:
         set: (resource) -> null
         get: -> resource

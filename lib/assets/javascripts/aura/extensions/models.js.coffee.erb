@@ -57,8 +57,9 @@ define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
       # inflector outside it
       define: owl.pluralize.define
 
-    # TODO rename core.models and core.domain to core.resources, completely
+    # TODO rename core.models, core.domain and core.resources to core.resourceable completely
     core.resourceable = core.resources = core.domain = core.models   = sandbox.models = indemma.model
+
 
     core.resource = core.model  = sandbox.resource = sandbox.model = (name) ->
       # TODO use a Map internally in indemma

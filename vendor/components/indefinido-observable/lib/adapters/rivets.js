@@ -3,7 +3,9 @@ exports.adapter = {
     if (record == null) {
       throw new TypeError('observable.adapters.rivets.subscribe: No record provided for subscription');
     }
-    return record.subscribe(attribute_path, callback);
+    if (attribute_path) {
+      return record.subscribe(attribute_path, callback);
+    }
   },
   unsubscribe: function(record, attribute_path, callback) {
     if (record == null) {

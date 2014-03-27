@@ -2,7 +2,7 @@
 
 # TODO finish this extension
 # TODO initialize dependent extensions
-define 'aura/extensions/widget/presentable', ['advisable']  ->
+define 'aura/extensions/widget/presentable', ['advisable'], ->
 
   presentable =
     constructor: (options) ->
@@ -11,14 +11,17 @@ define 'aura/extensions/widget/presentable', ['advisable']  ->
       @after 'initialized', =>
         @presenter?.sandbox = @sandbox
 
-  (application) ->
+    present: (models...) ->
+      @presentation = @presenter models: models, sandbox: @sandbox
+      @bind @$el, @presentation
 
-    version: '0.2.0'
 
-    initialize: (application) ->
-      {core} = application
+  version: '0.1.0'
 
-      # Add support for element removal after stoping widget
-      # TODO replace Base.extend inheritance to stampit composition
-      core.Widgets.Base = core.Widgets.Base.extend presentable
-      recyclable.super  = core.Widgets.Base.__super__
+  initialize: (application) ->
+    {core} = application
+
+    # Add support for element removal after stoping widget
+    # TODO replace Base.extend inheritance to stampit composition
+    core.Widgets.Base = core.Widgets.Base.extend presentable
+    presentable.super  = core.Widgets.Base.__super__

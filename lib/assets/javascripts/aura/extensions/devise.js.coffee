@@ -1,8 +1,6 @@
-root = exports ? this
+'use strict'
 
 define 'aura/extensions/devise', ->
-
-  'use strict'
 
   sandbox  = null
   mediator = null
@@ -137,22 +135,21 @@ define 'aura/extensions/devise', ->
       # TODO better resource deletion control, create interface to
       # make delete requests
 
-      session.instance.destroy()
-        .done (response, status, xhr) ->
-          sandbox.current_user = null
-          sandbox.signed_in    = false
-          mediator.emit 'user.signed_out', @
+      succeeded = (response, status, xhr) ->
+        sandbox.current_user = null
+        sandbox.signed_in    = false
+        mediator.emit 'user.signed_out', @
 
-          # When the user logs in, the csrf token changes, so we need
-          # to update it too! The ende gem extends the controller when
-          # devise is included to send it to us
-          # TODO implement as a indemma extension
-          token = xhr.getResponseHeader 'X-CSRF-Token'
-          console.warn "Server did not send the new csrf token.\n User may not be able to log in again!" unless token
-          $('meta[name="csrf-token"]').attr 'content', token
+        # When the user logs in, the csrf token changes, so we need
+        # to update it too! The ende gem extends the controller when
+        # devise is included to send it to us
+        # TODO implement as a indemma extension
+        token = xhr.getResponseHeader 'X-CSRF-Token'
+        console.warn "Server did not send the new csrf token.\n User may not be able to log in again!" unless token
+        $('meta[name="csrf-token"]').attr 'content', token
 
-
-        .fail (xhr) ->
+      session.instance.destroy().done(succeeded)
+        .fail (xhr, status) ->
           mediator.emit 'session.destruction_failed', @
 
 
