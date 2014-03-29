@@ -6,8 +6,12 @@ define 'aura/extensions/widget/lifecycleable', ->
   with_component = 'jquery'
   jQuery         = require with_component
 
+  with_component = 'stampit/stampit'
+  stampit        = require with_component
+
   core           = null
 
+  # TODO transform into a composable
   lifecycleable =
     injection: (definition) ->
       options           = definition.options
@@ -58,20 +62,7 @@ define 'aura/extensions/widget/lifecycleable', ->
 
       definition
 
-  recyclable =
-    constructor: (options) ->
-
-      # TODO only listen to this specific sandbox stop
-      @sandbox.on 'aura.sandbox.stop', (sandbox) =>
-        @stopped() if @sandbox.ref == sandbox.ref
-
-      @sandbox.on 'aura.sandbox.start', (sandbox) =>
-        @started() if @sandbox.ref == sandbox.ref
-
-      recyclable.super.constructor.call @, options
-
-      @initialized()
-
+  recyclable = stampit(
     inject: (name, options) ->
       core.inject name, options
 
@@ -87,6 +78,16 @@ define 'aura/extensions/widget/lifecycleable', ->
     # TODO Remove when updating to aura 0.9
     stopped: ->
       @$el.remove()
+  ).enclose ->
+    # TODO only listen to this specific sandbox stop
+    @sandbox.on 'aura.sandbox.stop', (sandbox) =>
+      @stopped() if @sandbox.ref == sandbox.ref
+
+    @sandbox.on 'aura.sandbox.start', (sandbox) =>
+      @started() if @sandbox.ref == sandbox.ref
+
+    @initialized()
+
 
 
   (application) ->
@@ -145,7 +146,4 @@ define 'aura/extensions/widget/lifecycleable', ->
         params[2] = @ if params.length < 3
         core.inject params...
 
-      # Add support for element removal after stoping widget
-      # TODO replace Base.extend inheritance to stampit composition
-      core.Widgets.Base = core.Widgets.Base.extend recyclable
-      recyclable.super  = core.Widgets.Base.__super__
+      core.Widgets.Base.compose recyclable

@@ -1,13 +1,13 @@
 'use strict';
 
-lazy_requires = ['observable', 'advisable']
+lazy_require = 'advisable'
 define [
   './states/index',
   './presenters/default',
   'jquery.inview',
   'stampit/stampit',
-  lazy_requires[0],
-  lazy_requires[1]], (templates, presenter, inview, stampit, observable, advisable) ->
+  'observable',
+  lazy_require], (templates, presenter, inview, stampit, observable, advisable) ->
 
   scopable = (widget) ->
     deferred = widget.sandbox.data.deferred()

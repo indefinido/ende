@@ -25,7 +25,7 @@ end
 
 root = exports ? this
 
-define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
+define 'aura/extensions/models', <%= models_list.to_json  %>, (resources...) ->
 
   # TODO better require api for indemma
   indemma = require 'indemma'
@@ -45,10 +45,14 @@ define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
   # inflector outside it
   require 'indefinido-indemma/vendor/owl/pluralize'
 
+  name: 'resources'
+
+  version: '0.1.2'
+
   # Extension definition
   initialize: (application) ->
-    core                = application.core
-    sandbox             = application.sandbox
+    {core, sandbox}     = application
+
     core.util.inflector =
       cssify: (sentence) ->  sentence.replace /\//, '-'
       pluralize: indemma.model.pluralize
@@ -73,7 +77,11 @@ define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
 
     # TODO allow user to create custom definitions before resources
     # (models) get defined
+    # new Aura(inflections: {measures: measures})
     core.util.inflector.define 'measures', 'measures'
 
     # Build all model definitions
-    core.util._.map models, (model) -> indemma.model.call model
+    indemma.model.every = [] # TODO implement this on indemma
+    core.util._.map resources, (definition) ->
+      resource = indemma.model.call definition
+      indemma.model.every.push resource

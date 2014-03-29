@@ -2,7 +2,8 @@ define 'aura/extensions/widget/napable', ->
 
   'use strict'
 
-  napable =
+  # TODO think about adding rivets bindings to the element
+  napable = stampit
     bind: ->
       @sandbox.on "#{@name}.#{@identifier}.sleep", napable.sleep, @
       @sandbox.on "#{@name}.#{@identifier}.wake" , napable.wake , @
@@ -12,22 +13,18 @@ define 'aura/extensions/widget/napable', ->
     wake: ->
       @$el.addClass 'awake'
       @$el.removeClass 'asleep'
-
-  napable_extensions =
-    constructor: ->
-      napable_extensions["super"].constructor.apply @, arguments
-      napable.bind.call @
+  ,
+    naping: false
+  , ->
+    napable_extensions["super"].constructor.apply @, arguments
+    napable.bind.call @
 
   # The purpose of this extension is allow parent widget to save
   # memory by sending a sleep command to the child widgets
   (application) ->
 
-    version: '0.1.0'
+    version: '0.1.1'
 
     initialize: (application) ->
       {core} = application
-
-      # Add support for element removal after stoping widget
-      # TODO replace Base.extend inheritance to stampit composition
-      core.Widgets.Base = core.Widgets.Base.extend napable_extensions
-      napable_extensions.super  = core.Widgets.Base.__super__
+      core.Widgets.Base.compose napable
