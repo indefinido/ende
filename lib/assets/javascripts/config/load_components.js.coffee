@@ -121,8 +121,8 @@ define 'config/load_components', ['application_components'], ->
       using = loader.discover params...
 
       try
-
-        module = loader.loaders.discovered.apply @, params
+        # TODO rename mod to module
+        mod = loader.loaders.discovered.apply @, params
 
       catch e
         if e.require
@@ -132,15 +132,15 @@ define 'config/load_components', ['application_components'], ->
 
           # Since it failed to load with component, try to load with requirejs
           loader.activate 'requirejs'
-          unless module
-            module = loader.loaders.discovered.apply @, params
+          unless mod
+            mod = loader.loaders.discovered.apply @, params
         else
           throw e
 
         # Always let requirejs active by default
       loader.activate 'requirejs'
 
-      module
+      mod
 
   loader.shim()
   loader.initialize()

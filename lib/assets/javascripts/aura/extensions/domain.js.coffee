@@ -4,55 +4,48 @@ define 'aura/extensions/domain', ->
 
   # The purpose of this extension is have a business domain practice
   # integrated with the core application functionality
-  (application) ->
 
-    stampit  = require 'stampit/stampit'
+  version: '0.1.0'
 
-    instantiation =
-      composite_with: (application) ->
+  initialize: (application) ->
+    {core: {mediator}} = application
+    stampit = require 'stampit/stampit'
 
-        # TODO Move each composable to its file
-        eventable  = stampit().enclose ->
-          @on       = @sandbox.on
-          @off      = @sandbox.off
-          @once     = @sandbox.once
-          @many     = @sandbox.many
-          @unlisten = @sandbox.removeAllListeners
+    eventable  = stampit
+      on      : mediator.on
+      off     : mediator.off
+      once    : mediator.once
+      many    : mediator.many
+      emit    : mediator.emit
+      unlisten: mediator.removeAllListeners
 
-          @on "#{@name}.#{@identifier}.initialized", @stateless, @
+    domainable = stampit()
 
-          @
+    # application.use('extensions/models').use 'extensions/widget/flows'
+    # TODO detect if flows extension and models extension have already been loaded
 
-        filterable = stampit()
+    # TODO require domain commands
+    application.domain ||= eventable()
 
-        routeable  = stampit()
+  afterAppStart: (application) ->
+    {core: {resourceable: {every: resourceables}, Widgets: {Flow}}} = application
 
-        initializable  = stampit()
+    extensions = {}
+    for resourceable in resourceables
+      resource = resourceable.resource.toString()
 
+      namespaces = resource.split '/'
+      method     = namespaces.pop() + 'able'
 
-        stampit.compose filterable, routeable, eventable, initializable
+      # Create namespaces
+      node       = extensions
+      for namespace in namespaces
+        node[namespace] ||= {}
+        node = node[namespace]
 
-      create_widget_type: (flowable, application) ->
-        {core: {Widgets}}   = application
+      node[method] = resourceable
 
-        Widgets.Flow  = Widgets.composable Widgets.Default.prototype, ((options) -> new Widgets.Default options), flowable
-
-    version: '0.1.0'
-
-    initialize: (application) ->
-      application.use('extenions/models').use 'extenions/widget/flows'
-      stampit  = require 'stampit/stampit'
-      flowable = instantiation.composite_with application
-      instantiation.create_widget_type flowable, application
-
-    afterAppStart: (application) ->
-      {core: {resourceable: {every: resourceables}, {Widgets: Flow}}} = application
-
-      packaged = {}
-      for resourceable in resourceables
-        packaged[resourceable.resource.toString() + 'able'] = resourceable
-
-      Flow.composition.methods packaged
+    Flow.composition.methods extensions
 
 
 

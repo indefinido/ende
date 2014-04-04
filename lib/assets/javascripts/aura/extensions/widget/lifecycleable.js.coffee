@@ -54,7 +54,7 @@ define 'aura/extensions/widget/lifecycleable', ->
       options.require.packages.push name: options.ref, location: widgetsPath + "/" + widgetName
       options.name  = widgetName
 
-      unless options.el
+      unless options.el?
         options.el  = jQuery '<div class="widget"></div>'
         @root.append options.el
 
@@ -65,6 +65,18 @@ define 'aura/extensions/widget/lifecycleable', ->
   recyclable = stampit(
     inject: (name, options) ->
       core.inject name, options
+
+    injection: -> lifecycleable.injection arguments...
+
+    before_initialize: ->
+      # TODO only listen to this specific sandbox stop
+      @sandbox.on 'aura.sandbox.stop', (sandbox) ->
+        @stopped() if @sandbox.ref == sandbox.ref
+      , @
+
+      @sandbox.on 'aura.sandbox.start', (sandbox) ->
+        @started() if @sandbox.ref == sandbox.ref
+      , @
 
     initialized: ->
       # TODO think how to access parent widget in children ones
@@ -78,17 +90,8 @@ define 'aura/extensions/widget/lifecycleable', ->
     # TODO Remove when updating to aura 0.9
     stopped: ->
       @$el.remove()
-  ).enclose ->
-    # TODO only listen to this specific sandbox stop
-    @sandbox.on 'aura.sandbox.stop', (sandbox) =>
-      @stopped() if @sandbox.ref == sandbox.ref
 
-    @sandbox.on 'aura.sandbox.start', (sandbox) =>
-      @started() if @sandbox.ref == sandbox.ref
-
-    @initialized()
-
-
+  ).enclose -> @initialized()
 
   (application) ->
 
@@ -105,12 +108,18 @@ define 'aura/extensions/widget/lifecycleable', ->
       lifecycleable.sources    = application.config.widgets.sources
       lifecycleable.find       = core.dom.find
 
-      # TODO Keep searching for root until found, and only throw
-      # exception if someone tries to initialize widgets in root
-      # without a valid root selector
-      lifecycleable.root       = core.dom.find app.startOptions.widgets || 'body'
+      Object.defineProperty lifecycleable, 'root',
+        get: ->
+          root = core.dom.find app.startOptions.widgets
+          throw new TypeError "No root node found for selector '#{app.startOptions.widgets}'." unless root.length != 0
 
-      throw new TypeError "No root node found for selector '#{app.startOptions.widgets}'." unless lifecycleable.root.length != 0
+          # Cache and override root when found
+          Object.defineProperty lifecycleable, 'root', value: root
+
+          root
+
+        configurable: true
+
 
       lifecycleable.decamelize = core.util.decamelize
       lifecycleable.capitalize = core.util.capitalize

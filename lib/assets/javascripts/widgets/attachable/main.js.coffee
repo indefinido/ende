@@ -7,9 +7,13 @@ define ->
 
   version: '0.1.0'
 
+  # TODO options: {state: 'reset' # Will preserve initial widget state }
+
   initialize: (options) ->
 
     @sandbox._attachments = []
+
+    @$el.addClass "widget #{@name} composing"
 
     # TODO think how to extend widgets as a way of knowing all children have started
     @compose_when_parent()
@@ -24,12 +28,25 @@ define ->
 
   # Create a widget type to replace @$el for a html comment
   compose: (parent) ->
+    @parent = parent
     parent_namespace = parent.name + '.' + parent.identifier
+
+    # TODO move to elementless widgets
+    @transform_into_elementless()
 
     @sandbox.on "#{parent_namespace}.reattach", @reattach, @
     @sandbox.on "#{parent_namespace}.detach"  , @detach  , @
     @sandbox.on "#{parent_namespace}.attach"  , @attach  , @
 
+  transform_into_elementless: ->
+    serializable_options = _.omit @options, '$el', 'el', 'ref', '_ref', 'require', 'baseUrl'
+
+    marker  = " #{@name}.#{@identifier} for #{@parent.name}.#{parent.identifier}"
+    marker += " with #{JSON.stringify serializable_options} "
+    node    = document.createComment marker
+    @$el.replaceWith node
+
+    @$el = $ node
 
   reattach: (selector) ->
     @detach()
@@ -44,11 +61,11 @@ define ->
 
     # TODO unbind and store jquery handlers
     # TODO store element position in the attachment
-    @$el.detach()
+    @parent.$el.detach()
 
   attach: (selector) ->
     element = @sandbox.dom.find selector
-    throw new TypeError "attach: No element found for #{selector} for attachment" unless element.length
+    @sandbox.logger.error "attach: No element found for #{selector} for attachment" unless element.length
 
     # TODO Support multiple deatachments events storage
     @sandbox._attachments.push @sandbox._events
@@ -57,4 +74,4 @@ define ->
 
     # TODO rebind jquery handlers
     # TODO restore element position of the attachment
-    element.append @$el
+    element.append @parent.$el

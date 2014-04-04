@@ -1,11 +1,6 @@
 'use strict';
 
-window.domo = []
-
-# TODO define componentjs required packages, as requirejs packages
-observable   = require('indefinido-observable').mixin
-
-define ['stampit/stampit'], (stampit) ->
+define ['stampit/stampit', 'observable'], (stampit, observable) ->
 
   scopingable = stampit
     start: ->
@@ -40,7 +35,6 @@ define ['stampit/stampit'], (stampit) ->
       @reset()
 
     @
-
 
 
   scopable = stampit

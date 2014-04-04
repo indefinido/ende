@@ -6,10 +6,10 @@ define 'aura/extensions/widget/flowable', ->
   # put domain comunication logic between other widgets
   (application) ->
 
-    stampit = null
-
     instantiation =
-      composite_with: (application) ->
+      composite_with: ->
+
+        stampit  = require 'stampit/stampit'
 
         # TODO Move each composable to its file
         eventable  = stampit().enclose ->
@@ -17,9 +17,8 @@ define 'aura/extensions/widget/flowable', ->
           @off      = @sandbox.off
           @once     = @sandbox.once
           @many     = @sandbox.many
+          @emit     = @sandbox.emit
           @unlisten = @sandbox.removeAllListeners
-
-          @on "#{@name}.#{@identifier}.initialized", @stateless, @
 
           @
 
@@ -27,20 +26,31 @@ define 'aura/extensions/widget/flowable', ->
 
         routeable  = stampit()
 
-        initializable  = stampit()
+        stateable  = stampit(transit: (state) -> application.state = state).enclose ->
+          Object.defineProperty @, 'state',
+            set: @transit
+            get: -> application.state
+            configurable: false
 
+          @stateless()
 
-        stampit.compose filterable, routeable, eventable, initializable
+        elementless = stampit ->
+          marker  = " #{@name}.#{@identifier} flow "
+          node    = document.createComment marker
+          @$el.replaceWith node
+          @$el    = $ node
+
+        stampit.compose filterable, routeable, eventable, stateable, elementless
 
       create_widget_type: (flowable, application) ->
         {core: {Widgets}}   = application
 
-        Widgets.Flow  = Widgets.composable Widgets.Default.prototype, ((options) -> new Widgets.Default options), flowable
+        Widgets.Flow  = Widgets.composable Widgets.Default.prototype, null, (options) -> Widgets.Default.call @, options
+        Widgets.Flow.compose flowable
 
     version: '0.1.0'
 
     initialize: (application) ->
-      stampit  = require 'stampit/stampit'
       flowable = instantiation.composite_with application
       instantiation.create_widget_type flowable, application
 

@@ -149,6 +149,7 @@ define 'aura/extensions/states', ['states'], (states) ->
           #
           # TODO initialize the first flow in flows extension
           current_state = application.state if application.state != 'initialization'
+          application.startOptions.widgets = arguments[0]
           application.state = "default"
 
           startup = application.core.start arguments...

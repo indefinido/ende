@@ -28,35 +28,33 @@ define 'aura/extensions/widget/eventable', ['es6-map-shim'], ->
   with_component = 'stampit/stampit'
   stampit        = require with_component
 
-  eventable = stampit(
+  eventable = stampit
     # TODO implement rivets compatibility, instead of generic
     # binding events, alter html
     handles: (event_name, widget_event_name = event_name, selector = @$el) ->
       unless @name
-        message = "Widget name must be provided in order to use handlers, but this.name is '#{@name}' \n"
-        message = "Also you may have forgotten to set the type of your widget to 'Base'"
-        throw message
+        message  = "Widget name must be provided in order to use handlers, but this.name is '#{@name}' \n"
+        message += "Also you may have forgotten to set the type of your widget to 'Base'"
+        throw new TypeError message
 
       context = @$el unless selector == @$el
 
       event_name = translations.get(event_name) ? event_name
 
       @sandbox.dom.find(selector, context).on event_name, create_handler(@, widget_event_name || event_name)
-  ).enclose ->
-    matches     = extractor.exec @options._ref
-    @name       = matches[1]
-    @identifier = @options.identifier or @options.resource or matches[2]
-    @sandbox.identifier = @identifier
 
-    @
-
+    before_initialize: ->
+      matches     = extractor.exec @options._ref
+      @name       = matches[1]
+      @identifier = @options.identifier or @options.resource or matches[2]
+      @sandbox.identifier = @identifier
 
   version: '0.1.0'
 
   initialize: (application) ->
     application.core.Widgets.Base.compose eventable
 
-    {core: mediator} = application
+    {core: {mediator}} = application
     application.sandbox.startListening = ->
       # TODO @listening = true
       mediator.on event.name, event.callback for event in @_events

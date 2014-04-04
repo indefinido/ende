@@ -1,45 +1,136 @@
 'use strict';
 
 define 'aura/extensions/widget/composable', ->
+  stampit = extend = null
 
+  advisorable = (advisor) ->
+    # TODO merge advices in the composition chain
+    advice_names = ['before', 'after', 'around']
 
-  version: '0.1.0'
+    extract_advices = (object) ->
+      found = []
+      for key of object when key.indexOf('_') isnt -1
+        [name, adviced] = key.split '_'
+
+        if advice_names.indexOf(name) != -1
+          callbacks = if object[key].length then object[key] else [object[key]]
+
+          delete object[key]
+
+          found.push
+            key: key
+            name: name
+            adviced: adviced
+            callbacks: callbacks
+
+      found
+
+    advisor.advice = (widget) ->
+
+      advices = extract_advices widget
+
+      for advice in advices
+
+        # in order to preserve declaration order, we must reverse the callbacks order
+        advice.callbacks.reverse() if advice.name == 'before'
+
+        # Advice with all callbacks
+        widget[advice.name] advice.adviced, callback for callback in advice.callbacks
+
+      widget
+
+    advisor.advisable = (factory) ->
+      original = factory.compose
+
+      stampit.mixIn factory,
+        compose: (stamps...) ->
+          {fixed: {methods: composition_methods}} = @composition
+          advices = extract_advices composition_methods
+
+          for stamp in stamps
+            {fixed: {methods: stamp_methods}} = stamp
+            advices = advices.concat extract_advices stamp_methods
+
+          adviced_stamp = {}
+          for advice in advices
+            adviced_stamp[advice.key] ||= []
+            adviced_stamp[advice.key] = adviced_stamp[advice.key].concat advice.callbacks
+
+          # Create a ultimate stamp with all advices arrays or functions merged
+          # TODO do not store advices definitions in the prototype chain
+          stamps.push stampit adviced_stamp
+
+          original.apply factory, stamps
+
+        advice: advisor.advice
+
+    advisor
+
+  composerable = (compositor) ->
+    compositor.composable  = (methods, state, enclose) ->
+      factory = (options) ->
+
+        # Inherit defaults from widget
+        options = _.defaults options, factory.composition.fixed.methods.options
+
+        # Composition only will compose methods and state!
+        instance = factory.composition options: options
+        enclose.call instance, options
+
+      # TODO check if it is needed to inherit compositions
+      # if methods.composition
+      #   composition = methods.composition
+      #   delete methods.composition
+      #   composition = stampit.compose composition, stampit methods, state
+      # else
+      #   composition = stampit methods, state
+
+      stampit.mixIn factory,
+        composition: stampit methods, state
+        # Suport an extension with multiple compositions
+        compose: -> @composition = stampit.compose @composition, arguments...
+
+        extend: ->
+          `var methods, state`
+          {fixed}      = @composition
+          initializers = [enclose]
+          methods      = {}
+          state        = {}
+
+          for definition in arguments
+            {methods: definition_methods, state: definition_state} = definition
+
+            methods = extend methods, fixed.methods, definition_methods or definition
+            state   = extend state  , fixed.state  , definition_state
+
+            initializers.push fixed.enclose      if fixed.enclose
+            initializers.push definition.enclose if definition.enclose
+
+          enclosed = (properties) ->
+            initializers.forEach (initializer) => initializer.call @, properties
+            @
+
+          compositor.composable methods, state, enclosed or enclose
+
+    compositor
+
+  version: '0.1.1'
 
   initialize: (application) ->
-    stampit = require 'stampit/stampit'
-    Widgets = application.core.Widgets
+    stampit   = require 'stampit/stampit'
+    advisable = require 'advisable'
 
-    # TODO replace Base.extend inheritance to stampit composition
-    # Widgets.Base = Widgets.Base.extend eventable
-    # eventable.super = Widgets.Base.__super__
+    {core: {Widgets, util: {extend}}} = application
 
-    Widgets.composable  = (prototype, constructor, composition = stampit()) ->
-
-      constructor.composition = composition
-
-      extensible = (factory) ->
-        factory.compose = ->
-          constructor.composition = stampit.compose constructor.composition, arguments...
-
-        factory.extend = (definition) ->
-          {methods, state, enclose} = definition
-
-          subfactory = stampit definition or methods, state, enclose
-
-          factory.compose subfactory
-
-          stamp
-
-        factory
-
-      stamp = extensible ->
-        instance = @
-        instance = constructor.apply instance, arguments if constructor?
-
-        constructor.composition instance
-
+    Widgets = composerable advisorable Widgets
 
     # THINK how to at the same time respect aura ways of instantiating
     # widgets and preserve widget logic composability
     Widgets.Default = Widgets.Base
-    Widgets.Base    = Widgets.composable Widgets.Default.prototype, (options) -> new Widgets.Default options
+    delete Widgets.Default.extend
+
+    Widgets.Base    = Widgets.advisable Widgets.composable advisable(Widgets.Default.prototype), null, (options) ->
+      Object.defineProperty @, 'constructor', value: Widgets.Default, enumerable: false, configurable: false, writable: false
+      Widgets.Default.call Widgets.advice(@), options
+
+
