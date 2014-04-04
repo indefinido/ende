@@ -35,6 +35,7 @@ Components List
 
 _Detailed documentation is comming!_
 
+- Attachable
 - Authenticator
 - Content
 - Dialog
@@ -59,7 +60,7 @@ Extensions List
  - Devise
 - Rivets
 - Widget
- - Napable   
+ - Napable
  - Lifecycleable
  - Eventable
 - Models
