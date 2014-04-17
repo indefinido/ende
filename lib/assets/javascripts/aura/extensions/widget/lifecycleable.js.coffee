@@ -113,8 +113,9 @@ define 'aura/extensions/widget/lifecycleable', ->
           root = core.dom.find app.startOptions.widgets
           throw new TypeError "No root node found for selector '#{app.startOptions.widgets}'." unless root.length != 0
 
-          # Cache and override root when found
-          Object.defineProperty lifecycleable, 'root', value: root
+          # TODO Cache and override root when found
+          # TODO check how this will integrate with mocha specs
+          # Object.defineProperty lifecycleable, 'root', value: root
 
           root
 

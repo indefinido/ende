@@ -1,7 +1,7 @@
 'use strict';
 
 define 'aura/extensions/widget/composable', ->
-  stampit = extend = null
+  stamp = extend = null
 
   advisorable = (advisor) ->
     # TODO merge advices in the composition chain
@@ -42,13 +42,13 @@ define 'aura/extensions/widget/composable', ->
     advisor.advisable = (factory) ->
       original = factory.compose
 
-      stampit.mixIn factory,
+      stamp.mixIn factory,
         compose: (stamps...) ->
           {fixed: {methods: composition_methods}} = @composition
           advices = extract_advices composition_methods
 
-          for stamp in stamps
-            {fixed: {methods: stamp_methods}} = stamp
+          for stamped in stamps
+            {fixed: {methods: stamp_methods}} = stamped
             advices = advices.concat extract_advices stamp_methods
 
           adviced_stamp = {}
@@ -58,7 +58,7 @@ define 'aura/extensions/widget/composable', ->
 
           # Create a ultimate stamp with all advices arrays or functions merged
           # TODO do not store advices definitions in the prototype chain
-          stamps.push stampit adviced_stamp
+          stamps.push stamp adviced_stamp
 
           original.apply factory, stamps
 
@@ -81,14 +81,14 @@ define 'aura/extensions/widget/composable', ->
       # if methods.composition
       #   composition = methods.composition
       #   delete methods.composition
-      #   composition = stampit.compose composition, stampit methods, state
+      #   composition = stamp.compose composition, stamp methods, state
       # else
-      #   composition = stampit methods, state
+      #   composition = stamp methods, state
 
-      stampit.mixIn factory,
-        composition: stampit methods, state
+      stamp.mixIn factory,
+        composition: stamp methods, state
         # Suport an extension with multiple compositions
-        compose: -> @composition = stampit.compose @composition, arguments...
+        compose: -> @composition = stamp.compose @composition, arguments...
 
         extend: ->
           `var methods, state`
@@ -114,13 +114,12 @@ define 'aura/extensions/widget/composable', ->
 
     compositor
 
-  version: '0.1.1'
+  version: '0.1.2'
 
   initialize: (application) ->
-    stampit   = require 'stampit/stampit'
     advisable = require 'advisable'
 
-    {core: {Widgets, util: {extend}}} = application
+    {core: {Widgets, util: {extend}, stamp}} = application
 
     Widgets = composerable advisorable Widgets
 

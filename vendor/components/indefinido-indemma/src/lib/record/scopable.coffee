@@ -108,6 +108,7 @@ scopable =
       @scope.fetch.call @, data, done, fail
 
     # TODO optmize this iterations or add support for stampit on associable and merge factories
+    # TODO rename this method to forward extensions to association, and store extensions on has_many definitions
     # @ = record instance
     forward_scopes_to_associations: ->
       factory = model[@resource.name]
@@ -129,34 +130,24 @@ scopable =
         for scope in associated_factory.scope.declared
           association.scope scope, associated_factory["$#{scope}"]
 
-      for associated_resource in factory.has_one
-        # TODO change this warn message into a exception when
-        # associations are renamable
-        unless model[associated_resource]
-          console.warn("Associated factory not found for associated resource: #{associated_resource}")
-          continue
-
-        for scope in model[associated_resource].scope.declared
-          @[associated_resource][scope] = factory[scope]
-
         # TODO improve associable inner workings to stampit objects
-      if factory.belongs_to.length
-        generate_forwarder = (associated_resource) ->
-          associated_factory = model[associated_resource]
+      # if factory.belongs_to.length
+      #   generate_forwarder = (associated_resource) ->
+      #     associated_factory = model[associated_resource]
 
-          # TODO change this warn message into a exception when
-          # associations are renamable
-          return console.warn("Associated factory not found for associated resource: #{associated_resource}") unless associated_factory
+      #     # TODO change this warn message into a exception when
+      #     # associations are renamable
+      #     return console.warn("Associated factory not found for associated resource: #{associated_resource}") unless associated_factory
 
-          declared_scopes    = associated_factory.scope.declared
+      #     declared_scopes    = associated_factory.scope.declared
 
-          ->
-            for scope in declared_scopes
-              @[associated_resource][scope] = associated_factory[scope]
+      #     ->
+      #       for scope in declared_scopes
+      #         @[associated_resource][scope] = associated_factory[scope]
 
-        for associated_resource in factory.belongs_to
-          forwarder = generate_forwarder associated_resource
-          @after "build_#{associated_resource}", forwarder
+      #   for associated_resource in factory.belongs_to
+      #     forwarder = generate_forwarder associated_resource
+      #     @after "build_#{associated_resource}", forwarder
 
       true
   # @ = model instance

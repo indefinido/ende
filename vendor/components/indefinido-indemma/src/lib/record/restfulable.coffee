@@ -323,7 +323,7 @@ restful =
     # TODO move this to serializable module
     # TODO figure out why sometimes is rendering a circular referenced json
     # TODO rename to toJSON
-    json: (methods = {}) ->
+    json: (options = {}) ->
       json = {}
 
       definition = model[@resource.toString()]
@@ -356,7 +356,7 @@ restful =
 
             # TODO move nested attributes to model definition and
             # implement toJSON there
-            json["#{name}_attributes"] = value.json methods[name]
+            json["#{name}_attributes"] = value.json options[name]
 
           # Serialize complex type values
           else if value.toJSON? || value.json?
@@ -366,9 +366,9 @@ restful =
 
             # TODO rename json to toJSON
             if value.json?
-              json[name] = value.json methods[name]
+              json[name] = value.json options[name]
             else
-              json[name] = value.toJSON methods[name]
+              json[name] = value.toJSON options[name]
 
           # It is a complex type value without serializtion support so
           # we just ignore it
@@ -381,8 +381,15 @@ restful =
           # Serialize primitive type values
           json[name] = value
 
-      # Remove observable methods and dom node properties
+      # Remove observable options and dom node properties
       json = observable.unobserve json
+
+      for name, value of options.methods ? {}
+        method = @[name]
+        if typeof method  == 'function'
+          json[name] = method()
+        else
+          json[name] = method
 
       # TODO Store reserved words in a array
       # TODO Use _.omit function

@@ -8,10 +8,9 @@ define 'aura/extensions/domain', ->
   version: '0.1.0'
 
   initialize: (application) ->
-    {core: {mediator}} = application
-    stampit = require 'stampit/stampit'
+    {core: {mediator, stamp}} = application
 
-    eventable  = stampit
+    eventable  = stamp
       on      : mediator.on
       off     : mediator.off
       once    : mediator.once
@@ -19,7 +18,7 @@ define 'aura/extensions/domain', ->
       emit    : mediator.emit
       unlisten: mediator.removeAllListeners
 
-    domainable = stampit()
+    domainable = stamp()
 
     # application.use('extensions/models').use 'extensions/widget/flows'
     # TODO detect if flows extension and models extension have already been loaded
@@ -28,8 +27,9 @@ define 'aura/extensions/domain', ->
     application.domain ||= eventable()
 
   afterAppStart: (application) ->
-    {core: {resourceable: {every: resourceables}, Widgets: {Flow}}} = application
+    {core: {resourceable: {every: resourceables}, Widgets: {Flow}, stamp, stamps}, domain} = application
 
+    # TODO disponibilize the resourceables method through the resources extension
     extensions = {}
     for resourceable in resourceables
       resource = resourceable.resource.toString()
@@ -45,7 +45,9 @@ define 'aura/extensions/domain', ->
 
       node[method] = resourceable
 
-    Flow.composition.methods extensions
+    stamp 'resourceables', extensions
+
+    Flow.compose stamp.compose stamps.resourceables, stamp().enclose -> domain[@name] = @
 
 
 

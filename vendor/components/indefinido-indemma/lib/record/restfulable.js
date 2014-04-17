@@ -339,11 +339,11 @@ restful = {
         return JSON.stringify(serialized);
       }
     },
-    json: function(methods) {
-      var definition, json, name, nature, nested, value;
+    json: function(options) {
+      var definition, json, method, name, nature, nested, value, _ref, _ref1;
 
-      if (methods == null) {
-        methods = {};
+      if (options == null) {
+        options = {};
       }
       json = {};
       definition = model[this.resource.toString()];
@@ -369,15 +369,15 @@ restful = {
               console.warn("json: Tryied to serialize nested attribute '" + name + "' without serialization method!");
               continue;
             }
-            json["" + name + "_attributes"] = value.json(methods[name]);
+            json["" + name + "_attributes"] = value.json(options[name]);
           } else if ((value.toJSON != null) || (value.json != null)) {
             if (value.resource) {
               continue;
             }
             if (value.json != null) {
-              json[name] = value.json(methods[name]);
+              json[name] = value.json(options[name]);
             } else {
-              json[name] = value.toJSON(methods[name]);
+              json[name] = value.toJSON(options[name]);
             }
           } else {
             continue;
@@ -387,6 +387,16 @@ restful = {
         }
       }
       json = observable.unobserve(json);
+      _ref1 = (_ref = options.methods) != null ? _ref : {};
+      for (name in _ref1) {
+        value = _ref1[name];
+        method = this[name];
+        if (typeof method === 'function') {
+          json[name] = method();
+        } else {
+          json[name] = method;
+        }
+      }
       delete json.dirty;
       delete json.resource;
       delete json.route;

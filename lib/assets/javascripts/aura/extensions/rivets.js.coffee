@@ -269,8 +269,8 @@ define 'aura/extensions/rivets', ['aura/extensions/rivets/formatters'], (formatt
 
       original_bind.apply rivets, arguments
 
-    extend application.sandbox,
-      view: rivets
+    extend application.sandbox, view: rivets
+    extend application.core   , view: rivets
 
     extend application.core.Widgets.Base.prototype,
       bind: (presentation, options) ->

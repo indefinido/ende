@@ -26,6 +26,8 @@ define 'modernizr' , ['config/load_components'], ->
   require 'modernizr'
   window.Modernizr
 
+define 'rivets', ['config/load_components'], -> require 'rivets'
+
 # TODO define 'underscore', ['config/load_components'], -> require 'lodash'
 
 # TODO figure out how to use rjs optmizer to include component builds

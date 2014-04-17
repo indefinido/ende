@@ -136,32 +136,33 @@ define 'aura/extensions/states', ['states'], (states) ->
 
         get: -> state.current
 
+      # TODO clearer startup sequence
+      application.core.metabolize = (root) ->
+        # If any initialized flow changed the application state
+        # before the widgets initialization, store its state pass
+        # through the default state and go back to the old state
+        # created by the flows
+        #
+        # TODO initialize the first flow in flows extension
+        current_state = application.state if application.state != 'initialization'
+        application.startOptions.widgets ||= root
+        application.state = "default"
+
+        startup = application.core.start arguments...
+
+        # TODO move to domain extension
+        # TODO let this code more legible
+        domain_flow = application.domain.default
+        domain_flow?.ready ||= injection.then((widgets...) ->
+          # TODO use es6-shim promises
+          $.Deferred().resolveWith domain_flow, widgets
+        ).done
+
+        application.state = current_state if current_state?
+
+        startup
+
+
     afterAppStart: (application) ->
       # TODO Change the application to default state in flows extension
-      if (application.startOptions.widgets)
-        application.state = "default"
-      else
-        application.core.metabolize = ->
-          # If any initialized flow changed the application state
-          # before the widgets initialization, store its state pass
-          # through the default state and go back to the old state
-          # created by the flows
-          #
-          # TODO initialize the first flow in flows extension
-          current_state = application.state if application.state != 'initialization'
-          application.startOptions.widgets = arguments[0]
-          application.state = "default"
-
-          startup = application.core.start arguments...
-
-          # TODO move to domain extension
-          # TODO let this code more legible
-          domain_flow = application.domain.default
-          domain_flow?.ready ||= injection.then((widgets...) ->
-            # TODO use es6-shim promises
-            $.Deferred().resolveWith domain_flow, widgets
-          ).done
-
-          application.state = current_state if current_state?
-
-          startup
+      application.state = "default" if application.startOptions.widgets

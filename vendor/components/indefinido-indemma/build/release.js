@@ -26,14 +26,10 @@ function require(path, parent, orig) {
   // perform real require()
   // by invoking the module's
   // registered function
-  if (!module._resolving && !module.exports) {
-    var mod = {};
-    mod.exports = {};
-    mod.client = mod.component = true;
-    module._resolving = true;
-    module.call(this, mod.exports, require.relative(resolved), mod);
-    delete module._resolving;
-    module.exports = mod.exports;
+  if (!module.exports) {
+    module.exports = {};
+    module.client = module.component = true;
+    module.call(this, module.exports, require.relative(resolved), module);
   }
 
   return module.exports;
@@ -20737,7 +20733,7 @@ model.pluralize = resourceable.pluralize;
 
 });
 require.register("indemma/lib/record/rest.js", function(exports, require, module){
-var $, request;
+var $, data_for, request;
 
 $ = require('jquery');
 
@@ -20756,7 +20752,7 @@ module.exports = {
   }
 };
 
-request = function(method, url, data) {
+data_for = function(data) {
   var param_name;
 
   param_name = this.resource.param_name || this.resource.toString();
@@ -20768,6 +20764,11 @@ request = function(method, url, data) {
     delete data[param_name]['id'];
     delete data[param_name]['_id'];
   }
+  return data;
+};
+
+request = function(method, url, data) {
+  data = data_for.call(this, data);
   return $.ajax({
     url: url,
     data: data,
@@ -21120,11 +21121,11 @@ restful = {
         return JSON.stringify(serialized);
       }
     },
-    json: function(methods) {
-      var definition, json, name, nature, nested, value;
+    json: function(options) {
+      var definition, json, method, name, nature, nested, value, _ref, _ref1;
 
-      if (methods == null) {
-        methods = {};
+      if (options == null) {
+        options = {};
       }
       json = {};
       definition = model[this.resource.toString()];
@@ -21150,15 +21151,15 @@ restful = {
               console.warn("json: Tryied to serialize nested attribute '" + name + "' without serialization method!");
               continue;
             }
-            json["" + name + "_attributes"] = value.json(methods[name]);
+            json["" + name + "_attributes"] = value.json(options[name]);
           } else if ((value.toJSON != null) || (value.json != null)) {
             if (value.resource) {
               continue;
             }
             if (value.json != null) {
-              json[name] = value.json(methods[name]);
+              json[name] = value.json(options[name]);
             } else {
-              json[name] = value.toJSON(methods[name]);
+              json[name] = value.toJSON(options[name]);
             }
           } else {
             continue;
@@ -21168,6 +21169,16 @@ restful = {
         }
       }
       json = observable.unobserve(json);
+      _ref1 = (_ref = options.methods) != null ? _ref : {};
+      for (name in _ref1) {
+        value = _ref1[name];
+        method = this[name];
+        if (typeof method === 'function') {
+          json[name] = method();
+        } else {
+          json[name] = method;
+        }
+      }
       delete json.dirty;
       delete json.resource;
       delete json.route;
@@ -21351,7 +21362,7 @@ scopable = {
       return this.scope.fetch.call(this, data, done, fail);
     },
     forward_scopes_to_associations: function() {
-      var associated_factory, associated_resource, association, association_name, factory, forwarder, generate_forwarder, scope, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3, _ref4;
+      var associated_factory, associated_resource, association, association_name, factory, scope, _i, _j, _len, _len1, _ref, _ref1;
 
       factory = model[this.resource.name];
       _ref = factory.has_many;
@@ -21369,46 +21380,6 @@ scopable = {
         for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
           scope = _ref1[_j];
           association.scope(scope, associated_factory["$" + scope]);
-        }
-      }
-      _ref2 = factory.has_one;
-      for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-        associated_resource = _ref2[_k];
-        if (!model[associated_resource]) {
-          console.warn("Associated factory not found for associated resource: " + associated_resource);
-          continue;
-        }
-        _ref3 = model[associated_resource].scope.declared;
-        for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
-          scope = _ref3[_l];
-          this[associated_resource][scope] = factory[scope];
-        }
-      }
-      if (factory.belongs_to.length) {
-        generate_forwarder = function(associated_resource) {
-          var declared_scopes;
-
-          associated_factory = model[associated_resource];
-          if (!associated_factory) {
-            return console.warn("Associated factory not found for associated resource: " + associated_resource);
-          }
-          declared_scopes = associated_factory.scope.declared;
-          return function() {
-            var _len4, _m, _results;
-
-            _results = [];
-            for (_m = 0, _len4 = declared_scopes.length; _m < _len4; _m++) {
-              scope = declared_scopes[_m];
-              _results.push(this[associated_resource][scope] = associated_factory[scope]);
-            }
-            return _results;
-          };
-        };
-        _ref4 = factory.belongs_to;
-        for (_m = 0, _len4 = _ref4.length; _m < _len4; _m++) {
-          associated_resource = _ref4[_m];
-          forwarder = generate_forwarder(associated_resource);
-          this.after("build_" + associated_resource, forwarder);
         }
       }
       return true;
@@ -21855,219 +21826,230 @@ module.exports = composed;
 
 });
 require.register("indemma/lib/record/validatable.js", function(exports, require, module){
-(function() {
-  var errorsable, extensions, initializers, manager, messages, observable, root, stampit, type;
+var errorsable, extensions, initializers, manager, messages, observable, root, stampit, type;
 
-  require('./translationable');
+require('./translationable');
 
-  root = typeof exports !== "undefined" && exports !== null ? exports : this;
+root = typeof exports !== "undefined" && exports !== null ? exports : this;
 
-  stampit = require('../../vendor/stampit');
+stampit = require('../../vendor/stampit');
 
-  observable = require('observable').mixin;
+observable = require('observable').mixin;
 
-  type = require('type');
+type = require('type');
 
-  messages = {
-    blank: function(attribute_name) {
+messages = {
+  blank: function(attribute_name) {
+    attribute_name = this.human_attribute_name(attribute_name);
+    return "O campo " + attribute_name + " não pode ficar em branco.";
+  },
+  cpf: function(attribute_name) {
+    attribute_name = this.human_attribute_name(attribute_name);
+    return "O campo " + attribute_name + " não está válido.";
+  },
+  confirmation: function(attribute_name) {
+    var confirmation_attribute_name;
+
+    confirmation_attribute_name = this.human_attribute_name(attribute_name);
+    attribute_name = this.human_attribute_name(attribute_name.replace('_confirmation', ''));
+    return "O campo " + attribute_name + " não está de acordo com o campo " + confirmation_attribute_name + ".";
+  },
+  associated: function(attribute_name) {
+    attribute_name = this.human_attribute_name(attribute_name);
+    return "O registro associado " + attribute_name + " não é válido.";
+  },
+  server: function(attribute_name, options) {
+    if (attribute_name === 'base') {
+      return options.server_message;
+    } else {
       attribute_name = this.human_attribute_name(attribute_name);
-      return "O campo " + attribute_name + " não pode ficar em branco.";
-    },
-    cpf: function(attribute_name) {
-      attribute_name = this.human_attribute_name(attribute_name);
-      return "O campo " + attribute_name + " não está válido.";
-    },
-    confirmation: function(attribute_name) {
-      var confirmation_attribute_name;
-      confirmation_attribute_name = this.human_attribute_name(attribute_name);
-      attribute_name = this.human_attribute_name(attribute_name.replace('_confirmation', ''));
-      return "O campo " + attribute_name + " não está de acordo com o campo " + confirmation_attribute_name + ".";
-    },
-    associated: function(attribute_name) {
-      attribute_name = this.human_attribute_name(attribute_name);
-      return "O registro associado " + attribute_name + " não é válido.";
-    },
-    server: function(attribute_name, options) {
-      if (attribute_name === 'base') {
-return options.server_message;
-      } else {
-	attribute_name = this.human_attribute_name(attribute_name);
-	return "" + attribute_name + " " + options.server_message + ".";
-      }
-    },
-    type: function(attribute_name, options) {
-      attribute_name = this.human_attribute_name(attribute_name);
-      return "O campo " + attribute_name + " não está válido.";
+      return "" + attribute_name + " " + options.server_message + ".";
     }
-  };
+  },
+  type: function(attribute_name, options) {
+    attribute_name = this.human_attribute_name(attribute_name);
+    return "O campo " + attribute_name + " não está válido.";
+  }
+};
 
-  errorsable = stampit({
-    add: function(attribute_name, message_key, options) {
-      var translator;
-      this.push([attribute_name, message_key, options]);
-      this.messages[attribute_name] = '';
-      translator = messages[message_key];
-      if (translator != null) {
-	return this.messages[attribute_name] += translator.call(this.model, attribute_name, options);
-      } else {
-	return this.messages[attribute_name] += message_key;
-      }
-    },
-    clear: function() {
-      var attribute_name, _results;
-      if (this.length) {
-	this.length = 0;
-	_results = [];
-	for (attribute_name in this.messages) {
-	  _results.push(this.messages[attribute_name] = null);
-	}
-	return _results;
-      }
-    },
-    push: Array.prototype.push,
-    splice: Array.prototype.splice,
-    indexOf: Array.prototype.indexOf
-  }, {
-    model: null,
-    messages: null,
-    length: 0
-  }, function() {
-    this.messages = {};
-    return this;
-  });
+errorsable = stampit({
+  add: function(attribute_name, message_key, options) {
+    var translator;
 
-  initializers = {
-    define_triggers: function() {
-      this.errors = errorsable({
-	model: model[this.resource]
-      });
-      this.before('save', function() {
-	if (this.save) return this.validate();
-      });
-      this.validated = false;
-      this.subscribe('dirty', function(value) {
-	return value && (this.validated = false);
-      });
-      return Object.defineProperty(this, 'valid', {
-	get: function() {
-	  this.validate();
-	  if (this.validation.state() === 'resolved') {
-	    return !this.errors.length;
-	  } else {
-	    return null;
-	  }
-	},
-	set: function() {
-	  throw new TypeError("You can't set the value for the valid property.");
-	},
-	enumerable: false
-      });
-    },
-    create_validators: function(definitions) {
-      var definition, name, validator, validator_options, _ref, _results;
-      this.validators = [];
-      _ref = manager.validators;
+    this.push([attribute_name, message_key, options]);
+    this.messages[attribute_name] = '';
+    translator = messages[message_key];
+    if (translator != null) {
+      return this.messages[attribute_name] += translator.call(this.model, attribute_name, options);
+    } else {
+      return this.messages[attribute_name] += message_key;
+    }
+  },
+  clear: function() {
+    var attribute_name, _results;
+
+    if (this.length) {
+      this.length = 0;
       _results = [];
-      for (name in _ref) {
-	validator = _ref[name];
-	definition = definitions[validator.definition_key];
-	if (definition) {
-	  if (type(definition) !== 'array') definition = [definition];
-	  _results.push((function() {
-	    var _i, _len, _results2;
-	    _results2 = [];
-	    for (_i = 0, _len = definition.length; _i < _len; _i++) {
-	      validator_options = definition[_i];
-	      if (type(validator_options) !== 'object') {
-		validator_options = {
-		  attribute_name: validator_options
-		};
-	      }
-	      validator_options.model = this;
-	      this.validators.push(validator(validator_options));
-	      _results2.push(delete definitions[validator.definition_key]);
-	    }
-	    return _results2;
-	  }).call(this));
-	} else {
-	  _results.push(void 0);
-	}
+      for (attribute_name in this.messages) {
+        _results.push(this.messages[attribute_name] = null);
       }
       return _results;
     }
-  };
+  },
+  push: Array.prototype.push,
+  splice: Array.prototype.splice,
+  indexOf: Array.prototype.indexOf
+}, {
+  model: null,
+  messages: null,
+  length: 0
+}, function() {
+  this.messages = {};
+  return this;
+});
 
-  extensions = {
-    model: {
-      validators: null
-    },
-    record: {
-      validate_attribute: function(attribute, doned, failed) {
-	var results, validation, validator, _i, _len, _ref;
-	this.errors.messages[attribute] = null;
-	results = [this, attribute];
-	_ref = model[this.resource.toString()].validators;
-	for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-	  validator = _ref[_i];
-	  if (validator.attribute_name === attribute) {
-	    results.push(validator.validate_each(this, validator.attribute_name, this[validator.attribute_name]));
-	  }
-	}
-	validation = jQuery.when.apply(jQuery, results);
-	validation.done(doned);
-	validation.fail(failed);
-	return validation;
+initializers = {
+  define_triggers: function() {
+    this.errors = errorsable({
+      model: model[this.resource]
+    });
+    this.before('save', function() {
+      if (this.save) {
+        return this.validate();
+      }
+    });
+    this.validated = false;
+    this.subscribe('dirty', function(value) {
+      return value && (this.validated = false);
+    });
+    return Object.defineProperty(this, 'valid', {
+      get: function() {
+        this.validate();
+        if (this.validation.state() === 'resolved') {
+          return !this.errors.length;
+        } else {
+          return null;
+        }
       },
-      validate: function(doned, failed) {
-	var results, validator, _i, _len, _ref;
-	if (this.validated && !this.dirty) return this.validation;
-	this.errors.clear();
-	results = [this];
-	_ref = model[this.resource.toString()].validators;
-	for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-	  validator = _ref[_i];
-	  results.push(validator.validate_each(this, validator.attribute_name, this[validator.attribute_name]));
-	}
-	this.validation = jQuery.when.apply(jQuery, results);
-	this.validation.done(doned);
-	this.validation.fail(failed);
-	return this.validation.done(function(record) {
-	  var old_dirty;
-	  old_dirty = record.dirty;
-	  record.dirty = null;
-	  record.validated || (record.validated = true);
-	  if (record.dirty !== old_dirty) record.dirty = old_dirty;
-	  return record;
-	});
+      set: function() {
+        throw new TypeError("You can't set the value for the valid property.");
+      },
+      enumerable: false
+    });
+  },
+  create_validators: function(definitions) {
+    var definition, name, validator, validator_options, _ref, _results;
+
+    this.validators = [];
+    _ref = manager.validators;
+    _results = [];
+    for (name in _ref) {
+      validator = _ref[name];
+      definition = definitions[validator.definition_key];
+      if (definition) {
+        if (type(definition) !== 'array') {
+          definition = [definition];
+        }
+        _results.push((function() {
+          var _i, _len, _results1;
+
+          _results1 = [];
+          for (_i = 0, _len = definition.length; _i < _len; _i++) {
+            validator_options = definition[_i];
+            if (type(validator_options) !== 'object') {
+              validator_options = {
+                attribute_name: validator_options
+              };
+            }
+            validator_options.model = this;
+            this.validators.push(validator(validator_options));
+            _results1.push(delete definitions[validator.definition_key]);
+          }
+          return _results1;
+        }).call(this));
+      } else {
+        _results.push(void 0);
       }
     }
-  };
+    return _results;
+  }
+};
 
-  manager = {
-    validators: {}
-  };
+extensions = {
+  model: {
+    validators: null
+  },
+  record: {
+    validate_attribute: function(attribute, doned, failed) {
+      var results, validation, validator, _i, _len, _ref;
 
-  model.mix(function(modelable) {
-    jQuery.extend(modelable, extensions.model);
-    jQuery.extend(modelable.record, extensions.record);
-    modelable.after_mix.unshift(initializers.create_validators);
-    modelable.record.after_initialize.push(initializers.define_triggers);
-    return model.validators = manager.validators;
-  });
+      this.errors.messages[attribute] = null;
+      results = [this, attribute];
+      _ref = model[this.resource.toString()].validators;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        validator = _ref[_i];
+        if (validator.attribute_name === attribute) {
+          results.push(validator.validate_each(this, validator.attribute_name, this[validator.attribute_name]));
+        }
+      }
+      validation = jQuery.when.apply(jQuery, results);
+      validation.done(doned);
+      validation.fail(failed);
+      return validation;
+    },
+    validate: function(doned, failed) {
+      var results, validator, _i, _len, _ref;
 
-  manager.validators.confirmation = require('./validations/confirmation');
+      if (this.validated && !this.dirty) {
+        return this.validation;
+      }
+      this.errors.clear();
+      results = [this];
+      _ref = model[this.resource.toString()].validators;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        validator = _ref[_i];
+        results.push(validator.validate_each(this, validator.attribute_name, this[validator.attribute_name]));
+      }
+      this.validation = jQuery.when.apply(jQuery, results);
+      this.validation.done(doned);
+      this.validation.fail(failed);
+      return this.validation.done(function(record) {
+        var old_dirty;
 
-  manager.validators.associated = require('./validations/associated');
+        old_dirty = record.dirty;
+        record.dirty = null;
+        record.validated || (record.validated = true);
+        record.dirty = old_dirty;
+        return record;
+      });
+    }
+  }
+};
 
-  manager.validators.presence = require('./validations/presence');
+manager = {
+  validators: {}
+};
 
-  manager.validators.remote = require('./validations/remote');
+model.mix(function(modelable) {
+  jQuery.extend(modelable, extensions.model);
+  jQuery.extend(modelable.record, extensions.record);
+  modelable.after_mix.unshift(initializers.create_validators);
+  modelable.record.after_initialize.push(initializers.define_triggers);
+  return model.validators = manager.validators;
+});
 
-  manager.validators.type = require('./validations/type');
+manager.validators.confirmation = require('./validations/confirmation');
 
-  manager.validators.cpf = require('./validations/cpf');
+manager.validators.associated = require('./validations/associated');
 
-}).call(this);
+manager.validators.presence = require('./validations/presence');
+
+manager.validators.remote = require('./validations/remote');
+
+manager.validators.type = require('./validations/type');
+
+manager.validators.cpf = require('./validations/cpf');
 
 });
 require.register("indemma/lib/extensions/rivets.js", function(exports, require, module){
@@ -22096,22 +22078,11 @@ model.rivets = function() {
 };
 
 });
-
-
-
-
-
-
-
-
-
-
-
-
 require.alias("pluma-assimilate/dist/assimilate.js", "indemma/deps/assimilate/dist/assimilate.js");
 require.alias("pluma-assimilate/dist/assimilate.js", "indemma/deps/assimilate/index.js");
 require.alias("pluma-assimilate/dist/assimilate.js", "assimilate/index.js");
 require.alias("pluma-assimilate/dist/assimilate.js", "pluma-assimilate/index.js");
+
 require.alias("component-type/index.js", "indemma/deps/type/index.js");
 require.alias("component-type/index.js", "type/index.js");
 
@@ -22137,3 +22108,4 @@ require.alias("indefinido-advisable/index.js", "indemma/deps/advisable/index.js"
 require.alias("indefinido-advisable/lib/advisable.js", "indemma/deps/advisable/lib/advisable.js");
 require.alias("indefinido-advisable/index.js", "advisable/index.js");
 require.alias("component-jquery/index.js", "indefinido-advisable/deps/jquery/index.js");
+

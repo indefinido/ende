@@ -1,6 +1,6 @@
 'use strict';
 
-define 'aura/extensions/widget/eventable', ['es6-map-shim'], ->
+define 'aura/extensions/widget/eventable', ['stampit', 'es6-map-shim'], (stampit) ->
 
   extractor = /.*?\$(.*?)@(.*?)\+(.*?)/
 
@@ -23,10 +23,6 @@ define 'aura/extensions/widget/eventable', ['es6-map-shim'], ->
       widget.sandbox.emit "#{widget.name}.#{widget.identifier}.#{event_name}ed", @
       event.preventDefault()
       false
-
-  # TODO pass this extensions to the identifiable extension
-  with_component = 'stampit/stampit'
-  stampit        = require with_component
 
   eventable = stampit
     # TODO implement rivets compatibility, instead of generic
