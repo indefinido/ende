@@ -70,6 +70,7 @@ define 'aura/extensions/widget/lifecycleable', ->
 
     before_initialize: ->
       # TODO only listen to this specific sandbox stop
+      # TODO stop listening when sandbox starts or stops
       @sandbox.on 'aura.sandbox.stop', (sandbox) ->
         @stopped() if @sandbox.ref == sandbox.ref
       , @

@@ -1,6 +1,6 @@
-define 'aura/extensions/widget/napable', ->
+'use strict'
 
-  'use strict'
+define 'aura/extensions/widget/napable', ['stampit/stampit'], (stampit) ->
 
   # TODO think about adding rivets bindings to the element
   napable = stampit

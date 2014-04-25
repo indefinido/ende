@@ -178,6 +178,19 @@ restful =
         @[association_name] = @["build_#{association_name}"] association_attributes if association_attributes
 
 
+      # Nested attributes
+      # TODO implement setter on belongs_to association and move this
+      # code there
+      for association_name in model[@resource.toString()].belongs_to
+        association_attributes = attributes[association_name].json?() ? attributes[association_name]
+
+        # TODO copy attributes object and don't change it inside the
+        # assignment method
+        delete attributes[association_name]
+        delete attributes[association_name + "_attributes"]
+        @[association_name] = @["build_#{association_name}"] association_attributes if association_attributes
+
+
       # Assign remaining attributes
       # TODO see if it is a best practice not overriding unchanged attributes
       # TODO rename attributes for properties
@@ -423,7 +436,7 @@ restful =
       json
 
 
-# TODO put deprecation warning on json method
+# TODO pt udeprecation warning on json method
 # TODO rename json method to toJSON
 restful.toJSON = restful.json
 

@@ -18600,7 +18600,8 @@ plural = {
   },
   push: function() {
     console.warn("" + this.resource + ".push is deprecated and will be removed, please use add instead");
-    return Array.prototype.push.apply(this, arguments);
+    Array.prototype.push.apply(this, arguments);
+    return arguments[0];
   },
   length: 0,
   json: function(methods, omissions) {
@@ -18612,7 +18613,18 @@ plural = {
       _results.push(record.json(methods, omissions));
     }
     return _results;
-  }
+  },
+  find: function(id) {
+    var resource, _i, _len;
+
+    for (_i = 0, _len = this.length; _i < _len; _i++) {
+      resource = this[_i];
+      if (resource._id === id) {
+        return resource;
+      }
+    }
+  },
+  filter: Array.prototype.filter || (typeof _ !== "undefined" && _ !== null ? _.filter : void 0)
 };
 
 singular = {
@@ -19346,7 +19358,7 @@ restful = {
       return promise;
     },
     assign_attributes: function(attributes) {
-      var association, association_attributes, association_name, associations_attributes, attribute, message, name, singular_resource, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _results;
+      var association, association_attributes, association_name, associations_attributes, attribute, message, name, singular_resource, _base, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3, _ref4, _results;
 
       _ref = model[this.resource.toString()].has_many;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -19384,6 +19396,16 @@ restful = {
       for (_l = 0, _len3 = _ref2.length; _l < _len3; _l++) {
         association_name = _ref2[_l];
         association_attributes = attributes[association_name];
+        delete attributes[association_name];
+        delete attributes[association_name + "_attributes"];
+        if (association_attributes) {
+          this[association_name] = this["build_" + association_name](association_attributes);
+        }
+      }
+      _ref3 = model[this.resource.toString()].belongs_to;
+      for (_m = 0, _len4 = _ref3.length; _m < _len4; _m++) {
+        association_name = _ref3[_m];
+        association_attributes = (_ref4 = typeof (_base = attributes[association_name]).json === "function" ? _base.json() : void 0) != null ? _ref4 : attributes[association_name];
         delete attributes[association_name];
         delete attributes[association_name + "_attributes"];
         if (association_attributes) {
@@ -19904,11 +19926,13 @@ if (model.associable) {
       promises.push(this.scope.fetch.call(this, data, null, scopable.record.failed));
       reload = $.when.apply(jQuery, promises);
       reload.done(function(records, status) {
-        var association_name, singular_resource, _i, _j, _len, _len1, _ref;
+        var association_name, create, index, singular_resource, target, _i, _j, _k, _len, _len1, _len2, _ref;
 
-        Array.prototype.splice.call(this, 0);
         if (!records.length) {
-          return;
+          if (this.length) {
+            Array.prototype.splice.call(this, 0);
+          }
+          return true;
         }
         singular_resource = model.singularize(this.resource);
         for (_i = 0, _len = records.length; _i < _len; _i++) {
@@ -19920,7 +19944,16 @@ if (model.associable) {
             delete record[association_name];
           }
         }
-        this.add.apply(this, records);
+        create = [];
+        for (index = _k = 0, _len2 = records.length; _k < _len2; index = ++_k) {
+          record = records[index];
+          if (target = this.find(record._id)) {
+            target.assign_attributes(record);
+          } else {
+            create.push(record);
+          }
+        }
+        this.add.apply(this, create);
         records.splice(0);
         return records.push.apply(records, this);
       });

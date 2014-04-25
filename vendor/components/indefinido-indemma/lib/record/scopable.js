@@ -243,11 +243,13 @@ if (model.associable) {
       promises.push(this.scope.fetch.call(this, data, null, scopable.record.failed));
       reload = $.when.apply(jQuery, promises);
       reload.done(function(records, status) {
-        var association_name, singular_resource, _i, _j, _len, _len1, _ref;
+        var association_name, create, index, singular_resource, target, _i, _j, _k, _len, _len1, _len2, _ref;
 
-        Array.prototype.splice.call(this, 0);
         if (!records.length) {
-          return;
+          if (this.length) {
+            Array.prototype.splice.call(this, 0);
+          }
+          return true;
         }
         singular_resource = model.singularize(this.resource);
         for (_i = 0, _len = records.length; _i < _len; _i++) {
@@ -259,7 +261,16 @@ if (model.associable) {
             delete record[association_name];
           }
         }
-        this.add.apply(this, records);
+        create = [];
+        for (index = _k = 0, _len2 = records.length; _k < _len2; index = ++_k) {
+          record = records[index];
+          if (target = this.find(record._id)) {
+            target.assign_attributes(record);
+          } else {
+            create.push(record);
+          }
+        }
+        this.add.apply(this, create);
         records.splice(0);
         return records.push.apply(records, this);
       });

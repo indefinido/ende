@@ -252,7 +252,7 @@ define [
       records = _.map records, @resource, @resource unless records[0]?.resource or records[0]?.itemable
 
       # TODO implement Array.concat ou Array.merge in observer, and
-      # use it here instead of pushing each record
+      # use it here instead of overriding all records
       viewer.items = records
 
       # Start widgets created by bindings
@@ -271,15 +271,14 @@ define [
       @sandbox.emit "viewer.#{@identifier}.populated", records, @
 
     @fetching.always =>
-      # TODO implement status for viewer widget
-      @statused 'loading'
-      @$el.addClass 'idle'
-      @$el.removeClass 'loading'
-
       if @load?
         @load.stop()
         @load = null
 
+      # TODO implement status for viewer widget
+      @$el.removeClass 'loading'
+      @statused 'idle'
+      @$el.addClass 'idle'
 
   populate: ->
     @load   = @sandbox.ui.loader @$el
