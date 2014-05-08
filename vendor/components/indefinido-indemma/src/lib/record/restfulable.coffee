@@ -182,7 +182,7 @@ restful =
       # TODO implement setter on belongs_to association and move this
       # code there
       for association_name in model[@resource.toString()].belongs_to
-        association_attributes = attributes[association_name].json?() ? attributes[association_name]
+        association_attributes = attributes[association_name]?.json?() ? attributes[association_name]
 
         # TODO copy attributes object and don't change it inside the
         # assignment method

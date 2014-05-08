@@ -20935,7 +20935,7 @@ restful = {
       return promise;
     },
     assign_attributes: function(attributes) {
-      var association, association_attributes, association_name, associations_attributes, attribute, message, name, singular_resource, _base, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3, _ref4, _results;
+      var association, association_attributes, association_name, associations_attributes, attribute, message, name, singular_resource, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _results;
 
       _ref = model[this.resource.toString()].has_many;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -20982,7 +20982,7 @@ restful = {
       _ref3 = model[this.resource.toString()].belongs_to;
       for (_m = 0, _len4 = _ref3.length; _m < _len4; _m++) {
         association_name = _ref3[_m];
-        association_attributes = (_ref4 = typeof (_base = attributes[association_name]).json === "function" ? _base.json() : void 0) != null ? _ref4 : attributes[association_name];
+        association_attributes = (_ref4 = (_ref5 = attributes[association_name]) != null ? typeof _ref5.json === "function" ? _ref5.json() : void 0 : void 0) != null ? _ref4 : attributes[association_name];
         delete attributes[association_name];
         delete attributes[association_name + "_attributes"];
         if (association_attributes) {

@@ -4,9 +4,10 @@ define 'aura/extensions/widget/napable', ['stampit/stampit'], (stampit) ->
 
   # TODO think about adding rivets bindings to the element
   napable = stampit
-    bind: ->
-      @sandbox.on "#{@name}.#{@identifier}.sleep", napable.sleep, @
-      @sandbox.on "#{@name}.#{@identifier}.wake" , napable.wake , @
+    tired: ->
+      @sandbox.on "#{@name}.#{@identifier}.sleep", @sleep, @
+      @sandbox.on "#{@name}.#{@identifier}.wake" , @wake , @
+      @
     sleep: ->
       @$el.addClass 'asleep'
       @$el.removeClass 'awake'
@@ -15,15 +16,13 @@ define 'aura/extensions/widget/napable', ['stampit/stampit'], (stampit) ->
       @$el.removeClass 'asleep'
   ,
     naping: false
-  , ->
-    napable_extensions["super"].constructor.apply @, arguments
-    napable.bind.call @
+  , -> @tired()
 
   # The purpose of this extension is allow parent widget to save
   # memory by sending a sleep command to the child widgets
   (application) ->
 
-    version: '0.1.1'
+    version: '0.1.2'
 
     initialize: (application) ->
       {core} = application

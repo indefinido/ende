@@ -185,14 +185,11 @@ define 'aura/extensions/rivets', ['aura/extensions/rivets/formatters'], (formatt
   rivets.binders.spell ||=
     publishes: true
     bind: (el) ->
-
-      @options.publisher ||=  (event) =>
+      @options.publisher ||= (event) =>
         value  = Rivets.Util.getInputValue @el
 
         # TODO more controllable enter handling
         return if event.which == 13
-
-        value += String.fromCharCode event.which || event.keyCode || event.charCode
 
         for formatter in @formatters.slice(0).reverse()
           args = formatter.split /\s+/
@@ -204,26 +201,18 @@ define 'aura/extensions/rivets', ['aura/extensions/rivets/formatters'], (formatt
         @view.config.adapter.publish @model, @keypath, value
         event.preventDefault()
 
-      if window.jQuery?
-        # TODO Rivets.Util.bindEvent el, 'keypress change', @options.publisher
-        Rivets.Util.bindEvent el, 'keypress', @options.publisher
-        Rivets.Util.bindEvent el, 'change'  , @publish
-      else
-        Rivets.Util.bindEvent el, 'keypress', @options.publisher
-        Rivets.Util.bindEvent el, 'change'  , @publish
+      # TODO Rivets.Util.bindEvent el, 'keypress change', @options.publisher
+      Rivets.Util.bindEvent el, 'keyup'   , @options.publisher
+      Rivets.Util.bindEvent el, 'change'  , @publish
+
 
     unbind: (el) ->
 
-      if window.jQuery?
-        # TODO Rivets.Util.unbindEvent el, 'keypress change', @options.publisher
-        Rivets.Util.unbindEvent el, 'keypress', @options.publisher
-        Rivets.Util.unbindEvent el, 'change', @publish
-      else
-        # TODO Rivets.Util.unbindEvent el, 'change'  , @options.publisher
-        Rivets.Util.unbindEvent el, 'keypress', @options.publisher
-        Rivets.Util.unbindEvent el, 'change', @publish
+      Rivets.Util.unbindEvent el, 'keyup' , @options.publisher
+      Rivets.Util.unbindEvent el, 'change', @publish
 
     routine: (el, value) ->
+
       if window.jQuery?
         el = jQuery el
 

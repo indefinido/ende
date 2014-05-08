@@ -29,6 +29,7 @@ define [
 
       return unless total_pages?
 
+      # TODO set default abortion to decreatse page numbers amount
       scope.page ++page_number
 
       if page_number <= total_pages

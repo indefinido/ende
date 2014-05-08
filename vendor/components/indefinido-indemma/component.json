@@ -10,6 +10,7 @@
     "component/bind": "*",
     "component/jquery": "*",
     "indefinido/observable": "*",
+
     "indefinido/advisable": "*"
   },
   "development": {},
