@@ -85,7 +85,11 @@ restful = {
         data = {};
       }
       old_route = this.route;
-      default_route = "/" + (model.pluralize(this.resource.name));
+      default_route = '';
+      if (this.resource.scope != null) {
+        default_route += this.resource.scope + '/';
+      }
+      default_route += this.resource.singular ? this.resource.name : model.pluralize(this.resource.name);
       if (default_route !== this.route) {
         this.route = default_route;
       }

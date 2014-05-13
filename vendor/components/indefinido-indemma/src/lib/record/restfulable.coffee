@@ -63,7 +63,13 @@ restful =
     get: (action, data = {}) ->
       # TODO better way to override route
       old_route     = @route
-      default_route = "/#{model.pluralize @resource.name}"
+
+      # TODO extract route generation concern
+      default_route = ''
+      default_route += @resource.scope + '/' if @resource.scope?
+      default_route += if @resource.singular then @resource.name else model.pluralize @resource.name
+
+      # TODO think why this code is here
       @route        = default_route unless default_route == @route
 
       if action
