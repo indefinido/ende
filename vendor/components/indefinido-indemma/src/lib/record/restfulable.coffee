@@ -63,7 +63,13 @@ restful =
     get: (action, data = {}) ->
       # TODO better way to override route
       old_route     = @route
-      default_route = "/#{model.pluralize @resource.name}"
+
+      # TODO extract route generation concern
+      default_route  = '/'
+      default_route += @resource.scope + '/' if @resource.scope?
+      default_route += if @resource.singular then @resource.name else model.pluralize @resource.name
+
+      # TODO think why this code is here
       @route        = default_route unless default_route == @route
 
       if action
@@ -116,16 +122,22 @@ restful =
 
       promise
 
+
+    # TODO sufix association attributes with '_attributes' and remove
+    # double checking in this method
     assign_attributes: (attributes) ->
 
       # TODO only set associations on nested attributes!
       # First assign has_many associations
       # TODO implement setter on has_many association and move this code there
       for association_name in model[@resource.toString()].has_many
-        associations_attributes = attributes[association_name]
+        associations_attributes = attributes[association_name + "_attributes"] or attributes[association_name]
 
         # TODO copy attributes object and don't change it inside the assignment method
+        # TODO sufix association attributes with '_attributes' and remove
+        # double checking in this method
         delete attributes[association_name] # Remove loaded json data
+        delete attributes[association_name + '_attributes'] # Remove loaded json data
 
         # Clear current stored cache on this association
         # TODO implement setter on this association and let user to set
@@ -152,7 +164,7 @@ restful =
         for association_attributes in associations_attributes
 
           # TODO only nest specified nested attributes on model definition
-          # TODO create special deserialization method no plural association
+          # TODO create special deserialization method on plural association
           # TODO check if we need to nest attributes in other association types
           for association_name in model[singular_resource].has_many
             association_attributes["#{association_name}_attributes"] = association_attributes[association_name]
@@ -170,6 +182,19 @@ restful =
       # code there
       for association_name in model[@resource.toString()].has_one
         association_attributes = attributes[association_name]
+
+        # TODO copy attributes object and don't change it inside the
+        # assignment method
+        delete attributes[association_name]
+        delete attributes[association_name + "_attributes"]
+        @[association_name] = @["build_#{association_name}"] association_attributes if association_attributes
+
+
+      # Nested attributes
+      # TODO implement setter on belongs_to association and move this
+      # code there
+      for association_name in model[@resource.toString()].belongs_to
+        association_attributes = attributes[association_name]?.json?() ? attributes[association_name]
 
         # TODO copy attributes object and don't change it inside the
         # assignment method
@@ -323,7 +348,7 @@ restful =
     # TODO move this to serializable module
     # TODO figure out why sometimes is rendering a circular referenced json
     # TODO rename to toJSON
-    json: (methods = {}) ->
+    json: (options = {}) ->
       json = {}
 
       definition = model[@resource.toString()]
@@ -356,7 +381,7 @@ restful =
 
             # TODO move nested attributes to model definition and
             # implement toJSON there
-            json["#{name}_attributes"] = value.json methods[name]
+            json["#{name}_attributes"] = value.json options[name]
 
           # Serialize complex type values
           else if value.toJSON? || value.json?
@@ -366,9 +391,9 @@ restful =
 
             # TODO rename json to toJSON
             if value.json?
-              json[name] = value.json methods[name]
+              json[name] = value.json options[name]
             else
-              json[name] = value.toJSON methods[name]
+              json[name] = value.toJSON options[name]
 
           # It is a complex type value without serializtion support so
           # we just ignore it
@@ -381,8 +406,15 @@ restful =
           # Serialize primitive type values
           json[name] = value
 
-      # Remove observable methods and dom node properties
+      # Remove observable options and dom node properties
       json = observable.unobserve json
+
+      for name, value of options.methods ? {}
+        method = @[name]
+        if typeof method  == 'function'
+          json[name] = method()
+        else
+          json[name] = method
 
       # TODO Store reserved words in a array
       # TODO Use _.omit function
@@ -416,7 +448,7 @@ restful =
       json
 
 
-# TODO put deprecation warning on json method
+# TODO pt udeprecation warning on json method
 # TODO rename json method to toJSON
 restful.toJSON = restful.json
 
