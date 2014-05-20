@@ -64,7 +64,7 @@ define [
     scrolled: ->
       @widget.sandbox.emit "#{@widget.name}.#{@widget.identifier}.flip" if @bottoned()
   ,
-    buffer: 400
+    buffer: 800
   , ->
     @scroll_container = $ window
 
