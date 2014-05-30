@@ -256,9 +256,6 @@ define [
       # use it here instead of overriding all records
       viewer.items = records
 
-      # Start widgets created by bindings
-      @syncronize_children()
-
     @fetching.done (records) =>
       if viewer.items.length
         # boo.initialize @$el.find '.results .items'
@@ -325,7 +322,14 @@ define [
 
       # TODO move binders to application
       @inherit_parent_presentation()
-      @bind @presentation, @presenter.presentation
+      # TODO on bind execute presentation_options method and extend and inherit from presenter what needed
+      @bind @presentation, @sandbox.util.extend(true, @presenter.presentation, @options.presentation)
+
+      @presentation.viewer.subscribe 'items', =>
+        # Start possible widgets created by items with widget
+        # instantiation markup
+        @syncronize_children()
+
 
       # Start widgets that may have been created by bindings
       @sandbox.emit 'aura.sandbox.start', @sandbox
