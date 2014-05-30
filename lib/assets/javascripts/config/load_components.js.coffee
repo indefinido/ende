@@ -20,13 +20,13 @@ requirejs.config
 
 # Prevent aura from defining jquery erroniously
 define 'jquery'    , ['config/load_components'], ->
-  window.jQuery = window.$ = require 'component-jquery'
+  window.jQuery = window.$ = require 'component~jquery@1.9.1'
 
 define 'modernizr' , ['config/load_components'], ->
-  require 'modernizr'
+  require 'components~modernizr@2.6.2'
   window.Modernizr
 
-define 'rivets', ['config/load_components'], -> require 'rivets'
+define 'rivets', ['config/load_components'], -> require 'mikeric~rivets@v0.5.12'
 
 # TODO define 'underscore', ['config/load_components'], -> require 'lodash'
 
@@ -41,18 +41,18 @@ define 'config/load_components', ['application_components'], ->
   # TODO remove and use r.js optmizer wrapShim option, when
   # optimizer gets updated
   define 'jquery.inview'                  , ['jquery'], ->
-    require 'ened/vendor/assets/javascripts/jquery/inview.js'
+    require 'ende/vendor/assets/javascripts/jquery/inview.js'
 
   define 'jquery.mask'                    , ['jquery'], ->
-    inner_lazy_require = 'ened/vendor/assets/javascripts/jquery/inputmask.js'
+    inner_lazy_require = 'ende/vendor/assets/javascripts/jquery/inputmask.js'
     require inner_lazy_require
 
   define 'jquery.mask_extensions'         , ['jquery'], ->
-    inner_lazy_require = 'ened/vendor/assets/javascripts/jquery/inputmask.extensions.js'
+    inner_lazy_require = 'ende/vendor/assets/javascripts/jquery/inputmask.extensions.js'
     require inner_lazy_require
 
   define 'jquery.mask_numeric_extensions' , ['jquery'], ->
-    inner_lazy_require = 'ened/vendor/assets/javascripts/jquery/inputmask.numeric.extensions.js'
+    inner_lazy_require = 'ende/vendor/assets/javascripts/jquery/inputmask.numeric.extensions.js'
     require inner_lazy_require
 
   # Object.defineProperty window, 'jQuery',
@@ -127,9 +127,9 @@ define 'config/load_components', ['application_components'], ->
         mod = loader.loaders.discovered.apply @, params
 
       catch e
-        if e.require
+        if e.toString().indexOf('failed to require') != -1
           # TODO better loggin support
-          if app.debug
+          if not app? or app.debug
             (app?.logger || console).warn "loader: Failed to load '#{params[0]}' with #{using}: \n Exception: '#{e.message}'. Trying with requirejs."
 
           # Since it failed to load with component, try to load with requirejs

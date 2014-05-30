@@ -1,0 +1,19 @@
+{
+  "name": "querystring",
+  "version": "1.3.0",
+  "description": "Simple key/value pair query-string parsing",
+  "keywords": [
+    "query",
+    "querystring",
+    "query-string",
+    "parser"
+  ],
+  "scripts": [
+    "index.js"
+  ],
+  "dependencies": {
+    "component/trim": "*",
+    "component/type": "*"
+  },
+  "repository": "component/querystring"
+}

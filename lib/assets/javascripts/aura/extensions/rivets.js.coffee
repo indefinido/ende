@@ -5,14 +5,14 @@ define 'aura/extensions/rivets', ['aura/extensions/rivets/formatters'], (formatt
 
   extend                   = null
 
-  with_component           = 'mikeric-rivets/dist/rivets'
+  with_component           = 'mikeric~rivets@v0.5.12'
   rivets                   = require with_component
   Rivets                   = rivets._
 
-  with_component           = 'indefinido-observable/lib/adapters/rivets'
+  with_component           = 'indefinido~observable@es6-modules/lib/adapters/rivets.js'
   observable_configuration = require with_component
 
-  with_component           = 'segmentio-extend'
+  with_component           = 'segmentio~extend@1.0.0'
   extend                   = require with_component
 
   extend rivets.formatters, formatters

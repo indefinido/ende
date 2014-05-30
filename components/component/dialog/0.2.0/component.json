@@ -1,0 +1,35 @@
+{
+  "name": "dialog",
+  "description": "Dialog component",
+  "version": "0.2.0",
+  "keywords": [
+    "dialog",
+    "ui",
+    "modal"
+  ],
+  "dependencies": {
+    "component/emitter": "1.0.0",
+    "component/overlay": "0.1.1",
+    "component/domify": "*",
+    "component/event": "*",
+    "component/classes": "*",
+    "component/query": "*"
+  },
+  "development": {
+    "dependencies": {
+      "visionmedia/mocha": "*",
+      "dominicbarnes/expect.js": "*"
+    }
+  },
+  "scripts": [
+    "index.js"
+  ],
+  "styles": [
+    "dialog.css"
+  ],
+  "templates": [
+    "template.html"
+  ],
+  "demo": "http://component.github.io/dialog/",
+  "repository": "component/dialog"
+}
