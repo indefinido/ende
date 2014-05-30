@@ -25,30 +25,34 @@ end
 
 root = exports ? this
 
-define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
+define 'aura/extensions/models', <%= models_list.to_json  %>, (resources...) ->
 
   # TODO better require api for indemma
-  indemma = require 'indemma'
-  require 'indefinido-indemma/lib/extensions/rivets'
-  require 'indefinido-indemma/lib/record/rest'
-  require 'indefinido-indemma/lib/record/associable'
-  require 'indefinido-indemma/lib/record/storable'
-  require 'indefinido-indemma/lib/record/persistable'
-  require 'indefinido-indemma/lib/record/queryable'
-  require 'indefinido-indemma/lib/record/scopable'
-  require 'indefinido-indemma/lib/record/restfulable'
-  require 'indefinido-indemma/lib/record/resource'
-  require 'indefinido-indemma/lib/record/maid'
-  require 'indefinido-indemma/lib/record/validatable'
+  indemma = require 'indefinido~indemma@master'
+  require 'indefinido~indemma@master/lib/extensions/rivets.js'
+  require 'indefinido~indemma@master/lib/record/rest.js'
+  require 'indefinido~indemma@master/lib/record/associable.js'
+  require 'indefinido~indemma@master/lib/record/storable.js'
+  require 'indefinido~indemma@master/lib/record/persistable.js'
+  require 'indefinido~indemma@master/lib/record/queryable.js'
+  require 'indefinido~indemma@master/lib/record/scopable.js'
+  require 'indefinido~indemma@master/lib/record/restfulable.js'
+  require 'indefinido~indemma@master/lib/record/resource.js'
+  require 'indefinido~indemma@master/lib/record/maid.js'
+  require 'indefinido~indemma@master/lib/record/validatable.js'
 
   # TODO create an plurazation interface on indemma, or move
   # inflector outside it
-  require 'indefinido-indemma/vendor/owl/pluralize'
+  require 'indefinido~indemma@master/vendor/owl/pluralize.js'
+
+  name: 'resources'
+
+  version: '0.1.2'
 
   # Extension definition
   initialize: (application) ->
-    core                = application.core
-    sandbox             = application.sandbox
+    {core, sandbox}     = application
+
     core.util.inflector =
       cssify: (sentence) ->  sentence.replace /\//, '-'
       pluralize: indemma.model.pluralize
@@ -73,7 +77,11 @@ define 'aura/extensions/models', <%= models_list.to_json  %>, (models...) ->
 
     # TODO allow user to create custom definitions before resources
     # (models) get defined
+    # new Aura(inflections: {measures: measures})
     core.util.inflector.define 'measures', 'measures'
 
     # Build all model definitions
-    core.util._.map models, (model) -> indemma.model.call model
+    indemma.model.every = [] # TODO implement this on indemma
+    core.util._.map resources, (definition) ->
+      resource = indemma.model.call definition
+      indemma.model.every.push resource

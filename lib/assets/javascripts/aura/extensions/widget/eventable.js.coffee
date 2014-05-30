@@ -1,6 +1,6 @@
 'use strict';
 
-define 'aura/extensions/widget/eventable', ['es6-map-shim'], ->
+define 'aura/extensions/widget/eventable', ['stampit', 'es6-map-shim'], (stampit) ->
 
   extractor = /.*?\$(.*?)@(.*?)\+(.*?)/
 
@@ -24,44 +24,39 @@ define 'aura/extensions/widget/eventable', ['es6-map-shim'], ->
       event.preventDefault()
       false
 
-  eventable =
-    # TODO pass this extensions to the identifiable extension
-    # TODO use widget.extend with the constructor property
-    constructor: (options) ->
-      matches     = extractor.exec options._ref
+  eventable = stampit
+    # TODO implement rivets compatibility, instead of generic
+    # binding events, alter html
+    handles: (event_name, widget_event_name = event_name, selector = @$el) ->
+      unless @name
+        message  = "Widget name must be provided in order to use handlers, but this.name is '#{@name}' \n"
+        message += "Also you may have forgotten to set the type of your widget to 'Base'"
+        throw new TypeError message
+
+      context = @$el unless selector == @$el
+
+      event_name = translations.get(event_name) ? event_name
+
+      @sandbox.dom.find(selector, context).on event_name, create_handler(@, widget_event_name || event_name)
+
+    before_initialize: ->
+      matches     = extractor.exec @options._ref
       @name       = matches[1]
-      @identifier = options.identifier or options.resource or matches[2]
-
-      eventable.super.constructor.call @, options
-
+      @identifier = @options.identifier or @options.resource or matches[2]
       @sandbox.identifier = @identifier
-
-      @
-
 
   version: '0.1.0'
 
   initialize: (application) ->
-    with_component = 'segmentio-extend'
-    extend  = require with_component
+    application.core.Widgets.Base.compose eventable
 
-    Widgets = application.core.Widgets
+    {core: {mediator}} = application
+    application.sandbox.startListening = ->
+      # TODO @listening = true
+      mediator.on event.name, event.callback for event in @_events
 
-    extend Widgets.Base.prototype,
-    # TODO implement rivets compatibility, instead of generic
-    # binding events, alter html
-      handles: (event_name, widget_event_name = event_name, selector = @$el) ->
-        unless @name
-          message = "Widget name must be provided in order to use handlers, but this.name is '#{@name}' \n"
-          message = "Also you may have forgotten to set the type of your widget to 'Base'"
-          throw message
+      true
 
-        context = @$el unless selector == @$el
 
-        event_name = translations.get(event_name) ? event_name
 
-        @sandbox.dom.find(selector, context).on event_name, create_handler(@, widget_event_name || event_name)
 
-    # TODO replace Base.extend inheritance to stampit composition
-    Widgets.Base = Widgets.Base.extend eventable
-    eventable.super = Widgets.Base.__super__

@@ -1,24 +1,22 @@
-define ->
+'use strict'
 
-  'use strict'
+define
 
   type: 'Base'
 
   version: '0.1.2'
 
   initialize: (options) ->
-    names = []
     {identifier} = options
+    @names = []
 
-    # TODO access omit method throuhgh underscore
+    # TODO access omit method throuhgh sandbox
     widget_options =  _.omit options, 'el', 'ref', '_ref', 'name', 'require', 'baseUrl', 'resource'
 
     # TODO remove jquery dependency
-    for name, suboptions of widget_options when $.type(suboptions) is "object"
-      names.push suboptions.name || name
-      @add suboptions.name || name, suboptions
+    injections = @prepare_injections widget_options
 
-    @$el.addClass ['tray', 'widget'].concat(names).join(' ')
+    @$el.addClass ['tray', 'widget'].concat(@names).join(' ')
 
     @identifier ||= identifier
 
@@ -27,13 +25,21 @@ define ->
       @identifier = identifier
       @$el.attr 'id', identifier
 
-    @sandbox.start()
+    # TODO get defer through sandbox
+    _.defer =>
+      @sandbox.start injections
 
-  add: (name, options) ->
+  prepare_injections: (widget_options) ->
+    # TODO remove jquery dependency, and use type detection through sandbox
+    for name, suboptions of widget_options when $.type(suboptions) is "object"
+      @names.push suboptions.name || name
 
-    # TODO add widgets as childrens of the tray widget sandbox
-    # TODO remove jquery dependency, and use documentFragment to build widgets
-    element     = jQuery '<div class="widget"></div>'
-    options.el  = element
-    @$el.append   element
-    @inject name, options
+      # TODO do not allow elements outside of the tray
+      # TODO remove jquery dependency, and use documentFragment to build widgets
+      # TODO allow widgets without elements
+      @$el.append suboptions.el = jQuery '<div class="widget"></div>'
+
+      @injection
+        name: suboptions.name || name
+        options: suboptions
+

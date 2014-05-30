@@ -1,3 +1,3 @@
 module Ende
-  VERSION = "0.4.16"
+  VERSION = "0.5.1"
 end

@@ -8,7 +8,7 @@
 # TODO unifiy extension plug-in api
 define 'aura/extensions/rivets/accounting', ['aura/extensions/rivets', 'vendor/accounting'], (parent, accounting) ->
 
-  rivets = require 'mikeric-rivets/dist/rivets'
+  rivets = require 'mikeric~rivets@v0.5.12'
 
   # ### currency
   # ```data-text="user.accountBalance | currency"```

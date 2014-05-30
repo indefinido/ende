@@ -1,13 +1,13 @@
 'use strict';
 
-lazy_requires = ['observable', 'advisable']
+lazy_require = 'advisable'
 define [
   './states/index',
   './presenters/default',
   'jquery.inview',
   'stampit/stampit',
-  lazy_requires[0],
-  lazy_requires[1]], (templates, presenter, inview, stampit, observable, advisable) ->
+  'observable',
+  lazy_require], (templates, presenter, inview, stampit, observable, advisable) ->
 
   scopable = (widget) ->
     deferred = widget.sandbox.data.deferred()
@@ -29,6 +29,7 @@ define [
 
       return unless total_pages?
 
+      # TODO set default abortion to decreatse page numbers amount
       scope.page ++page_number
 
       if page_number <= total_pages
@@ -252,11 +253,8 @@ define [
       records = _.map records, @resource, @resource unless records[0]?.resource or records[0]?.itemable
 
       # TODO implement Array.concat ou Array.merge in observer, and
-      # use it here instead of pushing each record
+      # use it here instead of overriding all records
       viewer.items = records
-
-      # Start widgets created by bindings
-      @syncronize_children()
 
     @fetching.done (records) =>
       if viewer.items.length
@@ -271,15 +269,14 @@ define [
       @sandbox.emit "viewer.#{@identifier}.populated", records, @
 
     @fetching.always =>
-      # TODO implement status for viewer widget
-      @statused 'loading'
-      @$el.addClass 'idle'
-      @$el.removeClass 'loading'
-
       if @load?
         @load.stop()
         @load = null
 
+      # TODO implement status for viewer widget
+      @$el.removeClass 'loading'
+      @statused 'idle'
+      @$el.addClass 'idle'
 
   populate: ->
     @load   = @sandbox.ui.loader @$el
@@ -325,7 +322,14 @@ define [
 
       # TODO move binders to application
       @inherit_parent_presentation()
-      @bind @presentation, @presenter.presentation
+      # TODO on bind execute presentation_options method and extend and inherit from presenter what needed
+      @bind @presentation, @sandbox.util.extend(true, @presenter.presentation, @options.presentation)
+
+      @presentation.viewer.subscribe 'items', =>
+        # Start possible widgets created by items with widget
+        # instantiation markup
+        @syncronize_children()
+
 
       # Start widgets that may have been created by bindings
       @sandbox.emit 'aura.sandbox.start', @sandbox

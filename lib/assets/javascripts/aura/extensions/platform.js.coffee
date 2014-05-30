@@ -1,4 +1,4 @@
-'use strict';
+'use strict'
 
 define 'aura/extensions/platform', ->
 
@@ -15,3 +15,9 @@ define 'aura/extensions/platform', ->
     application.sandbox = Object.create application.sandbox, descriptors
 
     # TODO copy other properties to the main application
+
+
+    # TODO detect aura version and warn for updates
+    application.components = {}
+    application.components.config    = application.config
+    application.components.addSource = application.registerWidgetsSource

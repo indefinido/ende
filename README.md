@@ -5,7 +5,7 @@ endë
 Summary
 -------
 
-Endë (core, middle)
+Endë (core, middle) [![Gem Version](https://badge.fury.io/rb/ende.svg)](http://badge.fury.io/rb/ende)
 
 A modular web application rails gem. Using aurajs for architecture and indemma for resource management by default.
 
@@ -35,6 +35,7 @@ Components List
 
 _Detailed documentation is comming!_
 
+- Attachable
 - Authenticator
 - Content
 - Dialog
@@ -59,7 +60,7 @@ Extensions List
  - Devise
 - Rivets
 - Widget
- - Napable   
+ - Napable
  - Lifecycleable
  - Eventable
 - Models

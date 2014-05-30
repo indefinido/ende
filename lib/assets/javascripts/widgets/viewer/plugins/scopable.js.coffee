@@ -1,11 +1,6 @@
 'use strict';
 
-window.domo = []
-
-# TODO define componentjs required packages, as requirejs packages
-observable   = require('indefinido-observable').mixin
-
-define ['stampit/stampit'], (stampit) ->
+define ['stampit/stampit', 'observable'], (stampit, observable) ->
 
   scopingable = stampit
     start: ->
@@ -42,7 +37,6 @@ define ['stampit/stampit'], (stampit) ->
     @
 
 
-
   scopable = stampit
     forward_scope_data: (scope_name, data) ->
       switch @scope['$' + scope_name].constructor
@@ -52,15 +46,15 @@ define ['stampit/stampit'], (stampit) ->
         else
           @scope[scope_name] data
 
-    enhancable_presenter: (presenter) ->
+    scopable_presentation_options: (options) ->
       widget    = @
       scoping   = scopingable widget: @
       scoping.start()
 
       # Update presenter interface to support binders customization
-      presenter.presentation         ||= {binders: {}}
-      presenter.presentation.binders ||= {}
-      {presentation: {binders}}        = presenter
+      options.presentation         ||= {binders: {}}
+      options.presentation.binders ||= {}
+      {presentation: {binders}}      = options
 
       # Create custom bindings for this scope, for storing scope
       # changes per widget instance
@@ -97,9 +91,8 @@ define ['stampit/stampit'], (stampit) ->
       # widget.subscribe 'scope', ->
 
       # TODO @widget.scopings = scopings = []
-      @widget.scopings = []
-      @enhancable_presenter.call @widget, @widget.presenter
-      @widget.subscribe 'presenter', @widget.enhancable_presenter
+      @widget.scopings = {}
+      @scopable_presentation_options.call @widget, @widget.options
 
       @widget
 
