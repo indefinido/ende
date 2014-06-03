@@ -25062,19 +25062,24 @@ generator = {
   },
 
   observable_for: function (object) {
+    var toJSON = undefined;
+
     Object.defineProperty(object, 'observed', {
       configurable: true,
       enumerable: false,
       value: {}
     });
 
-    // TODO call the current object.toJSON after this method
+    toJSON = object.json || object.toJSON;
     return Object.defineProperty(object, 'toJSON', {
       enumerable: false,
       value: function () {
+        var json = undefined;
+
+        json = toJSON.apply(this, arguments);
         // TODO remove underscore dependency
-        return observable.unobserve(_.omit(this, observable.ignores));
-        // old_to_json()
+        json = observable.unobserve(_.omit(json, observable.ignores, ['toJSON', 'observed']));
+        json
       }
     });
   },
@@ -25360,7 +25365,8 @@ require.register("indefinido-observable/vendor/shims/accessors.js", function(exp
         if (!fix && !inDocument(obj)) throw new TypeError('Object.defineProperty: Dom element must be attached in document.');
       }
 
-      if (!descriptor) throw new TypeError('Object.defineProperty (object, property, descriptor): Descriptor must be an object, was \'' + descriptor + '\'.');
+      if (!descriptor) throw new TypeError('Object.defineProperty (object, property, descriptor): Descriptor must be an object, was \'' + descriptor +
+ '\'.');
 
       // Store current value in descriptor
       // TODO only try to set descriptor value if it was passed as parameter
