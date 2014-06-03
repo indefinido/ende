@@ -96,7 +96,7 @@ define 'aura/extensions/rivets', ['aura/extensions/rivets/formatters'], (formatt
         if dependencies = context.shift()
           options.dependencies = dependencies.split /\s+/
 
-        if @models[key]
+        if @models[key] and keypath
           @bindings.push new Rivets[binding] @, node, type, key, keypath, options
         else
           console.warn "Model with key '#{key}' not found for binding of type '#{type}' on keypath '#{keypath}'.", @

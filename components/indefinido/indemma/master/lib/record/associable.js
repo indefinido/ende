@@ -1,4 +1,4 @@
-var $, associable, callbacks, extend, model, modifiers, plural, root, singular, subscribers,
+var $, associable, callbacks, descriptors, extend, model, plural, root, singular,
   __slice = [].slice;
 
 root = window;
@@ -52,7 +52,8 @@ plural = {
   },
   push: function() {
     console.warn("" + this.resource + ".push is deprecated and will be removed, please use add instead");
-    return Array.prototype.push.apply(this, arguments);
+    Array.prototype.push.apply(this, arguments);
+    return arguments[0];
   },
   length: 0,
   json: function(methods, omissions) {
@@ -64,7 +65,18 @@ plural = {
       _results.push(record.json(methods, omissions));
     }
     return _results;
-  }
+  },
+  find: function(id) {
+    var resource, _i, _len;
+
+    for (_i = 0, _len = this.length; _i < _len; _i++) {
+      resource = this[_i];
+      if (resource._id === id) {
+        return resource;
+      }
+    }
+  },
+  filter: Array.prototype.filter || (typeof _ !== "undefined" && _ !== null ? _.filter : void 0)
 };
 
 singular = {
@@ -76,82 +88,66 @@ singular = {
   }
 };
 
-subscribers = {
+descriptors = {
   belongs_to: {
-    foreign_key: function(resource_id) {
-      var association_name, current_resource_id, resource, _ref;
+    resource_id: {
+      getter: function() {
+        return this.owner.observed[this.resource + '_id'];
+      },
+      setter: function(resource_id) {
+        var association_name, current_resource_id, resource, _ref;
 
-      association_name = this.resource.toString();
-      if (!resource_id) {
-        this.dirty = true;
-        this.owner[association_name] = resource_id;
-        return resource_id;
-      }
-      current_resource_id = (_ref = this.owner.observed[association_name]) != null ? _ref._id : void 0;
-      if (resource_id !== current_resource_id) {
-        resource = model[association_name];
-        if (!resource) {
-          console.warn("subscribers.belongs_to.foreign_key: associated factory not found for model: " + association_name);
+        association_name = this.resource.toString();
+        if (!resource_id) {
+          this.dirty = true;
+          this.owner[association_name] = resource_id;
           return resource_id;
         }
-        this.owner.observed[association_name] = null;
-      }
-      return resource_id;
-    },
-    associated_changed: function(associated) {
-      return this.owner.observed["" + (this.resource.toString()) + "_id"] = associated ? associated._id : null;
-    }
-  }
-};
-
-modifiers = {
-  belongs_to: {
-    associated_loader: function() {
-      var association_name, definition, temporary_observed,
-        _this = this;
-
-      association_name = this.resource.toString();
-      if (this.owner.observed == null) {
-        this.owner.observed = {};
-        temporary_observed = true;
-      }
-      definition = Object.defineProperty(this.owner, association_name, {
-        set: function(associated) {
-          return this.observed[association_name] = associated;
-        },
-        get: function() {
-          var associated, associated_id, resource;
-
-          associated = _this.owner.observed[association_name];
-          associated_id = _this.owner.observed[association_name + '_id'];
-          if (!(((associated != null ? associated._id : void 0) != null) || associated_id)) {
-            return associated;
-          }
-          if (associated != null ? associated.sustained : void 0) {
-            return associated;
-          }
+        current_resource_id = (_ref = this.owner.observed[association_name]) != null ? _ref._id : void 0;
+        if (resource_id !== current_resource_id) {
           resource = model[association_name];
           if (!resource) {
             console.warn("subscribers.belongs_to.foreign_key: associated factory not found for model: " + association_name);
-            return associated;
+            return resource_id;
           }
-          associated = resource.find(associated_id || associated._id);
-          if (associated) {
-            return _this.owner.observed[association_name] = associated;
-          }
-          associated || (associated = resource({
-            _id: associated_id
-          }));
-          associated.reload();
-          return _this.owner.observed[association_name] = associated;
-        },
-        configurable: true,
-        enumerable: true
-      });
-      if (temporary_observed) {
-        delete this.owner.observed;
+          this.owner.observed[association_name + '_id'] = resource_id;
+          this.owner.observed[association_name] = null;
+        }
+        return resource_id;
       }
-      return definition;
+    },
+    resource: {
+      getter: function() {
+        var associated, associated_id, association_name, resource;
+
+        association_name = this.resource.toString();
+        associated = this.owner.observed[association_name];
+        associated_id = this.owner.observed[association_name + '_id'];
+        if (!(((associated != null ? associated._id : void 0) != null) || associated_id)) {
+          return associated;
+        }
+        if (associated != null ? associated.sustained : void 0) {
+          return associated;
+        }
+        resource = model[association_name];
+        if (!resource) {
+          console.warn("descriptors.belongs_to.resource.getter: associated factory not found for model '" + association_name + "' belonging to '" + this.owner.resource + "'");
+          return associated;
+        }
+        associated = resource.find(associated_id || associated._id);
+        if (associated) {
+          return this.owner.observed[association_name] = associated;
+        }
+        associated || (associated = resource({
+          _id: associated_id
+        }));
+        associated.reload();
+        return this.owner.observed[association_name] = associated;
+      },
+      setter: function(associated) {
+        this.owner.observed[this.resource.toString()] = associated;
+        return this.owner.observed[this.resource.toString() + '_id'] = associated ? associated._id : null;
+      }
     }
   }
 };
@@ -313,8 +309,11 @@ associable = {
           old_resource_id = this["" + resource + "_id"];
           old_dirty = this.dirty;
           this["" + resource + "_id"] = null;
-          this.subscribe("" + resource + "_id", $.proxy(subscribers.belongs_to.foreign_key, association_proxy));
-          this.subscribe(resource.toString(), $.proxy(subscribers.belongs_to.associated_changed, association_proxy));
+          Object.defineProperty(this, "" + resource + "_id", {
+            get: $.proxy(descriptors.belongs_to.resource_id.getter, association_proxy),
+            set: $.proxy(descriptors.belongs_to.resource_id.setter, association_proxy),
+            configurable: true
+          });
           this["" + resource + "_id"] = old_resource_id;
           _results.push(this.dirty = old_dirty);
         }
@@ -322,7 +321,7 @@ associable = {
       }
     },
     create_before_hooks: function(record) {
-      var association_proxy, definition, resource, _i, _len, _ref, _results;
+      var association_proxy, definition, old_resource, resource, _i, _len, _ref, _results;
 
       definition = this;
       if (definition.belongs_to) {
@@ -335,7 +334,12 @@ associable = {
             parent_resource: this.resource,
             owner: record
           };
-          _results.push(modifiers.belongs_to.associated_loader.call(association_proxy));
+          old_resource = this[resource];
+          Object.defineProperty(record, resource.toString(), {
+            get: $.proxy(descriptors.belongs_to.resource.getter, association_proxy),
+            set: $.proxy(descriptors.belongs_to.resource.setter, association_proxy)
+          });
+          _results.push(this[resource] = old_resource);
         }
         return _results;
       }
