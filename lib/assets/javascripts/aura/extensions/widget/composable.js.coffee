@@ -103,8 +103,8 @@ define 'aura/extensions/widget/composable', ->
             methods = extend methods, fixed.methods, definition_methods or definition
             state   = extend state  , fixed.state  , definition_state
 
-            initializers.push fixed.enclose      if fixed.enclose
-            initializers.push definition.enclose if definition.enclose
+            initializers = initializers.concat fixed.enclose      if fixed.enclose
+            initializers = initializers.concat definition.enclose if definition.enclose
 
           enclosed = (properties) ->
             initializers.forEach (initializer) => initializer.call @, properties

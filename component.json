@@ -1,8 +1,8 @@
 {
-  "name": "ened",
-  "repo": "indefinido/ened",
+  "name": "ende",
+  "repo": "indefinido/ende",
   "description": "Core web application functionacility",
-  "version": "0.1.1",
+  "version": "0.5.1",
   "keywords": [],
   "dependencies": {
     "mikeric/rivets": "v0.5.12",
@@ -14,26 +14,22 @@
     "component/jquery": "*",
     "component/querystring": "*",
     "components/modernizr": "*",
-    "indefinido/indemma": "*",
-    "indefinido/observable": "*",
     "indefinido/advisable": "*",
+    "indefinido/observable": "es6-modules",
+    "indefinido/indemma": "master",
     "component/dialog": "*"
   },
   "scripts": [
-    "vendor/assets/javascripts/lennon/lennon.js",
-    "vendor/assets/javascripts/spin/spin.js",
-    "vendor/assets/javascripts/jquery/inview.js",
-    "vendor/assets/javascripts/jquery/inputmask.js",
-    "vendor/assets/javascripts/jquery/inputmask.extensions.js",
-    "vendor/assets/javascripts/jquery/inputmask.numeric.extensions.js",
-    "vendor/assets/javascripts/polyfills/es5-shim.js",
-    "vendor/assets/javascripts/polyfills/es6-map-shim.js"
+    "vendor/assets/javascripts/accounting/**/*.js",
+    "vendor/assets/javascripts/jquery/**/*.js",
+    "vendor/assets/javascripts/lennon/**/*.js",
+    "vendor/assets/javascripts/polyfills/**/*.js",
+    "vendor/assets/javascripts/spin/**/*.js"
   ],
   "development": {},
   "paths": [
-    "lib/components",
     "vendor/components",
     "vendor/assets/javascripts"
   ],
-  "license": "MIT"
+  "license": "WTFPL"
 }
