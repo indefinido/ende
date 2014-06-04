@@ -13270,6 +13270,3315 @@ exports.mixin = function(object) {
 
 });
 
+require.register("component~emitter@1.0.0", function (exports, module) {
+
+/**
+ * Expose `Emitter`.
+ */
+
+module.exports = Emitter;
+
+/**
+ * Initialize a new `Emitter`.
+ *
+ * @api public
+ */
+
+function Emitter(obj) {
+  if (obj) return mixin(obj);
+};
+
+/**
+ * Mixin the emitter properties.
+ *
+ * @param {Object} obj
+ * @return {Object}
+ * @api private
+ */
+
+function mixin(obj) {
+  for (var key in Emitter.prototype) {
+    obj[key] = Emitter.prototype[key];
+  }
+  return obj;
+}
+
+/**
+ * Listen on the given `event` with `fn`.
+ *
+ * @param {String} event
+ * @param {Function} fn
+ * @return {Emitter}
+ * @api public
+ */
+
+Emitter.prototype.on = function(event, fn){
+  this._callbacks = this._callbacks || {};
+  (this._callbacks[event] = this._callbacks[event] || [])
+    .push(fn);
+  return this;
+};
+
+/**
+ * Adds an `event` listener that will be invoked a single
+ * time then automatically removed.
+ *
+ * @param {String} event
+ * @param {Function} fn
+ * @return {Emitter}
+ * @api public
+ */
+
+Emitter.prototype.once = function(event, fn){
+  var self = this;
+  this._callbacks = this._callbacks || {};
+
+  function on() {
+    self.off(event, on);
+    fn.apply(this, arguments);
+  }
+
+  fn._off = on;
+  this.on(event, on);
+  return this;
+};
+
+/**
+ * Remove the given callback for `event` or all
+ * registered callbacks.
+ *
+ * @param {String} event
+ * @param {Function} fn
+ * @return {Emitter}
+ * @api public
+ */
+
+Emitter.prototype.off =
+Emitter.prototype.removeListener =
+Emitter.prototype.removeAllListeners = function(event, fn){
+  this._callbacks = this._callbacks || {};
+
+  // all
+  if (0 == arguments.length) {
+    this._callbacks = {};
+    return this;
+  }
+
+  // specific event
+  var callbacks = this._callbacks[event];
+  if (!callbacks) return this;
+
+  // remove all handlers
+  if (1 == arguments.length) {
+    delete this._callbacks[event];
+    return this;
+  }
+
+  // remove specific handler
+  var i = callbacks.indexOf(fn._off || fn);
+  if (~i) callbacks.splice(i, 1);
+  return this;
+};
+
+/**
+ * Emit `event` with the given args.
+ *
+ * @param {String} event
+ * @param {Mixed} ...
+ * @return {Emitter}
+ */
+
+Emitter.prototype.emit = function(event){
+  this._callbacks = this._callbacks || {};
+  var args = [].slice.call(arguments, 1)
+    , callbacks = this._callbacks[event];
+
+  if (callbacks) {
+    callbacks = callbacks.slice(0);
+    for (var i = 0, len = callbacks.length; i < len; ++i) {
+      callbacks[i].apply(this, args);
+    }
+  }
+
+  return this;
+};
+
+/**
+ * Return array of callbacks for `event`.
+ *
+ * @param {String} event
+ * @return {Array}
+ * @api public
+ */
+
+Emitter.prototype.listeners = function(event){
+  this._callbacks = this._callbacks || {};
+  return this._callbacks[event] || [];
+};
+
+/**
+ * Check if this emitter has `event` handlers.
+ *
+ * @param {String} event
+ * @return {Boolean}
+ * @api public
+ */
+
+Emitter.prototype.hasListeners = function(event){
+  return !! this.listeners(event).length;
+};
+
+});
+
+require.register("component~domify@1.0.0", function (exports, module) {
+
+/**
+ * Expose `parse`.
+ */
+
+module.exports = parse;
+
+/**
+ * Wrap map from jquery.
+ */
+
+var map = {
+  option: [1, '<select multiple="multiple">', '</select>'],
+  optgroup: [1, '<select multiple="multiple">', '</select>'],
+  legend: [1, '<fieldset>', '</fieldset>'],
+  thead: [1, '<table>', '</table>'],
+  tbody: [1, '<table>', '</table>'],
+  tfoot: [1, '<table>', '</table>'],
+  colgroup: [1, '<table>', '</table>'],
+  caption: [1, '<table>', '</table>'],
+  tr: [2, '<table><tbody>', '</tbody></table>'],
+  td: [3, '<table><tbody><tr>', '</tr></tbody></table>'],
+  th: [3, '<table><tbody><tr>', '</tr></tbody></table>'],
+  col: [2, '<table><tbody></tbody><colgroup>', '</colgroup></table>'],
+  _default: [0, '', '']
+};
+
+/**
+ * Parse `html` and return the children.
+ *
+ * @param {String} html
+ * @return {Array}
+ * @api private
+ */
+
+function parse(html) {
+  if ('string' != typeof html) throw new TypeError('String expected');
+
+  // tag name
+  var m = /<([\w:]+)/.exec(html);
+  if (!m) throw new Error('No elements were generated.');
+  var tag = m[1];
+
+  // body support
+  if (tag == 'body') {
+    var el = document.createElement('html');
+    el.innerHTML = html;
+    return el.removeChild(el.lastChild);
+  }
+
+  // wrap map
+  var wrap = map[tag] || map._default;
+  var depth = wrap[0];
+  var prefix = wrap[1];
+  var suffix = wrap[2];
+  var el = document.createElement('div');
+  el.innerHTML = prefix + html + suffix;
+  while (depth--) el = el.lastChild;
+
+  var els = el.children;
+  if (1 == els.length) {
+    return el.removeChild(els[0]);
+  }
+
+  var fragment = document.createDocumentFragment();
+  while (els.length) {
+    fragment.appendChild(el.removeChild(els[0]));
+  }
+
+  return fragment;
+}
+
+});
+
+require.register("component~domify@1.2.2", function (exports, module) {
+
+/**
+ * Expose `parse`.
+ */
+
+module.exports = parse;
+
+/**
+ * Wrap map from jquery.
+ */
+
+var map = {
+  legend: [1, '<fieldset>', '</fieldset>'],
+  tr: [2, '<table><tbody>', '</tbody></table>'],
+  col: [2, '<table><tbody></tbody><colgroup>', '</colgroup></table>'],
+  _default: [0, '', '']
+};
+
+map.td =
+map.th = [3, '<table><tbody><tr>', '</tr></tbody></table>'];
+
+map.option =
+map.optgroup = [1, '<select multiple="multiple">', '</select>'];
+
+map.thead =
+map.tbody =
+map.colgroup =
+map.caption =
+map.tfoot = [1, '<table>', '</table>'];
+
+map.text =
+map.circle =
+map.ellipse =
+map.line =
+map.path =
+map.polygon =
+map.polyline =
+map.rect = [1, '<svg xmlns="http://www.w3.org/2000/svg" version="1.1">','</svg>'];
+
+/**
+ * Parse `html` and return the children.
+ *
+ * @param {String} html
+ * @return {Array}
+ * @api private
+ */
+
+function parse(html) {
+  if ('string' != typeof html) throw new TypeError('String expected');
+  
+  // tag name
+  var m = /<([\w:]+)/.exec(html);
+  if (!m) return document.createTextNode(html);
+
+  html = html.replace(/^\s+|\s+$/g, ''); // Remove leading/trailing whitespace
+
+  var tag = m[1];
+
+  // body support
+  if (tag == 'body') {
+    var el = document.createElement('html');
+    el.innerHTML = html;
+    return el.removeChild(el.lastChild);
+  }
+
+  // wrap map
+  var wrap = map[tag] || map._default;
+  var depth = wrap[0];
+  var prefix = wrap[1];
+  var suffix = wrap[2];
+  var el = document.createElement('div');
+  el.innerHTML = prefix + html + suffix;
+  while (depth--) el = el.lastChild;
+
+  // one element
+  if (el.firstChild == el.lastChild) {
+    return el.removeChild(el.firstChild);
+  }
+
+  // several elements
+  var fragment = document.createDocumentFragment();
+  while (el.firstChild) {
+    fragment.appendChild(el.removeChild(el.firstChild));
+  }
+
+  return fragment;
+}
+
+});
+
+require.register("component~event@0.1.0", function (exports, module) {
+
+/**
+ * Bind `el` event `type` to `fn`.
+ *
+ * @param {Element} el
+ * @param {String} type
+ * @param {Function} fn
+ * @param {Boolean} capture
+ * @return {Function}
+ * @api public
+ */
+
+exports.bind = function(el, type, fn, capture){
+  if (el.addEventListener) {
+    el.addEventListener(type, fn, capture);
+  } else {
+    el.attachEvent('on' + type, fn);
+  }
+  return fn;
+};
+
+/**
+ * Unbind `el` event `type`'s callback `fn`.
+ *
+ * @param {Element} el
+ * @param {String} type
+ * @param {Function} fn
+ * @param {Boolean} capture
+ * @return {Function}
+ * @api public
+ */
+
+exports.unbind = function(el, type, fn, capture){
+  if (el.removeEventListener) {
+    el.removeEventListener(type, fn, capture);
+  } else {
+    el.detachEvent('on' + type, fn);
+  }
+  return fn;
+};
+
+});
+
+require.register("component~event@0.1.3", function (exports, module) {
+var bind = window.addEventListener ? 'addEventListener' : 'attachEvent',
+    unbind = window.removeEventListener ? 'removeEventListener' : 'detachEvent',
+    prefix = bind !== 'addEventListener' ? 'on' : '';
+
+/**
+ * Bind `el` event `type` to `fn`.
+ *
+ * @param {Element} el
+ * @param {String} type
+ * @param {Function} fn
+ * @param {Boolean} capture
+ * @return {Function}
+ * @api public
+ */
+
+exports.bind = function(el, type, fn, capture){
+  el[bind](prefix + type, fn, capture || false);
+  return fn;
+};
+
+/**
+ * Unbind `el` event `type`'s callback `fn`.
+ *
+ * @param {Element} el
+ * @param {String} type
+ * @param {Function} fn
+ * @param {Boolean} capture
+ * @return {Function}
+ * @api public
+ */
+
+exports.unbind = function(el, type, fn, capture){
+  el[unbind](prefix + type, fn, capture || false);
+  return fn;
+};
+});
+
+require.register("component~query@0.0.1", function (exports, module) {
+
+function one(selector, el) {
+  return el.querySelector(selector);
+}
+
+exports = module.exports = function(selector, el){
+  el = el || document;
+  return one(selector, el);
+};
+
+exports.all = function(selector, el){
+  el = el || document;
+  return el.querySelectorAll(selector);
+};
+
+exports.engine = function(obj){
+  if (!obj.one) throw new Error('.one callback required');
+  if (!obj.all) throw new Error('.all callback required');
+  one = obj.one;
+  exports.all = obj.all;
+};
+
+});
+
+require.register("component~query@0.0.3", function (exports, module) {
+function one(selector, el) {
+  return el.querySelector(selector);
+}
+
+exports = module.exports = function(selector, el){
+  el = el || document;
+  return one(selector, el);
+};
+
+exports.all = function(selector, el){
+  el = el || document;
+  return el.querySelectorAll(selector);
+};
+
+exports.engine = function(obj){
+  if (!obj.one) throw new Error('.one callback required');
+  if (!obj.all) throw new Error('.all callback required');
+  one = obj.one;
+  exports.all = obj.all;
+  return exports;
+};
+
+});
+
+require.register("component~matches-selector@0.1.2", function (exports, module) {
+/**
+ * Module dependencies.
+ */
+
+var query = require("component~query@0.0.3");
+
+/**
+ * Element prototype.
+ */
+
+var proto = Element.prototype;
+
+/**
+ * Vendor function.
+ */
+
+var vendor = proto.matches
+  || proto.webkitMatchesSelector
+  || proto.mozMatchesSelector
+  || proto.msMatchesSelector
+  || proto.oMatchesSelector;
+
+/**
+ * Expose `match()`.
+ */
+
+module.exports = match;
+
+/**
+ * Match `el` to `selector`.
+ *
+ * @param {Element} el
+ * @param {String} selector
+ * @return {Boolean}
+ * @api public
+ */
+
+function match(el, selector) {
+  if (vendor) return vendor.call(el, selector);
+  var nodes = query.all(selector, el.parentNode);
+  for (var i = 0; i < nodes.length; ++i) {
+    if (nodes[i] == el) return true;
+  }
+  return false;
+}
+
+});
+
+require.register("component~delegate@0.1.0", function (exports, module) {
+
+/**
+ * Module dependencies.
+ */
+
+var matches = require("component~matches-selector@0.1.2")
+  , event = require("component~event@0.1.3");
+
+/**
+ * Delegate event `type` to `selector`
+ * and invoke `fn(e)`. A callback function
+ * is returned which may be passed to `.unbind()`.
+ *
+ * @param {Element} el
+ * @param {String} selector
+ * @param {String} type
+ * @param {Function} fn
+ * @param {Boolean} capture
+ * @return {Function}
+ * @api public
+ */
+
+exports.bind = function(el, selector, type, fn, capture){
+  return event.bind(el, type, function(e){
+    if (matches(e.target, selector)) fn(e);
+  }, capture);
+  return callback;
+};
+
+/**
+ * Unbind event `type`'s callback `fn`.
+ *
+ * @param {Element} el
+ * @param {String} type
+ * @param {Function} fn
+ * @param {Boolean} capture
+ * @api public
+ */
+
+exports.unbind = function(el, type, fn, capture){
+  event.unbind(el, type, fn, capture);
+};
+
+});
+
+require.register("component~indexof@0.0.1", function (exports, module) {
+
+var indexOf = [].indexOf;
+
+module.exports = function(arr, obj){
+  if (indexOf) return arr.indexOf(obj);
+  for (var i = 0; i < arr.length; ++i) {
+    if (arr[i] === obj) return i;
+  }
+  return -1;
+};
+});
+
+require.register("component~css@0.0.2", function (exports, module) {
+
+/**
+ * Properties to ignore appending "px".
+ */
+
+var ignore = {
+  columnCount: true,
+  fillOpacity: true,
+  fontWeight: true,
+  lineHeight: true,
+  opacity: true,
+  orphans: true,
+  widows: true,
+  zIndex: true,
+  zoom: true
+};
+
+/**
+ * Set `el` css values.
+ *
+ * @param {Element} el
+ * @param {Object} obj
+ * @return {Element}
+ * @api public
+ */
+
+module.exports = function(el, obj){
+  for (var key in obj) {
+    var val = obj[key];
+    if ('number' == typeof val && !ignore[key]) val += 'px';
+    el.style[key] = val;
+  }
+  return el;
+};
+
+});
+
+require.register("component~value@1.1.0", function (exports, module) {
+
+/**
+ * Module dependencies.
+ */
+
+var typeOf = require("component~type@1.0.0");
+
+/**
+ * Set or get `el`'s' value.
+ *
+ * @param {Element} el
+ * @param {Mixed} val
+ * @return {Mixed}
+ * @api public
+ */
+
+module.exports = function(el, val){
+  if (2 == arguments.length) return set(el, val);
+  return get(el);
+};
+
+/**
+ * Get `el`'s value.
+ */
+
+function get(el) {
+  switch (type(el)) {
+    case 'checkbox':
+    case 'radio':
+      if (el.checked) {
+        var attr = el.getAttribute('value');
+        return null == attr ? true : attr;
+      } else {
+        return false;
+      }
+    case 'radiogroup':
+      for (var i = 0, radio; radio = el[i]; i++) {
+        if (radio.checked) return radio.value;
+      }
+      break;
+    case 'select':
+      for (var i = 0, option; option = el.options[i]; i++) {
+        if (option.selected) return option.value;
+      }
+      break;
+    default:
+      return el.value;
+  }
+}
+
+/**
+ * Set `el`'s value.
+ */
+
+function set(el, val) {
+  switch (type(el)) {
+    case 'checkbox':
+    case 'radio':
+      if (val) {
+        el.checked = true;
+      } else {
+        el.checked = false;
+      }
+      break;
+    case 'radiogroup':
+      for (var i = 0, radio; radio = el[i]; i++) {
+        radio.checked = radio.value === val;
+      }
+      break;
+    case 'select':
+      for (var i = 0, option; option = el.options[i]; i++) {
+        option.selected = option.value === val;
+      }
+      break;
+    default:
+      el.value = val;
+  }
+}
+
+/**
+ * Element type.
+ */
+
+function type(el) {
+  var group = 'array' == typeOf(el) || 'object' == typeOf(el);
+  if (group) el = el[0];
+  var name = el.nodeName.toLowerCase();
+  var type = el.getAttribute('type');
+
+  if (group && type && 'radio' == type.toLowerCase()) return 'radiogroup';
+  if ('input' == name && type && 'checkbox' == type.toLowerCase()) return 'checkbox';
+  if ('input' == name && type && 'radio' == type.toLowerCase()) return 'radio';
+  if ('select' == name) return 'select';
+  return name;
+}
+
+});
+
+require.register("component~classes@1.1.2", function (exports, module) {
+
+/**
+ * Module dependencies.
+ */
+
+var index = require("component~indexof@0.0.1");
+
+/**
+ * Whitespace regexp.
+ */
+
+var re = /\s+/;
+
+/**
+ * toString reference.
+ */
+
+var toString = Object.prototype.toString;
+
+/**
+ * Wrap `el` in a `ClassList`.
+ *
+ * @param {Element} el
+ * @return {ClassList}
+ * @api public
+ */
+
+module.exports = function(el){
+  return new ClassList(el);
+};
+
+/**
+ * Initialize a new ClassList for `el`.
+ *
+ * @param {Element} el
+ * @api private
+ */
+
+function ClassList(el) {
+  this.el = el;
+  this.list = el.classList;
+}
+
+/**
+ * Add class `name` if not already present.
+ *
+ * @param {String} name
+ * @return {ClassList}
+ * @api public
+ */
+
+ClassList.prototype.add = function(name){
+  // classList
+  if (this.list) {
+    this.list.add(name);
+    return this;
+  }
+
+  // fallback
+  var arr = this.array();
+  var i = index(arr, name);
+  if (!~i) arr.push(name);
+  this.el.className = arr.join(' ');
+  return this;
+};
+
+/**
+ * Remove class `name` when present, or
+ * pass a regular expression to remove
+ * any which match.
+ *
+ * @param {String|RegExp} name
+ * @return {ClassList}
+ * @api public
+ */
+
+ClassList.prototype.remove = function(name){
+  if ('[object RegExp]' == toString.call(name)) {
+    return this.removeMatching(name);
+  }
+
+  // classList
+  if (this.list) {
+    this.list.remove(name);
+    return this;
+  }
+
+  // fallback
+  var arr = this.array();
+  var i = index(arr, name);
+  if (~i) arr.splice(i, 1);
+  this.el.className = arr.join(' ');
+  return this;
+};
+
+/**
+ * Remove all classes matching `re`.
+ *
+ * @param {RegExp} re
+ * @return {ClassList}
+ * @api private
+ */
+
+ClassList.prototype.removeMatching = function(re){
+  var arr = this.array();
+  for (var i = 0; i < arr.length; i++) {
+    if (re.test(arr[i])) {
+      this.remove(arr[i]);
+    }
+  }
+  return this;
+};
+
+/**
+ * Toggle class `name`.
+ *
+ * @param {String} name
+ * @return {ClassList}
+ * @api public
+ */
+
+ClassList.prototype.toggle = function(name){
+  // classList
+  if (this.list) {
+    this.list.toggle(name);
+    return this;
+  }
+
+  // fallback
+  if (this.has(name)) {
+    this.remove(name);
+  } else {
+    this.add(name);
+  }
+  return this;
+};
+
+/**
+ * Return an array of classes.
+ *
+ * @return {Array}
+ * @api public
+ */
+
+ClassList.prototype.array = function(){
+  var str = this.el.className.replace(/^\s+|\s+$/g, '');
+  var arr = str.split(re);
+  if ('' === arr[0]) arr.shift();
+  return arr;
+};
+
+/**
+ * Check if class `name` is present.
+ *
+ * @param {String} name
+ * @return {ClassList}
+ * @api public
+ */
+
+ClassList.prototype.has =
+ClassList.prototype.contains = function(name){
+  return this.list
+    ? this.list.contains(name)
+    : !! ~index(this.array(), name);
+};
+
+});
+
+require.register("component~classes@1.2.1", function (exports, module) {
+/**
+ * Module dependencies.
+ */
+
+var index = require("component~indexof@0.0.1");
+
+/**
+ * Whitespace regexp.
+ */
+
+var re = /\s+/;
+
+/**
+ * toString reference.
+ */
+
+var toString = Object.prototype.toString;
+
+/**
+ * Wrap `el` in a `ClassList`.
+ *
+ * @param {Element} el
+ * @return {ClassList}
+ * @api public
+ */
+
+module.exports = function(el){
+  return new ClassList(el);
+};
+
+/**
+ * Initialize a new ClassList for `el`.
+ *
+ * @param {Element} el
+ * @api private
+ */
+
+function ClassList(el) {
+  if (!el) throw new Error('A DOM element reference is required');
+  this.el = el;
+  this.list = el.classList;
+}
+
+/**
+ * Add class `name` if not already present.
+ *
+ * @param {String} name
+ * @return {ClassList}
+ * @api public
+ */
+
+ClassList.prototype.add = function(name){
+  // classList
+  if (this.list) {
+    this.list.add(name);
+    return this;
+  }
+
+  // fallback
+  var arr = this.array();
+  var i = index(arr, name);
+  if (!~i) arr.push(name);
+  this.el.className = arr.join(' ');
+  return this;
+};
+
+/**
+ * Remove class `name` when present, or
+ * pass a regular expression to remove
+ * any which match.
+ *
+ * @param {String|RegExp} name
+ * @return {ClassList}
+ * @api public
+ */
+
+ClassList.prototype.remove = function(name){
+  if ('[object RegExp]' == toString.call(name)) {
+    return this.removeMatching(name);
+  }
+
+  // classList
+  if (this.list) {
+    this.list.remove(name);
+    return this;
+  }
+
+  // fallback
+  var arr = this.array();
+  var i = index(arr, name);
+  if (~i) arr.splice(i, 1);
+  this.el.className = arr.join(' ');
+  return this;
+};
+
+/**
+ * Remove all classes matching `re`.
+ *
+ * @param {RegExp} re
+ * @return {ClassList}
+ * @api private
+ */
+
+ClassList.prototype.removeMatching = function(re){
+  var arr = this.array();
+  for (var i = 0; i < arr.length; i++) {
+    if (re.test(arr[i])) {
+      this.remove(arr[i]);
+    }
+  }
+  return this;
+};
+
+/**
+ * Toggle class `name`, can force state via `force`.
+ *
+ * For browsers that support classList, but do not support `force` yet,
+ * the mistake will be detected and corrected.
+ *
+ * @param {String} name
+ * @param {Boolean} force
+ * @return {ClassList}
+ * @api public
+ */
+
+ClassList.prototype.toggle = function(name, force){
+  // classList
+  if (this.list) {
+    if ("undefined" !== typeof force) {
+      if (force !== this.list.toggle(name, force)) {
+        this.list.toggle(name); // toggle again to correct
+      }
+    } else {
+      this.list.toggle(name);
+    }
+    return this;
+  }
+
+  // fallback
+  if ("undefined" !== typeof force) {
+    if (!force) {
+      this.remove(name);
+    } else {
+      this.add(name);
+    }
+  } else {
+    if (this.has(name)) {
+      this.remove(name);
+    } else {
+      this.add(name);
+    }
+  }
+
+  return this;
+};
+
+/**
+ * Return an array of classes.
+ *
+ * @return {Array}
+ * @api public
+ */
+
+ClassList.prototype.array = function(){
+  var str = this.el.className.replace(/^\s+|\s+$/g, '');
+  var arr = str.split(re);
+  if ('' === arr[0]) arr.shift();
+  return arr;
+};
+
+/**
+ * Check if class `name` is present.
+ *
+ * @param {String} name
+ * @return {ClassList}
+ * @api public
+ */
+
+ClassList.prototype.has =
+ClassList.prototype.contains = function(name){
+  return this.list
+    ? this.list.contains(name)
+    : !! ~index(this.array(), name);
+};
+
+});
+
+require.register("component~sort@0.0.3", function (exports, module) {
+
+/**
+ * Expose `sort`.
+ */
+
+exports = module.exports = sort;
+
+/**
+ * Sort `el`'s children with the given `fn(a, b)`.
+ *
+ * @param {Element} el
+ * @param {Function} fn
+ * @api public
+ */
+
+function sort(el, fn) {
+  var arr = [].slice.call(el.children).sort(fn);
+  var frag = document.createDocumentFragment();
+  for (var i = 0; i < arr.length; i++) {
+    frag.appendChild(arr[i]);
+  }
+  el.appendChild(frag);
+};
+
+/**
+ * Sort descending.
+ *
+ * @param {Element} el
+ * @param {Function} fn
+ * @api public
+ */
+
+exports.desc = function(el, fn){
+  sort(el, function(a, b){
+    return ~fn(a, b) + 1;
+  });
+};
+
+/**
+ * Sort ascending.
+ */
+
+exports.asc = sort;
+
+});
+
+require.register("component~dom@0.7.1", function (exports, module) {
+/**
+ * Module dependencies.
+ */
+
+var delegate = require("component~delegate@0.1.0");
+var classes = require("component~classes@1.1.2");
+var indexof = require("component~indexof@0.0.1");
+var domify = require("component~domify@1.0.0");
+var events = require("component~event@0.1.0");
+var value = require("component~value@1.1.0");
+var query = require("component~query@0.0.1");
+var type = require("component~type@1.0.0");
+var css = require("component~css@0.0.2");
+
+/**
+ * Attributes supported.
+ */
+
+var attrs = [
+  'id',
+  'src',
+  'rel',
+  'cols',
+  'rows',
+  'name',
+  'href',
+  'title',
+  'style',
+  'width',
+  'height',
+  'tabindex',
+  'placeholder'
+];
+
+/**
+ * Expose `dom()`.
+ */
+
+exports = module.exports = dom;
+
+/**
+ * Expose supported attrs.
+ */
+
+exports.attrs = attrs;
+
+/**
+ * Return a dom `List` for the given
+ * `html`, selector, or element.
+ *
+ * @param {String|Element|List}
+ * @return {List}
+ * @api public
+ */
+
+function dom(selector, context) {
+  // array
+  if (Array.isArray(selector)) {
+    return new List(selector);
+  }
+
+  // List
+  if (selector instanceof List) {
+    return selector;
+  }
+
+  // node
+  if (selector.nodeName) {
+    return new List([selector]);
+  }
+
+  if ('string' != typeof selector) {
+    throw new TypeError('invalid selector');
+  }
+
+  // html
+  if ('<' == selector.charAt(0)) {
+    return new List([domify(selector)], selector);
+  }
+
+  // selector
+  var ctx = context
+    ? (context.els ? context.els[0] : context)
+    : document;
+
+  return new List(query.all(selector, ctx), selector);
+}
+
+/**
+ * Expose `List` constructor.
+ */
+
+exports.List = List;
+
+/**
+ * Initialize a new `List` with the
+ * given array-ish of `els` and `selector`
+ * string.
+ *
+ * @param {Mixed} els
+ * @param {String} selector
+ * @api private
+ */
+
+function List(els, selector) {
+  this.els = els || [];
+  this.selector = selector;
+}
+
+/**
+ * Enumerable iterator.
+ */
+
+List.prototype.__iterate__ = function(){
+  var self = this;
+  return {
+    length: function(){ return self.els.length },
+    get: function(i){ return new List([self.els[i]]) }
+  }
+};
+
+/**
+ * Remove elements from the DOM.
+ *
+ * @api public
+ */
+
+List.prototype.remove = function(){
+  for (var i = 0; i < this.els.length; i++) {
+    var el = this.els[i];
+    var parent = el.parentNode;
+    if (parent) parent.removeChild(el);
+  }
+};
+
+/**
+ * Set attribute `name` to `val`, or get attr `name`.
+ *
+ * @param {String} name
+ * @param {String} [val]
+ * @return {String|List} self
+ * @api public
+ */
+
+List.prototype.attr = function(name, val){
+  // get
+  if (1 == arguments.length) {
+    return this.els[0] && this.els[0].getAttribute(name);
+  }
+
+  // remove
+  if (null == val) {
+    return this.removeAttr(name);
+  }
+
+  // set
+  return this.forEach(function(el){
+    el.setAttribute(name, val);
+  });
+};
+
+/**
+ * Remove attribute `name`.
+ *
+ * @param {String} name
+ * @return {List} self
+ * @api public
+ */
+
+List.prototype.removeAttr = function(name){
+  return this.forEach(function(el){
+    el.removeAttribute(name);
+  });
+};
+
+/**
+ * Set property `name` to `val`, or get property `name`.
+ *
+ * @param {String} name
+ * @param {String} [val]
+ * @return {Object|List} self
+ * @api public
+ */
+
+List.prototype.prop = function(name, val){
+  if (1 == arguments.length) {
+    return this.els[0] && this.els[0][name];
+  }
+
+  return this.forEach(function(el){
+    el[name] = val;
+  });
+};
+
+/**
+ * Get the first element's value or set selected
+ * element values to `val`.
+ *
+ * @param {Mixed} [val]
+ * @return {Mixed}
+ * @api public
+ */
+
+List.prototype.val =
+List.prototype.value = function(val){
+  if (0 == arguments.length) {
+    return this.els[0]
+      ? value(this.els[0])
+      : undefined;
+  }
+
+  return this.forEach(function(el){
+    value(el, val);
+  });
+};
+
+/**
+ * Return a cloned `List` with all elements cloned.
+ *
+ * @return {List}
+ * @api public
+ */
+
+List.prototype.clone = function(){
+  var arr = [];
+  for (var i = 0, len = this.els.length; i < len; ++i) {
+    arr.push(this.els[i].cloneNode(true));
+  }
+  return new List(arr);
+};
+
+/**
+ * Prepend `val`.
+ *
+ * @param {String|Element|List} val
+ * @return {List} new list
+ * @api public
+ */
+
+List.prototype.prepend = function(val){
+  var el = this.els[0];
+  if (!el) return this;
+  val = dom(val);
+  for (var i = 0; i < val.els.length; ++i) {
+    if (el.children.length) {
+      el.insertBefore(val.els[i], el.firstChild);
+    } else {
+      el.appendChild(val.els[i]);
+    }
+  }
+  return val;
+};
+
+/**
+ * Append `val`.
+ *
+ * @param {String|Element|List} val
+ * @return {List} new list
+ * @api public
+ */
+
+List.prototype.append = function(val){
+  var el = this.els[0];
+  if (!el) return this;
+  val = dom(val);
+  for (var i = 0; i < val.els.length; ++i) {
+    el.appendChild(val.els[i]);
+  }
+  return val;
+};
+
+/**
+ * Append self's `el` to `val`
+ *
+ * @param {String|Element|List} val
+ * @return {List} self
+ * @api public
+ */
+
+List.prototype.appendTo = function(val){
+  dom(val).append(this);
+  return this;
+};
+
+/**
+ * Return a `List` containing the element at `i`.
+ *
+ * @param {Number} i
+ * @return {List}
+ * @api public
+ */
+
+List.prototype.at = function(i){
+  return new List([this.els[i]], this.selector);
+};
+
+/**
+ * Return a `List` containing the first element.
+ *
+ * @param {Number} i
+ * @return {List}
+ * @api public
+ */
+
+List.prototype.first = function(){
+  return new List([this.els[0]], this.selector);
+};
+
+/**
+ * Return a `List` containing the last element.
+ *
+ * @param {Number} i
+ * @return {List}
+ * @api public
+ */
+
+List.prototype.last = function(){
+  return new List([this.els[this.els.length - 1]], this.selector);
+};
+
+/**
+ * Return an `Element` at `i`.
+ *
+ * @param {Number} i
+ * @return {Element}
+ * @api public
+ */
+
+List.prototype.get = function(i){
+  return this.els[i || 0];
+};
+
+/**
+ * Return list length.
+ *
+ * @return {Number}
+ * @api public
+ */
+
+List.prototype.length = function(){
+  return this.els.length;
+};
+
+/**
+ * Return element text.
+ *
+ * @param {String} str
+ * @return {String|List}
+ * @api public
+ */
+
+List.prototype.text = function(str){
+  // TODO: real impl
+  if (1 == arguments.length) {
+    this.forEach(function(el){
+      el.textContent = str;
+    });
+    return this;
+  }
+
+  var str = '';
+  for (var i = 0; i < this.els.length; ++i) {
+    str += this.els[i].textContent;
+  }
+  return str;
+};
+
+/**
+ * Return element html.
+ *
+ * @return {String} html
+ * @api public
+ */
+
+List.prototype.html = function(html){
+  if (1 == arguments.length) {
+    this.forEach(function(el){
+      el.innerHTML = html;
+    });
+  }
+  // TODO: real impl
+  return this.els[0] && this.els[0].innerHTML;
+};
+
+/**
+ * Bind to `event` and invoke `fn(e)`. When
+ * a `selector` is given then events are delegated.
+ *
+ * @param {String} event
+ * @param {String} [selector]
+ * @param {Function} fn
+ * @param {Boolean} capture
+ * @return {List}
+ * @api public
+ */
+
+List.prototype.on = function(event, selector, fn, capture){
+  if ('string' == typeof selector) {
+    for (var i = 0; i < this.els.length; ++i) {
+      fn._delegate = delegate.bind(this.els[i], selector, event, fn, capture);
+    }
+    return this;
+  }
+
+  capture = fn;
+  fn = selector;
+
+  for (var i = 0; i < this.els.length; ++i) {
+    events.bind(this.els[i], event, fn, capture);
+  }
+
+  return this;
+};
+
+/**
+ * Unbind to `event` and invoke `fn(e)`. When
+ * a `selector` is given then delegated event
+ * handlers are unbound.
+ *
+ * @param {String} event
+ * @param {String} [selector]
+ * @param {Function} fn
+ * @param {Boolean} capture
+ * @return {List}
+ * @api public
+ */
+
+List.prototype.off = function(event, selector, fn, capture){
+  if ('string' == typeof selector) {
+    for (var i = 0; i < this.els.length; ++i) {
+      // TODO: add selector support back
+      delegate.unbind(this.els[i], event, fn._delegate, capture);
+    }
+    return this;
+  }
+
+  capture = fn;
+  fn = selector;
+
+  for (var i = 0; i < this.els.length; ++i) {
+    events.unbind(this.els[i], event, fn, capture);
+  }
+  return this;
+};
+
+/**
+ * Iterate elements and invoke `fn(list, i)`.
+ *
+ * @param {Function} fn
+ * @return {List} self
+ * @api public
+ */
+
+List.prototype.each = function(fn){
+  for (var i = 0; i < this.els.length; ++i) {
+    fn(new List([this.els[i]], this.selector), i);
+  }
+  return this;
+};
+
+/**
+ * Iterate elements and invoke `fn(el, i)`.
+ *
+ * @param {Function} fn
+ * @return {List} self
+ * @api public
+ */
+
+List.prototype.forEach = function(fn){
+  for (var i = 0; i < this.els.length; ++i) {
+    fn(this.els[i], i);
+  }
+  return this;
+};
+
+/**
+ * Map elements invoking `fn(list, i)`.
+ *
+ * @param {Function} fn
+ * @return {Array}
+ * @api public
+ */
+
+List.prototype.map = function(fn){
+  var arr = [];
+  for (var i = 0; i < this.els.length; ++i) {
+    arr.push(fn(new List([this.els[i]], this.selector), i));
+  }
+  return arr;
+};
+
+/**
+ * Filter elements invoking `fn(list, i)`, returning
+ * a new `List` of elements when a truthy value is returned.
+ *
+ * @param {Function} fn
+ * @return {List}
+ * @api public
+ */
+
+List.prototype.select =
+List.prototype.filter = function(fn){
+  var el;
+  var list = new List([], this.selector);
+  for (var i = 0; i < this.els.length; ++i) {
+    el = this.els[i];
+    if (fn(new List([el], this.selector), i)) list.els.push(el);
+  }
+  return list;
+};
+
+/**
+ * Filter elements invoking `fn(list, i)`, returning
+ * a new `List` of elements when a falsey value is returned.
+ *
+ * @param {Function} fn
+ * @return {List}
+ * @api public
+ */
+
+List.prototype.reject = function(fn){
+  var el;
+  var list = new List([], this.selector);
+  for (var i = 0; i < this.els.length; ++i) {
+    el = this.els[i];
+    if (!fn(new List([el], this.selector), i)) list.els.push(el);
+  }
+  return list;
+};
+
+/**
+ * Add the given class `name`.
+ *
+ * @param {String} name
+ * @return {List} self
+ * @api public
+ */
+
+List.prototype.addClass = function(name){
+  var el;
+  for (var i = 0; i < this.els.length; ++i) {
+    el = this.els[i];
+    el._classes = el._classes || classes(el);
+    el._classes.add(name);
+  }
+  return this;
+};
+
+/**
+ * Remove the given class `name`.
+ *
+ * @param {String|RegExp} name
+ * @return {List} self
+ * @api public
+ */
+
+List.prototype.removeClass = function(name){
+  var el;
+
+  if ('regexp' == type(name)) {
+    for (var i = 0; i < this.els.length; ++i) {
+      el = this.els[i];
+      el._classes = el._classes || classes(el);
+      var arr = el._classes.array();
+      for (var j = 0; j < arr.length; j++) {
+        if (name.test(arr[j])) {
+          el._classes.remove(arr[j]);
+        }
+      }
+    }
+    return this;
+  }
+
+  for (var i = 0; i < this.els.length; ++i) {
+    el = this.els[i];
+    el._classes = el._classes || classes(el);
+    el._classes.remove(name);
+  }
+
+  return this;
+};
+
+/**
+ * Toggle the given class `name`,
+ * optionally a `bool` may be given
+ * to indicate that the class should
+ * be added when truthy.
+ *
+ * @param {String} name
+ * @param {Boolean} bool
+ * @return {List} self
+ * @api public
+ */
+
+List.prototype.toggleClass = function(name, bool){
+  var el;
+  var fn = 'toggle';
+
+  // toggle with boolean
+  if (2 == arguments.length) {
+    fn = bool ? 'add' : 'remove';
+  }
+
+  for (var i = 0; i < this.els.length; ++i) {
+    el = this.els[i];
+    el._classes = el._classes || classes(el);
+    el._classes[fn](name);
+  }
+
+  return this;
+};
+
+/**
+ * Check if the given class `name` is present.
+ *
+ * @param {String} name
+ * @return {Boolean}
+ * @api public
+ */
+
+List.prototype.hasClass = function(name){
+  var el;
+  for (var i = 0; i < this.els.length; ++i) {
+    el = this.els[i];
+    el._classes = el._classes || classes(el);
+    if (el._classes.has(name)) return true;
+  }
+  return false;
+};
+
+/**
+ * Set CSS `prop` to `val` or get `prop` value.
+ * Also accepts an object (`prop`: `val`)
+ *
+ * @param {String} prop
+ * @param {Mixed} val
+ * @return {List|String}
+ * @api public
+ */
+
+List.prototype.css = function(prop, val){
+  if (2 == arguments.length) {
+    var obj = {};
+    obj[prop] = val;
+    return this.setStyle(obj);
+  }
+
+  if ('object' == type(prop)) {
+    return this.setStyle(prop);
+  }
+
+  return this.getStyle(prop);
+};
+
+/**
+ * Set CSS `props`.
+ *
+ * @param {Object} props
+ * @return {List} self
+ * @api private
+ */
+
+List.prototype.setStyle = function(props){
+  for (var i = 0; i < this.els.length; ++i) {
+    css(this.els[i], props);
+  }
+  return this;
+};
+
+/**
+ * Get CSS `prop` value.
+ *
+ * @param {String} prop
+ * @return {String}
+ * @api private
+ */
+
+List.prototype.getStyle = function(prop){
+  var el = this.els[0];
+  if (el) return el.style[prop];
+};
+
+/**
+ * Find children matching the given `selector`.
+ *
+ * @param {String} selector
+ * @return {List}
+ * @api public
+ */
+
+List.prototype.find = function(selector){
+  return dom(selector, this);
+};
+
+/**
+ * Empty the dom list
+ *
+ * @return self
+ * @api public
+ */
+
+List.prototype.empty = function(){
+  var elem, el;
+
+  for (var i = 0; i < this.els.length; ++i) {
+    el = this.els[i];
+    while (el.firstChild) {
+      el.removeChild(el.firstChild);
+    }
+  }
+
+  return this;
+}
+
+/**
+ * Attribute accessors.
+ */
+
+attrs.forEach(function(name){
+  List.prototype[name] = function(val){
+    if (0 == arguments.length) return this.attr(name);
+    return this.attr(name, val);
+  };
+});
+
+
+});
+
+require.register("component~overlay@0.1.1", function (exports, module) {
+
+/**
+ * Module dependencies.
+ */
+
+var Emitter = require("component~emitter@1.0.0");
+var tmpl = require("component~overlay@0.1.1/template.js");
+var o = require("component~dom@0.7.1");
+
+/**
+ * Expose `overlay()`.
+ */
+
+exports = module.exports = overlay;
+
+/**
+ * Expose `Overlay`.
+ */
+
+exports.Overlay = Overlay;
+
+/**
+ * Return a new `Overlay` with the given `options`.
+ *
+ * @param {Object|Element} options
+ * @return {Overlay}
+ * @api public
+ */
+
+function overlay(options){
+  options = options || {};
+
+  // element
+  if (options.nodeName) {
+    options = { target: options };
+  }
+
+  return new Overlay(options);
+};
+
+/**
+ * Initialize a new `Overlay`.
+ *
+ * @param {Object} options
+ * @api public
+ */
+
+function Overlay(options) {
+  Emitter.call(this);
+  options = options || {};
+  this.target = options.target || 'body';
+  this.closable = options.closable;
+  this.el = o(tmpl);
+  this.el.appendTo(this.target);
+  if (this.closable) this.el.on('click', this.hide.bind(this));
+}
+
+/**
+ * Mixin emitter.
+ */
+
+Emitter(Overlay.prototype);
+
+/**
+ * Show the overlay.
+ *
+ * Emits "show" event.
+ *
+ * @return {Overlay}
+ * @api public
+ */
+
+Overlay.prototype.show = function(){
+  this.emit('show');
+  this.el.removeClass('hide');
+  return this;
+};
+
+/**
+ * Hide the overlay.
+ *
+ * Emits "hide" event.
+ *
+ * @return {Overlay}
+ * @api public
+ */
+
+Overlay.prototype.hide = function(){
+  this.emit('hide');
+  return this.remove();
+};
+
+/**
+ * Hide the overlay without emitting "hide".
+ *
+ * Emits "close" event.
+ *
+ * @return {Overlay}
+ * @api public
+ */
+
+Overlay.prototype.remove = function(){
+  var self = this;
+  this.emit('close');
+  this.el.addClass('hide');
+  setTimeout(function(){
+    self.el.remove();
+  }, 2000);
+  return this;
+};
+
+
+});
+
+require.register("component~overlay@0.1.1/template.js", function (exports, module) {
+module.exports = '<div class="overlay hide"></div>\n';
+});
+
+require.register("component~dialog@0.2.0", function (exports, module) {
+
+/**
+ * Module dependencies.
+ */
+
+var Emitter = require("component~emitter@1.0.0")
+  , overlay = require("component~overlay@0.1.1")
+  , domify = require("component~domify@1.2.2")
+  , events = require("component~event@0.1.3")
+  , classes = require("component~classes@1.2.1")
+  , query = require("component~query@0.0.3");
+
+/**
+ * Active dialog.
+ */
+
+var active;
+
+/**
+ * Expose `dialog()`.
+ */
+
+exports = module.exports = dialog;
+
+/**
+ * Expose `Dialog`.
+ */
+
+exports.Dialog = Dialog;
+
+/**
+ * Return a new `Dialog` with the given
+ * (optional) `title` and `msg`.
+ *
+ * @param {String} title or msg
+ * @param {String} msg
+ * @return {Dialog}
+ * @api public
+ */
+
+function dialog(title, msg){
+  switch (arguments.length) {
+    case 2:
+      return new Dialog({ title: title, message: msg });
+    case 1:
+      return new Dialog({ message: title });
+  }
+};
+
+/**
+ * Initialize a new `Dialog`.
+ *
+ * Options:
+ *
+ *    - `title` dialog title
+ *    - `message` a message to display
+ *
+ * Emits:
+ *
+ *    - `show` when visible
+ *    - `hide` when hidden
+ *
+ * @param {Object} options
+ * @api public
+ */
+
+function Dialog(options) {
+  Emitter.call(this);
+  options = options || {};
+  this.template = require("component~dialog@0.2.0/template.html");
+  this.el = domify(this.template);
+  this._classes = classes(this.el);
+  this.render(options);
+  if (active && !active.hiding) active.hide();
+  if (exports.effect) this.effect(exports.effect);
+  this.on('escape', this.hide.bind(this));
+  active = this;
+};
+
+/**
+ * Inherit from `Emitter.prototype`.
+ */
+
+Dialog.prototype = new Emitter;
+
+/**
+ * Render with the given `options`.
+ *
+ * @param {Object} options
+ * @api public
+ */
+
+Dialog.prototype.render = function(options){
+  var self = this
+    , el = self.el
+    , title = options.title
+    , titleEl = query('.title', el)
+    , pEl = query('p', el)
+    , msg = options.message;
+
+  events.bind(query('.close', el), 'click', function (ev) {
+    ev.preventDefault();
+    self.emit('close');
+    self.hide();
+  });
+
+  if (titleEl) {
+    if (!title) {
+      titleEl.parentNode.removeChild(titleEl);
+    } else {
+      titleEl.textContent = title;
+    }
+  }
+
+  // message
+  if ('string' == typeof msg) {
+    pEl.textContent = msg;
+  } else if (msg) {
+    pEl.parentNode.insertBefore(msg.el || msg, pEl);
+    pEl.parentNode.removeChild(pEl);
+  }
+};
+
+/**
+ * Enable the dialog close link.
+ *
+ * @return {Dialog} for chaining
+ * @api public
+ */
+
+Dialog.prototype.closable = function(){
+  return this.addClass('closable');
+};
+
+/**
+ * Add class `name`.
+ *
+ * @param {String} name
+ * @return {Dialog}
+ * @api public
+ */
+
+Dialog.prototype.addClass = function(name){
+  this._classes.add(name);
+  return this;
+};
+
+/**
+ * Set the effect to `type`.
+ *
+ * @param {String} type
+ * @return {Dialog} for chaining
+ * @api public
+ */
+
+Dialog.prototype.effect = function(type){
+  this._effect = type;
+  this.addClass(type);
+  return this;
+};
+
+/**
+ * Make it modal!
+ *
+ * @return {Dialog} for chaining
+ * @api public
+ */
+
+Dialog.prototype.modal = function(){
+  this._overlay = overlay();
+  return this;
+};
+
+/**
+ * Add an overlay.
+ *
+ * @return {Dialog} for chaining
+ * @api public
+ */
+
+Dialog.prototype.overlay = function(opts){
+  var self = this;
+  opts = opts || { closable: true };
+  var o = overlay(opts);
+  o.on('hide', function(){
+    self._overlay = null;
+    self.hide();
+  });
+  this._overlay = o;
+  return this;
+};
+
+/**
+ * Close the dialog when the escape key is pressed.
+ *
+ * @api public
+ */
+
+Dialog.prototype.escapable = function(){
+  var self = this;
+  // Save reference to remove listener later
+  self._escKeyCallback = self._escKeyCallback || function (e) {
+    e.which = e.which || e.keyCode;
+    if (27 !== e.which) return;
+    self.emit('escape');
+  };
+  events.bind(document, 'keydown', self._escKeyCallback);
+  return this;
+};
+
+/**
+ * Fixed dialogs position can be manipulated through CSS.
+ *
+ * @return {Dialog} for chaining
+ * @api public
+ */
+
+Dialog.prototype.fixed = function(){
+  this._fixed = true;
+  return this;
+}
+
+/**
+ * Show the dialog.
+ *
+ * Emits "show" event.
+ *
+ * @return {Dialog} for chaining
+ * @api public
+ */
+
+Dialog.prototype.show = function(){
+  var overlay = this._overlay;
+  var self = this;
+
+  // overlay
+  if (overlay) {
+    overlay.show();
+    this._classes.add('modal');
+  }
+
+  // escape
+  if (!overlay || overlay.closable) this.escapable();
+
+  // position
+  document.body.appendChild(this.el);
+  if (!this._fixed) {
+    setTimeout(function() {
+      self.el.style.marginLeft = -(self.el.offsetWidth / 2) + 'px'
+    }, 0);
+  }
+  this._classes.remove('hide');
+  this.emit('show');
+  return this;
+};
+
+/**
+ * Hide the overlay.
+ *
+ * @api private
+ */
+
+Dialog.prototype.hideOverlay = function(){
+  if (!this._overlay) return;
+  this._overlay.remove();
+  this._overlay = null;
+};
+
+/**
+ * Hide the dialog with optional delay of `ms`,
+ * otherwise the dialog is removed immediately.
+ *
+ * Emits "hide" event.
+ *
+ * @return {Number} ms
+ * @return {Dialog} for chaining
+ * @api public
+ */
+
+Dialog.prototype.hide = function(ms){
+  var self = this;
+
+  if (self._escKeyCallback) {
+    events.unbind(document, 'keydown', self._escKeyCallback);
+  }
+
+  // prevent thrashing - this isn't used
+  self.hiding = true;
+
+  // duration
+  if (ms) {
+    setTimeout(function(){
+      self.hide();
+    }, ms);
+    return self;
+  }
+
+  // hide / remove
+  self._classes.add('hide');
+  if (self._effect) {
+    setTimeout(function(){
+      self.remove();
+    }, 500);
+  } else {
+    self.remove();
+  }
+
+  // overlay
+  self.hideOverlay();
+
+  return self;
+};
+/**
+ * Hide the dialog without potential animation.
+ *
+ * @return {Dialog} for chaining
+ * @api public
+ */
+
+Dialog.prototype.remove = function(){
+  if (this.el.parentNode) {
+    this.emit('hide');
+    this.el.parentNode.removeChild(this.el);
+  }
+  return this;
+};
+
+});
+
+require.define("component~dialog@0.2.0/template.html", "<div id=\"dialog\" class=\"hide\">\n  <div class=\"content\">\n    <span class=\"title\">Title</span>\n    <a href=\"#\" class=\"close\">&times;<em>close</em></a>\n    <div class=\"body\">\n      <p>Message</p>\n    </div>\n  </div>\n</div>\n");
+
+require.register("mikeric~rivets@v0.5.12", function (exports, module) {
+// Rivets.js
+// version: 0.5.12
+// author: Michael Richards
+// license: MIT
+(function() {
+  var Rivets,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __slice = [].slice,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+
+  Rivets = {};
+
+  if (!String.prototype.trim) {
+    String.prototype.trim = function() {
+      return this.replace(/^\s+|\s+$/g, '');
+    };
+  }
+
+  Rivets.Binding = (function() {
+    function Binding(view, el, type, key, keypath, options) {
+      var identifier, regexp, value, _ref;
+      this.view = view;
+      this.el = el;
+      this.type = type;
+      this.key = key;
+      this.keypath = keypath;
+      this.options = options != null ? options : {};
+      this.update = __bind(this.update, this);
+      this.unbind = __bind(this.unbind, this);
+      this.bind = __bind(this.bind, this);
+      this.publish = __bind(this.publish, this);
+      this.sync = __bind(this.sync, this);
+      this.set = __bind(this.set, this);
+      this.eventHandler = __bind(this.eventHandler, this);
+      this.formattedValue = __bind(this.formattedValue, this);
+      if (!(this.binder = this.view.binders[type])) {
+        _ref = this.view.binders;
+        for (identifier in _ref) {
+          value = _ref[identifier];
+          if (identifier !== '*' && identifier.indexOf('*') !== -1) {
+            regexp = new RegExp("^" + (identifier.replace('*', '.+')) + "$");
+            if (regexp.test(type)) {
+              this.binder = value;
+              this.args = new RegExp("^" + (identifier.replace('*', '(.+)')) + "$").exec(type);
+              this.args.shift();
+            }
+          }
+        }
+      }
+      this.binder || (this.binder = this.view.binders['*']);
+      if (this.binder instanceof Function) {
+        this.binder = {
+          routine: this.binder
+        };
+      }
+      this.formatters = this.options.formatters || [];
+      this.model = this.key ? this.view.models[this.key] : this.view.models;
+    }
+
+    Binding.prototype.formattedValue = function(value) {
+      var args, formatter, id, _i, _len, _ref;
+      _ref = this.formatters;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        formatter = _ref[_i];
+        args = formatter.split(/\s+/);
+        id = args.shift();
+        formatter = this.model[id] instanceof Function ? this.model[id] : this.view.formatters[id];
+        if ((formatter != null ? formatter.read : void 0) instanceof Function) {
+          value = formatter.read.apply(formatter, [value].concat(__slice.call(args)));
+        } else if (formatter instanceof Function) {
+          value = formatter.apply(null, [value].concat(__slice.call(args)));
+        }
+      }
+      return value;
+    };
+
+    Binding.prototype.eventHandler = function(fn) {
+      var binding, handler;
+      handler = (binding = this).view.config.handler;
+      return function(ev) {
+        return handler.call(fn, this, ev, binding);
+      };
+    };
+
+    Binding.prototype.set = function(value) {
+      var _ref;
+      value = value instanceof Function && !this.binder["function"] ? this.formattedValue(value.call(this.model)) : this.formattedValue(value);
+      return (_ref = this.binder.routine) != null ? _ref.call(this, this.el, value) : void 0;
+    };
+
+    Binding.prototype.sync = function() {
+      return this.set(this.options.bypass ? this.model[this.keypath] : this.view.config.adapter.read(this.model, this.keypath));
+    };
+
+    Binding.prototype.publish = function() {
+      var args, formatter, id, value, _i, _len, _ref, _ref1, _ref2;
+      value = Rivets.Util.getInputValue(this.el);
+      _ref = this.formatters.slice(0).reverse();
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        formatter = _ref[_i];
+        args = formatter.split(/\s+/);
+        id = args.shift();
+        if ((_ref1 = this.view.formatters[id]) != null ? _ref1.publish : void 0) {
+          value = (_ref2 = this.view.formatters[id]).publish.apply(_ref2, [value].concat(__slice.call(args)));
+        }
+      }
+      return this.view.config.adapter.publish(this.model, this.keypath, value);
+    };
+
+    Binding.prototype.bind = function() {
+      var dependency, keypath, model, _i, _len, _ref, _ref1, _ref2, _results;
+      if ((_ref = this.binder.bind) != null) {
+        _ref.call(this, this.el);
+      }
+      if (this.options.bypass) {
+        this.sync();
+      } else {
+        this.view.config.adapter.subscribe(this.model, this.keypath, this.sync);
+        if (this.view.config.preloadData) {
+          this.sync();
+        }
+      }
+      if ((_ref1 = this.options.dependencies) != null ? _ref1.length : void 0) {
+        _ref2 = this.options.dependencies;
+        _results = [];
+        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+          dependency = _ref2[_i];
+          if (/^\./.test(dependency)) {
+            model = this.model;
+            keypath = dependency.substr(1);
+          } else {
+            dependency = dependency.split('.');
+            model = this.view.models[dependency.shift()];
+            keypath = dependency.join('.');
+          }
+          _results.push(this.view.config.adapter.subscribe(model, keypath, this.sync));
+        }
+        return _results;
+      }
+    };
+
+    Binding.prototype.unbind = function() {
+      var dependency, keypath, model, _i, _len, _ref, _ref1, _ref2, _results;
+      if ((_ref = this.binder.unbind) != null) {
+        _ref.call(this, this.el);
+      }
+      if (!this.options.bypass) {
+        this.view.config.adapter.unsubscribe(this.model, this.keypath, this.sync);
+      }
+      if ((_ref1 = this.options.dependencies) != null ? _ref1.length : void 0) {
+        _ref2 = this.options.dependencies;
+        _results = [];
+        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+          dependency = _ref2[_i];
+          if (/^\./.test(dependency)) {
+            model = this.model;
+            keypath = dependency.substr(1);
+          } else {
+            dependency = dependency.split('.');
+            model = this.view.models[dependency.shift()];
+            keypath = dependency.join('.');
+          }
+          _results.push(this.view.config.adapter.unsubscribe(model, keypath, this.sync));
+        }
+        return _results;
+      }
+    };
+
+    Binding.prototype.update = function(models) {
+      var _ref;
+      if (models == null) {
+        models = {};
+      }
+      if (this.key) {
+        if (models[this.key]) {
+          if (!this.options.bypass) {
+            this.view.config.adapter.unsubscribe(this.model, this.keypath, this.sync);
+          }
+          this.model = models[this.key];
+          if (this.options.bypass) {
+            this.sync();
+          } else {
+            this.view.config.adapter.subscribe(this.model, this.keypath, this.sync);
+            if (this.view.config.preloadData) {
+              this.sync();
+            }
+          }
+        }
+      } else {
+        this.sync();
+      }
+      return (_ref = this.binder.update) != null ? _ref.call(this, models) : void 0;
+    };
+
+    return Binding;
+
+  })();
+
+  Rivets.ComponentBinding = (function(_super) {
+    __extends(ComponentBinding, _super);
+
+    function ComponentBinding(view, el, type) {
+      var attribute, _i, _len, _ref, _ref1;
+      this.view = view;
+      this.el = el;
+      this.type = type;
+      this.unbind = __bind(this.unbind, this);
+      this.bind = __bind(this.bind, this);
+      this.update = __bind(this.update, this);
+      this.locals = __bind(this.locals, this);
+      this.component = Rivets.components[this.type];
+      this.attributes = {};
+      this.inflections = {};
+      _ref = this.el.attributes || [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        attribute = _ref[_i];
+        if (_ref1 = attribute.name, __indexOf.call(this.component.attributes, _ref1) >= 0) {
+          this.attributes[attribute.name] = attribute.value;
+        } else {
+          this.inflections[attribute.name] = attribute.value;
+        }
+      }
+    }
+
+    ComponentBinding.prototype.sync = function() {};
+
+    ComponentBinding.prototype.locals = function(models) {
+      var inverse, key, model, path, result, _i, _len, _ref, _ref1;
+      if (models == null) {
+        models = this.view.models;
+      }
+      result = {};
+      _ref = this.inflections;
+      for (key in _ref) {
+        inverse = _ref[key];
+        _ref1 = inverse.split('.');
+        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+          path = _ref1[_i];
+          result[key] = (result[key] || models)[path];
+        }
+      }
+      for (key in models) {
+        model = models[key];
+        if (result[key] == null) {
+          result[key] = model;
+        }
+      }
+      return result;
+    };
+
+    ComponentBinding.prototype.update = function(models) {
+      var _ref;
+      return (_ref = this.componentView) != null ? _ref.update(this.locals(models)) : void 0;
+    };
+
+    ComponentBinding.prototype.bind = function() {
+      var el, _ref;
+      if (this.componentView != null) {
+        return (_ref = this.componentView) != null ? _ref.bind() : void 0;
+      } else {
+        el = this.component.build.call(this.attributes);
+        (this.componentView = new Rivets.View(el, this.locals(), this.view.options)).bind();
+        return this.el.parentNode.replaceChild(el, this.el);
+      }
+    };
+
+    ComponentBinding.prototype.unbind = function() {
+      var _ref;
+      return (_ref = this.componentView) != null ? _ref.unbind() : void 0;
+    };
+
+    return ComponentBinding;
+
+  })(Rivets.Binding);
+
+  Rivets.TextBinding = (function(_super) {
+    __extends(TextBinding, _super);
+
+    function TextBinding(view, el, type, key, keypath, options) {
+      this.view = view;
+      this.el = el;
+      this.type = type;
+      this.key = key;
+      this.keypath = keypath;
+      this.options = options != null ? options : {};
+      this.sync = __bind(this.sync, this);
+      this.formatters = this.options.formatters || [];
+      this.model = this.key ? this.view.models[this.key] : this.view.models;
+    }
+
+    TextBinding.prototype.binder = {
+      routine: function(node, value) {
+        return node.data = value != null ? value : '';
+      }
+    };
+
+    TextBinding.prototype.sync = function() {
+      return TextBinding.__super__.sync.apply(this, arguments);
+    };
+
+    return TextBinding;
+
+  })(Rivets.Binding);
+
+  Rivets.View = (function() {
+    function View(els, models, options) {
+      var k, option, v, _base, _i, _len, _ref, _ref1, _ref2;
+      this.els = els;
+      this.models = models;
+      this.options = options != null ? options : {};
+      this.update = __bind(this.update, this);
+      this.publish = __bind(this.publish, this);
+      this.sync = __bind(this.sync, this);
+      this.unbind = __bind(this.unbind, this);
+      this.bind = __bind(this.bind, this);
+      this.select = __bind(this.select, this);
+      this.build = __bind(this.build, this);
+      this.componentRegExp = __bind(this.componentRegExp, this);
+      this.bindingRegExp = __bind(this.bindingRegExp, this);
+      if (!(this.els.jquery || this.els instanceof Array)) {
+        this.els = [this.els];
+      }
+      _ref = ['config', 'binders', 'formatters'];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        option = _ref[_i];
+        this[option] = {};
+        if (this.options[option]) {
+          _ref1 = this.options[option];
+          for (k in _ref1) {
+            v = _ref1[k];
+            this[option][k] = v;
+          }
+        }
+        _ref2 = Rivets[option];
+        for (k in _ref2) {
+          v = _ref2[k];
+          if ((_base = this[option])[k] == null) {
+            _base[k] = v;
+          }
+        }
+      }
+      this.build();
+    }
+
+    View.prototype.bindingRegExp = function() {
+      var prefix;
+      prefix = this.config.prefix;
+      if (prefix) {
+        return new RegExp("^data-" + prefix + "-");
+      } else {
+        return /^data-/;
+      }
+    };
+
+    View.prototype.componentRegExp = function() {
+      var _ref, _ref1;
+      return new RegExp("^" + ((_ref = (_ref1 = this.config.prefix) != null ? _ref1.toUpperCase() : void 0) != null ? _ref : 'RV') + "-");
+    };
+
+    View.prototype.build = function() {
+      var bindingRegExp, buildBinding, componentRegExp, el, parse, skipNodes, _i, _len, _ref,
+        _this = this;
+      this.bindings = [];
+      skipNodes = [];
+      bindingRegExp = this.bindingRegExp();
+      componentRegExp = this.componentRegExp();
+      buildBinding = function(binding, node, type, declaration) {
+        var context, ctx, dependencies, key, keypath, options, path, pipe, pipes, splitPath;
+        options = {};
+        pipes = (function() {
+          var _i, _len, _ref, _results;
+          _ref = declaration.split('|');
+          _results = [];
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            pipe = _ref[_i];
+            _results.push(pipe.trim());
+          }
+          return _results;
+        })();
+        context = (function() {
+          var _i, _len, _ref, _results;
+          _ref = pipes.shift().split('<');
+          _results = [];
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            ctx = _ref[_i];
+            _results.push(ctx.trim());
+          }
+          return _results;
+        })();
+        path = context.shift();
+        splitPath = path.split(/\.|:/);
+        options.formatters = pipes;
+        options.bypass = path.indexOf(':') !== -1;
+        if (splitPath[0]) {
+          key = splitPath.shift();
+        } else {
+          key = null;
+          splitPath.shift();
+        }
+        keypath = splitPath.join('.');
+        if (dependencies = context.shift()) {
+          options.dependencies = dependencies.split(/\s+/);
+        }
+        return _this.bindings.push(new Rivets[binding](_this, node, type, key, keypath, options));
+      };
+      parse = function(node) {
+        var attribute, attributes, binder, childNode, delimiters, identifier, n, parser, regexp, restTokens, startToken, text, token, tokens, type, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3, _ref4, _results;
+        if (__indexOf.call(skipNodes, node) < 0) {
+          if (node.nodeType === Node.TEXT_NODE) {
+            parser = Rivets.TextTemplateParser;
+            if (delimiters = _this.config.templateDelimiters) {
+              if ((tokens = parser.parse(node.data, delimiters)).length) {
+                if (!(tokens.length === 1 && tokens[0].type === parser.types.text)) {
+                  startToken = tokens[0], restTokens = 2 <= tokens.length ? __slice.call(tokens, 1) : [];
+                  node.data = startToken.value;
+                  if (startToken.type === 0) {
+                    node.data = startToken.value;
+                  } else {
+                    buildBinding('TextBinding', node, null, startToken.value);
+                  }
+                  for (_i = 0, _len = restTokens.length; _i < _len; _i++) {
+                    token = restTokens[_i];
+                    text = document.createTextNode(token.value);
+                    node.parentNode.appendChild(text);
+                    if (token.type === 1) {
+                      buildBinding('TextBinding', text, null, token.value);
+                    }
+                  }
+                }
+              }
+            }
+          } else if (componentRegExp.test(node.tagName)) {
+            type = node.tagName.replace(componentRegExp, '').toLowerCase();
+            _this.bindings.push(new Rivets.ComponentBinding(_this, node, type));
+          } else if (node.attributes != null) {
+            _ref = node.attributes;
+            for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
+              attribute = _ref[_j];
+              if (bindingRegExp.test(attribute.name)) {
+                type = attribute.name.replace(bindingRegExp, '');
+                if (!(binder = _this.binders[type])) {
+                  _ref1 = _this.binders;
+                  for (identifier in _ref1) {
+                    value = _ref1[identifier];
+                    if (identifier !== '*' && identifier.indexOf('*') !== -1) {
+                      regexp = new RegExp("^" + (identifier.replace('*', '.+')) + "$");
+                      if (regexp.test(type)) {
+                        binder = value;
+                      }
+                    }
+                  }
+                }
+                binder || (binder = _this.binders['*']);
+                if (binder.block) {
+                  _ref2 = node.childNodes;
+                  for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+                    n = _ref2[_k];
+                    skipNodes.push(n);
+                  }
+                  attributes = [attribute];
+                }
+              }
+            }
+            _ref3 = attributes || node.attributes;
+            for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
+              attribute = _ref3[_l];
+              if (bindingRegExp.test(attribute.name)) {
+                type = attribute.name.replace(bindingRegExp, '');
+                buildBinding('Binding', node, type, attribute.value);
+              }
+            }
+          }
+          _ref4 = node.childNodes;
+          _results = [];
+          for (_m = 0, _len4 = _ref4.length; _m < _len4; _m++) {
+            childNode = _ref4[_m];
+            _results.push(parse(childNode));
+          }
+          return _results;
+        }
+      };
+      _ref = this.els;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        el = _ref[_i];
+        parse(el);
+      }
+    };
+
+    View.prototype.select = function(fn) {
+      var binding, _i, _len, _ref, _results;
+      _ref = this.bindings;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        binding = _ref[_i];
+        if (fn(binding)) {
+          _results.push(binding);
+        }
+      }
+      return _results;
+    };
+
+    View.prototype.bind = function() {
+      var binding, _i, _len, _ref, _results;
+      _ref = this.bindings;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        binding = _ref[_i];
+        _results.push(binding.bind());
+      }
+      return _results;
+    };
+
+    View.prototype.unbind = function() {
+      var binding, _i, _len, _ref, _results;
+      _ref = this.bindings;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        binding = _ref[_i];
+        _results.push(binding.unbind());
+      }
+      return _results;
+    };
+
+    View.prototype.sync = function() {
+      var binding, _i, _len, _ref, _results;
+      _ref = this.bindings;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        binding = _ref[_i];
+        _results.push(binding.sync());
+      }
+      return _results;
+    };
+
+    View.prototype.publish = function() {
+      var binding, _i, _len, _ref, _results;
+      _ref = this.select(function(b) {
+        return b.binder.publishes;
+      });
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        binding = _ref[_i];
+        _results.push(binding.publish());
+      }
+      return _results;
+    };
+
+    View.prototype.update = function(models) {
+      var binding, key, model, _i, _len, _ref, _results;
+      if (models == null) {
+        models = {};
+      }
+      for (key in models) {
+        model = models[key];
+        this.models[key] = model;
+      }
+      _ref = this.bindings;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        binding = _ref[_i];
+        _results.push(binding.update(models));
+      }
+      return _results;
+    };
+
+    return View;
+
+  })();
+
+  Rivets.TextTemplateParser = (function() {
+    function TextTemplateParser() {}
+
+    TextTemplateParser.types = {
+      text: 0,
+      binding: 1
+    };
+
+    TextTemplateParser.parse = function(template, delimiters) {
+      var index, lastIndex, lastToken, length, substring, tokens, value;
+      tokens = [];
+      length = template.length;
+      index = 0;
+      lastIndex = 0;
+      while (lastIndex < length) {
+        index = template.indexOf(delimiters[0], lastIndex);
+        if (index < 0) {
+          tokens.push({
+            type: this.types.text,
+            value: template.slice(lastIndex)
+          });
+          break;
+        } else {
+          if (index > 0 && lastIndex < index) {
+            tokens.push({
+              type: this.types.text,
+              value: template.slice(lastIndex, index)
+            });
+          }
+          lastIndex = index + 2;
+          index = template.indexOf(delimiters[1], lastIndex);
+          if (index < 0) {
+            substring = template.slice(lastIndex - 2);
+            lastToken = tokens[tokens.length - 1];
+            if ((lastToken != null ? lastToken.type : void 0) === this.types.text) {
+              lastToken.value += substring;
+            } else {
+              tokens.push({
+                type: this.types.text,
+                value: substring
+              });
+            }
+            break;
+          }
+          value = template.slice(lastIndex, index).trim();
+          tokens.push({
+            type: this.types.binding,
+            value: value
+          });
+          lastIndex = index + 2;
+        }
+      }
+      return tokens;
+    };
+
+    return TextTemplateParser;
+
+  })();
+
+  Rivets.Util = {
+    bindEvent: function(el, event, handler) {
+      if (window.jQuery != null) {
+        el = jQuery(el);
+        if (el.on != null) {
+          return el.on(event, handler);
+        } else {
+          return el.bind(event, handler);
+        }
+      } else if (window.addEventListener != null) {
+        return el.addEventListener(event, handler, false);
+      } else {
+        event = 'on' + event;
+        return el.attachEvent(event, handler);
+      }
+    },
+    unbindEvent: function(el, event, handler) {
+      if (window.jQuery != null) {
+        el = jQuery(el);
+        if (el.off != null) {
+          return el.off(event, handler);
+        } else {
+          return el.unbind(event, handler);
+        }
+      } else if (window.removeEventListener != null) {
+        return el.removeEventListener(event, handler, false);
+      } else {
+        event = 'on' + event;
+        return el.detachEvent(event, handler);
+      }
+    },
+    getInputValue: function(el) {
+      var o, _i, _len, _results;
+      if (window.jQuery != null) {
+        el = jQuery(el);
+        switch (el[0].type) {
+          case 'checkbox':
+            return el.is(':checked');
+          default:
+            return el.val();
+        }
+      } else {
+        switch (el.type) {
+          case 'checkbox':
+            return el.checked;
+          case 'select-multiple':
+            _results = [];
+            for (_i = 0, _len = el.length; _i < _len; _i++) {
+              o = el[_i];
+              if (o.selected) {
+                _results.push(o.value);
+              }
+            }
+            return _results;
+            break;
+          default:
+            return el.value;
+        }
+      }
+    }
+  };
+
+  Rivets.binders = {
+    enabled: function(el, value) {
+      return el.disabled = !value;
+    },
+    disabled: function(el, value) {
+      return el.disabled = !!value;
+    },
+    checked: {
+      publishes: true,
+      bind: function(el) {
+        return Rivets.Util.bindEvent(el, 'change', this.publish);
+      },
+      unbind: function(el) {
+        return Rivets.Util.unbindEvent(el, 'change', this.publish);
+      },
+      routine: function(el, value) {
+        var _ref;
+        if (el.type === 'radio') {
+          return el.checked = ((_ref = el.value) != null ? _ref.toString() : void 0) === (value != null ? value.toString() : void 0);
+        } else {
+          return el.checked = !!value;
+        }
+      }
+    },
+    unchecked: {
+      publishes: true,
+      bind: function(el) {
+        return Rivets.Util.bindEvent(el, 'change', this.publish);
+      },
+      unbind: function(el) {
+        return Rivets.Util.unbindEvent(el, 'change', this.publish);
+      },
+      routine: function(el, value) {
+        var _ref;
+        if (el.type === 'radio') {
+          return el.checked = ((_ref = el.value) != null ? _ref.toString() : void 0) !== (value != null ? value.toString() : void 0);
+        } else {
+          return el.checked = !value;
+        }
+      }
+    },
+    show: function(el, value) {
+      return el.style.display = value ? '' : 'none';
+    },
+    hide: function(el, value) {
+      return el.style.display = value ? 'none' : '';
+    },
+    html: function(el, value) {
+      return el.innerHTML = value != null ? value : '';
+    },
+    value: {
+      publishes: true,
+      bind: function(el) {
+        return Rivets.Util.bindEvent(el, 'change', this.publish);
+      },
+      unbind: function(el) {
+        return Rivets.Util.unbindEvent(el, 'change', this.publish);
+      },
+      routine: function(el, value) {
+        var o, _i, _len, _ref, _ref1, _ref2, _results;
+        if (window.jQuery != null) {
+          el = jQuery(el);
+          if ((value != null ? value.toString() : void 0) !== ((_ref = el.val()) != null ? _ref.toString() : void 0)) {
+            return el.val(value != null ? value : '');
+          }
+        } else {
+          if (el.type === 'select-multiple') {
+            if (value != null) {
+              _results = [];
+              for (_i = 0, _len = el.length; _i < _len; _i++) {
+                o = el[_i];
+                _results.push(o.selected = (_ref1 = o.value, __indexOf.call(value, _ref1) >= 0));
+              }
+              return _results;
+            }
+          } else if ((value != null ? value.toString() : void 0) !== ((_ref2 = el.value) != null ? _ref2.toString() : void 0)) {
+            return el.value = value != null ? value : '';
+          }
+        }
+      }
+    },
+    text: function(el, value) {
+      if (el.innerText != null) {
+        return el.innerText = value != null ? value : '';
+      } else {
+        return el.textContent = value != null ? value : '';
+      }
+    },
+    "if": {
+      block: true,
+      bind: function(el) {
+        var attr, declaration;
+        if (this.marker == null) {
+          attr = ['data', this.view.config.prefix, this.type].join('-').replace('--', '-');
+          declaration = el.getAttribute(attr);
+          this.marker = document.createComment(" rivets: " + this.type + " " + declaration + " ");
+          el.removeAttribute(attr);
+          el.parentNode.insertBefore(this.marker, el);
+          return el.parentNode.removeChild(el);
+        }
+      },
+      unbind: function() {
+        var _ref;
+        return (_ref = this.nested) != null ? _ref.unbind() : void 0;
+      },
+      routine: function(el, value) {
+        var key, model, models, options, _ref;
+        if (!!value === (this.nested == null)) {
+          if (value) {
+            models = {};
+            _ref = this.view.models;
+            for (key in _ref) {
+              model = _ref[key];
+              models[key] = model;
+            }
+            options = {
+              binders: this.view.options.binders,
+              formatters: this.view.options.formatters,
+              config: this.view.options.config
+            };
+            (this.nested = new Rivets.View(el, models, options)).bind();
+            return this.marker.parentNode.insertBefore(el, this.marker.nextSibling);
+          } else {
+            el.parentNode.removeChild(el);
+            this.nested.unbind();
+            return delete this.nested;
+          }
+        }
+      },
+      update: function(models) {
+        var _ref;
+        return (_ref = this.nested) != null ? _ref.update(models) : void 0;
+      }
+    },
+    unless: {
+      block: true,
+      bind: function(el) {
+        return Rivets.binders["if"].bind.call(this, el);
+      },
+      unbind: function() {
+        return Rivets.binders["if"].unbind.call(this);
+      },
+      routine: function(el, value) {
+        return Rivets.binders["if"].routine.call(this, el, !value);
+      },
+      update: function(models) {
+        return Rivets.binders["if"].update.call(this, models);
+      }
+    },
+    "on-*": {
+      "function": true,
+      unbind: function(el) {
+        if (this.handler) {
+          return Rivets.Util.unbindEvent(el, this.args[0], this.handler);
+        }
+      },
+      routine: function(el, value) {
+        if (this.handler) {
+          Rivets.Util.unbindEvent(el, this.args[0], this.handler);
+        }
+        return Rivets.Util.bindEvent(el, this.args[0], this.handler = this.eventHandler(value));
+      }
+    },
+    "each-*": {
+      block: true,
+      bind: function(el) {
+        var attr;
+        if (this.marker == null) {
+          attr = ['data', this.view.config.prefix, this.type].join('-').replace('--', '-');
+          this.marker = document.createComment(" rivets: " + this.type + " ");
+          this.iterated = [];
+          el.removeAttribute(attr);
+          el.parentNode.insertBefore(this.marker, el);
+          return el.parentNode.removeChild(el);
+        }
+      },
+      unbind: function(el) {
+        var view, _i, _len, _ref, _results;
+        if (this.iterated != null) {
+          _ref = this.iterated;
+          _results = [];
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            view = _ref[_i];
+            _results.push(view.unbind());
+          }
+          return _results;
+        }
+      },
+      routine: function(el, collection) {
+        var data, i, index, k, key, model, modelName, options, previous, template, v, view, _i, _j, _len, _len1, _ref, _ref1, _ref2, _results;
+        modelName = this.args[0];
+        collection = collection || [];
+        if (this.iterated.length > collection.length) {
+          _ref = Array(this.iterated.length - collection.length);
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            i = _ref[_i];
+            view = this.iterated.pop();
+            view.unbind();
+            this.marker.parentNode.removeChild(view.els[0]);
+          }
+        }
+        _results = [];
+        for (index = _j = 0, _len1 = collection.length; _j < _len1; index = ++_j) {
+          model = collection[index];
+          data = {};
+          data[modelName] = model;
+          if (this.iterated[index] == null) {
+            _ref1 = this.view.models;
+            for (key in _ref1) {
+              model = _ref1[key];
+              if (data[key] == null) {
+                data[key] = model;
+              }
+            }
+            previous = this.iterated.length ? this.iterated[this.iterated.length - 1].els[0] : this.marker;
+            options = {
+              binders: this.view.options.binders,
+              formatters: this.view.options.formatters,
+              config: {}
+            };
+            _ref2 = this.view.options.config;
+            for (k in _ref2) {
+              v = _ref2[k];
+              options.config[k] = v;
+            }
+            options.config.preloadData = true;
+            template = el.cloneNode(true);
+            view = new Rivets.View(template, data, options);
+            view.bind();
+            this.iterated.push(view);
+            _results.push(this.marker.parentNode.insertBefore(template, previous.nextSibling));
+          } else if (this.iterated[index].models[modelName] !== model) {
+            _results.push(this.iterated[index].update(data));
+          } else {
+            _results.push(void 0);
+          }
+        }
+        return _results;
+      },
+      update: function(models) {
+        var data, key, model, view, _i, _len, _ref, _results;
+        data = {};
+        for (key in models) {
+          model = models[key];
+          if (key !== this.args[0]) {
+            data[key] = model;
+          }
+        }
+        _ref = this.iterated;
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          view = _ref[_i];
+          _results.push(view.update(data));
+        }
+        return _results;
+      }
+    },
+    "class-*": function(el, value) {
+      var elClass;
+      elClass = " " + el.className + " ";
+      if (!value === (elClass.indexOf(" " + this.args[0] + " ") !== -1)) {
+        return el.className = value ? "" + el.className + " " + this.args[0] : elClass.replace(" " + this.args[0] + " ", ' ').trim();
+      }
+    },
+    "*": function(el, value) {
+      if (value) {
+        return el.setAttribute(this.type, value);
+      } else {
+        return el.removeAttribute(this.type);
+      }
+    }
+  };
+
+  Rivets.components = {};
+
+  Rivets.config = {
+    preloadData: true,
+    handler: function(context, ev, binding) {
+      return this.call(context, ev, binding.view.models);
+    }
+  };
+
+  Rivets.formatters = {};
+
+  Rivets.factory = function(exports) {
+    exports._ = Rivets;
+    exports.binders = Rivets.binders;
+    exports.components = Rivets.components;
+    exports.formatters = Rivets.formatters;
+    exports.config = Rivets.config;
+    exports.configure = function(options) {
+      var property, value;
+      if (options == null) {
+        options = {};
+      }
+      for (property in options) {
+        value = options[property];
+        Rivets.config[property] = value;
+      }
+    };
+    return exports.bind = function(el, models, options) {
+      var view;
+      if (models == null) {
+        models = {};
+      }
+      if (options == null) {
+        options = {};
+      }
+      view = new Rivets.View(el, models, options);
+      view.bind();
+      return view;
+    };
+  };
+
+  if (typeof exports === 'object') {
+    Rivets.factory(exports);
+  } else if (typeof define === 'function' && define.amd) {
+    define(['exports'], function(exports) {
+      Rivets.factory(this.rivets = exports);
+      return exports;
+    });
+  } else {
+    Rivets.factory(this.rivets = {});
+  }
+
+}).call(this);
+
+});
+
 require.register("indefinido~observable@es6-modules", function (exports, module) {
 module.exports = require("indefinido~observable@es6-modules/lib/observable.js");
 
@@ -13487,7 +16796,7 @@ scheduler = function(options) {
           return _this.deliver();
         };
         clearTimeout(timeout);
-        return timeout = setTimeout(deliver, 500 || options.wait);
+        return timeout = setTimeout(deliver, 20 || options.wait);
       }
     }
   });
@@ -13517,14 +16826,7 @@ jQuery.extend(scheduler, {
       }
     },
     deliver: function() {
-      var keypath, observer, _ref;
-
-      _ref = this.target.observation.observers;
-      for (keypath in _ref) {
-        observer = _ref[keypath];
-        observer.deliver();
-      }
-      return true;
+      return this.target.observation.deliver();
     },
     setter: function(object, keypath, callback) {
       var current_setter;
@@ -13681,7 +16983,7 @@ jQuery.extend(observable, {
     object.observation.scheduler.destroy();
     delete object.observation;
     delete object.observed;
-    return true;
+    return object;
   },
   methods: {
     subscribe: function(keypath_or_callback, callback) {
@@ -13768,6 +17070,17 @@ observation = {
   },
   remove: function(keypath, callback) {
     return this.observers[keypath].remove(callback);
+  },
+  deliver: function() {
+    var keypath, observer, _ref, _results;
+
+    _ref = this.observers;
+    _results = [];
+    for (keypath in _ref) {
+      observer = _ref[keypath];
+      _results.push(observer.deliver());
+    }
+    return _results;
   },
   mute: function(keypath) {
     this.observers[keypath].close();
@@ -16288,7 +19601,7 @@ descriptors = {
         return this.owner.observed[this.resource + '_id'];
       },
       setter: function(resource_id) {
-        var association_name, current_resource_id, resource, _ref;
+        var association_name, current_resource_id, _ref;
 
         association_name = this.resource.toString();
         if (!resource_id) {
@@ -16298,11 +19611,6 @@ descriptors = {
         }
         current_resource_id = (_ref = this.owner.observed[association_name]) != null ? _ref._id : void 0;
         if (resource_id !== current_resource_id) {
-          resource = model[association_name];
-          if (!resource) {
-            console.warn("subscribers.belongs_to.foreign_key: associated factory not found for model: " + association_name);
-            return resource_id;
-          }
           this.owner.observed[association_name + '_id'] = resource_id;
           this.owner.observed[association_name] = null;
         }
@@ -19147,3315 +22455,6 @@ owl.pluralize = (function() {
 	return pluralize;
 
 })();
-
-});
-
-require.register("component~emitter@1.0.0", function (exports, module) {
-
-/**
- * Expose `Emitter`.
- */
-
-module.exports = Emitter;
-
-/**
- * Initialize a new `Emitter`.
- *
- * @api public
- */
-
-function Emitter(obj) {
-  if (obj) return mixin(obj);
-};
-
-/**
- * Mixin the emitter properties.
- *
- * @param {Object} obj
- * @return {Object}
- * @api private
- */
-
-function mixin(obj) {
-  for (var key in Emitter.prototype) {
-    obj[key] = Emitter.prototype[key];
-  }
-  return obj;
-}
-
-/**
- * Listen on the given `event` with `fn`.
- *
- * @param {String} event
- * @param {Function} fn
- * @return {Emitter}
- * @api public
- */
-
-Emitter.prototype.on = function(event, fn){
-  this._callbacks = this._callbacks || {};
-  (this._callbacks[event] = this._callbacks[event] || [])
-    .push(fn);
-  return this;
-};
-
-/**
- * Adds an `event` listener that will be invoked a single
- * time then automatically removed.
- *
- * @param {String} event
- * @param {Function} fn
- * @return {Emitter}
- * @api public
- */
-
-Emitter.prototype.once = function(event, fn){
-  var self = this;
-  this._callbacks = this._callbacks || {};
-
-  function on() {
-    self.off(event, on);
-    fn.apply(this, arguments);
-  }
-
-  fn._off = on;
-  this.on(event, on);
-  return this;
-};
-
-/**
- * Remove the given callback for `event` or all
- * registered callbacks.
- *
- * @param {String} event
- * @param {Function} fn
- * @return {Emitter}
- * @api public
- */
-
-Emitter.prototype.off =
-Emitter.prototype.removeListener =
-Emitter.prototype.removeAllListeners = function(event, fn){
-  this._callbacks = this._callbacks || {};
-
-  // all
-  if (0 == arguments.length) {
-    this._callbacks = {};
-    return this;
-  }
-
-  // specific event
-  var callbacks = this._callbacks[event];
-  if (!callbacks) return this;
-
-  // remove all handlers
-  if (1 == arguments.length) {
-    delete this._callbacks[event];
-    return this;
-  }
-
-  // remove specific handler
-  var i = callbacks.indexOf(fn._off || fn);
-  if (~i) callbacks.splice(i, 1);
-  return this;
-};
-
-/**
- * Emit `event` with the given args.
- *
- * @param {String} event
- * @param {Mixed} ...
- * @return {Emitter}
- */
-
-Emitter.prototype.emit = function(event){
-  this._callbacks = this._callbacks || {};
-  var args = [].slice.call(arguments, 1)
-    , callbacks = this._callbacks[event];
-
-  if (callbacks) {
-    callbacks = callbacks.slice(0);
-    for (var i = 0, len = callbacks.length; i < len; ++i) {
-      callbacks[i].apply(this, args);
-    }
-  }
-
-  return this;
-};
-
-/**
- * Return array of callbacks for `event`.
- *
- * @param {String} event
- * @return {Array}
- * @api public
- */
-
-Emitter.prototype.listeners = function(event){
-  this._callbacks = this._callbacks || {};
-  return this._callbacks[event] || [];
-};
-
-/**
- * Check if this emitter has `event` handlers.
- *
- * @param {String} event
- * @return {Boolean}
- * @api public
- */
-
-Emitter.prototype.hasListeners = function(event){
-  return !! this.listeners(event).length;
-};
-
-});
-
-require.register("component~event@0.1.0", function (exports, module) {
-
-/**
- * Bind `el` event `type` to `fn`.
- *
- * @param {Element} el
- * @param {String} type
- * @param {Function} fn
- * @param {Boolean} capture
- * @return {Function}
- * @api public
- */
-
-exports.bind = function(el, type, fn, capture){
-  if (el.addEventListener) {
-    el.addEventListener(type, fn, capture);
-  } else {
-    el.attachEvent('on' + type, fn);
-  }
-  return fn;
-};
-
-/**
- * Unbind `el` event `type`'s callback `fn`.
- *
- * @param {Element} el
- * @param {String} type
- * @param {Function} fn
- * @param {Boolean} capture
- * @return {Function}
- * @api public
- */
-
-exports.unbind = function(el, type, fn, capture){
-  if (el.removeEventListener) {
-    el.removeEventListener(type, fn, capture);
-  } else {
-    el.detachEvent('on' + type, fn);
-  }
-  return fn;
-};
-
-});
-
-require.register("component~event@0.1.3", function (exports, module) {
-var bind = window.addEventListener ? 'addEventListener' : 'attachEvent',
-    unbind = window.removeEventListener ? 'removeEventListener' : 'detachEvent',
-    prefix = bind !== 'addEventListener' ? 'on' : '';
-
-/**
- * Bind `el` event `type` to `fn`.
- *
- * @param {Element} el
- * @param {String} type
- * @param {Function} fn
- * @param {Boolean} capture
- * @return {Function}
- * @api public
- */
-
-exports.bind = function(el, type, fn, capture){
-  el[bind](prefix + type, fn, capture || false);
-  return fn;
-};
-
-/**
- * Unbind `el` event `type`'s callback `fn`.
- *
- * @param {Element} el
- * @param {String} type
- * @param {Function} fn
- * @param {Boolean} capture
- * @return {Function}
- * @api public
- */
-
-exports.unbind = function(el, type, fn, capture){
-  el[unbind](prefix + type, fn, capture || false);
-  return fn;
-};
-});
-
-require.register("component~indexof@0.0.1", function (exports, module) {
-
-var indexOf = [].indexOf;
-
-module.exports = function(arr, obj){
-  if (indexOf) return arr.indexOf(obj);
-  for (var i = 0; i < arr.length; ++i) {
-    if (arr[i] === obj) return i;
-  }
-  return -1;
-};
-});
-
-require.register("component~query@0.0.1", function (exports, module) {
-
-function one(selector, el) {
-  return el.querySelector(selector);
-}
-
-exports = module.exports = function(selector, el){
-  el = el || document;
-  return one(selector, el);
-};
-
-exports.all = function(selector, el){
-  el = el || document;
-  return el.querySelectorAll(selector);
-};
-
-exports.engine = function(obj){
-  if (!obj.one) throw new Error('.one callback required');
-  if (!obj.all) throw new Error('.all callback required');
-  one = obj.one;
-  exports.all = obj.all;
-};
-
-});
-
-require.register("component~query@0.0.3", function (exports, module) {
-function one(selector, el) {
-  return el.querySelector(selector);
-}
-
-exports = module.exports = function(selector, el){
-  el = el || document;
-  return one(selector, el);
-};
-
-exports.all = function(selector, el){
-  el = el || document;
-  return el.querySelectorAll(selector);
-};
-
-exports.engine = function(obj){
-  if (!obj.one) throw new Error('.one callback required');
-  if (!obj.all) throw new Error('.all callback required');
-  one = obj.one;
-  exports.all = obj.all;
-  return exports;
-};
-
-});
-
-require.register("component~matches-selector@0.1.2", function (exports, module) {
-/**
- * Module dependencies.
- */
-
-var query = require("component~query@0.0.3");
-
-/**
- * Element prototype.
- */
-
-var proto = Element.prototype;
-
-/**
- * Vendor function.
- */
-
-var vendor = proto.matches
-  || proto.webkitMatchesSelector
-  || proto.mozMatchesSelector
-  || proto.msMatchesSelector
-  || proto.oMatchesSelector;
-
-/**
- * Expose `match()`.
- */
-
-module.exports = match;
-
-/**
- * Match `el` to `selector`.
- *
- * @param {Element} el
- * @param {String} selector
- * @return {Boolean}
- * @api public
- */
-
-function match(el, selector) {
-  if (vendor) return vendor.call(el, selector);
-  var nodes = query.all(selector, el.parentNode);
-  for (var i = 0; i < nodes.length; ++i) {
-    if (nodes[i] == el) return true;
-  }
-  return false;
-}
-
-});
-
-require.register("component~delegate@0.1.0", function (exports, module) {
-
-/**
- * Module dependencies.
- */
-
-var matches = require("component~matches-selector@0.1.2")
-  , event = require("component~event@0.1.3");
-
-/**
- * Delegate event `type` to `selector`
- * and invoke `fn(e)`. A callback function
- * is returned which may be passed to `.unbind()`.
- *
- * @param {Element} el
- * @param {String} selector
- * @param {String} type
- * @param {Function} fn
- * @param {Boolean} capture
- * @return {Function}
- * @api public
- */
-
-exports.bind = function(el, selector, type, fn, capture){
-  return event.bind(el, type, function(e){
-    if (matches(e.target, selector)) fn(e);
-  }, capture);
-  return callback;
-};
-
-/**
- * Unbind event `type`'s callback `fn`.
- *
- * @param {Element} el
- * @param {String} type
- * @param {Function} fn
- * @param {Boolean} capture
- * @api public
- */
-
-exports.unbind = function(el, type, fn, capture){
-  event.unbind(el, type, fn, capture);
-};
-
-});
-
-require.register("component~domify@1.0.0", function (exports, module) {
-
-/**
- * Expose `parse`.
- */
-
-module.exports = parse;
-
-/**
- * Wrap map from jquery.
- */
-
-var map = {
-  option: [1, '<select multiple="multiple">', '</select>'],
-  optgroup: [1, '<select multiple="multiple">', '</select>'],
-  legend: [1, '<fieldset>', '</fieldset>'],
-  thead: [1, '<table>', '</table>'],
-  tbody: [1, '<table>', '</table>'],
-  tfoot: [1, '<table>', '</table>'],
-  colgroup: [1, '<table>', '</table>'],
-  caption: [1, '<table>', '</table>'],
-  tr: [2, '<table><tbody>', '</tbody></table>'],
-  td: [3, '<table><tbody><tr>', '</tr></tbody></table>'],
-  th: [3, '<table><tbody><tr>', '</tr></tbody></table>'],
-  col: [2, '<table><tbody></tbody><colgroup>', '</colgroup></table>'],
-  _default: [0, '', '']
-};
-
-/**
- * Parse `html` and return the children.
- *
- * @param {String} html
- * @return {Array}
- * @api private
- */
-
-function parse(html) {
-  if ('string' != typeof html) throw new TypeError('String expected');
-
-  // tag name
-  var m = /<([\w:]+)/.exec(html);
-  if (!m) throw new Error('No elements were generated.');
-  var tag = m[1];
-
-  // body support
-  if (tag == 'body') {
-    var el = document.createElement('html');
-    el.innerHTML = html;
-    return el.removeChild(el.lastChild);
-  }
-
-  // wrap map
-  var wrap = map[tag] || map._default;
-  var depth = wrap[0];
-  var prefix = wrap[1];
-  var suffix = wrap[2];
-  var el = document.createElement('div');
-  el.innerHTML = prefix + html + suffix;
-  while (depth--) el = el.lastChild;
-
-  var els = el.children;
-  if (1 == els.length) {
-    return el.removeChild(els[0]);
-  }
-
-  var fragment = document.createDocumentFragment();
-  while (els.length) {
-    fragment.appendChild(el.removeChild(els[0]));
-  }
-
-  return fragment;
-}
-
-});
-
-require.register("component~domify@1.2.2", function (exports, module) {
-
-/**
- * Expose `parse`.
- */
-
-module.exports = parse;
-
-/**
- * Wrap map from jquery.
- */
-
-var map = {
-  legend: [1, '<fieldset>', '</fieldset>'],
-  tr: [2, '<table><tbody>', '</tbody></table>'],
-  col: [2, '<table><tbody></tbody><colgroup>', '</colgroup></table>'],
-  _default: [0, '', '']
-};
-
-map.td =
-map.th = [3, '<table><tbody><tr>', '</tr></tbody></table>'];
-
-map.option =
-map.optgroup = [1, '<select multiple="multiple">', '</select>'];
-
-map.thead =
-map.tbody =
-map.colgroup =
-map.caption =
-map.tfoot = [1, '<table>', '</table>'];
-
-map.text =
-map.circle =
-map.ellipse =
-map.line =
-map.path =
-map.polygon =
-map.polyline =
-map.rect = [1, '<svg xmlns="http://www.w3.org/2000/svg" version="1.1">','</svg>'];
-
-/**
- * Parse `html` and return the children.
- *
- * @param {String} html
- * @return {Array}
- * @api private
- */
-
-function parse(html) {
-  if ('string' != typeof html) throw new TypeError('String expected');
-  
-  // tag name
-  var m = /<([\w:]+)/.exec(html);
-  if (!m) return document.createTextNode(html);
-
-  html = html.replace(/^\s+|\s+$/g, ''); // Remove leading/trailing whitespace
-
-  var tag = m[1];
-
-  // body support
-  if (tag == 'body') {
-    var el = document.createElement('html');
-    el.innerHTML = html;
-    return el.removeChild(el.lastChild);
-  }
-
-  // wrap map
-  var wrap = map[tag] || map._default;
-  var depth = wrap[0];
-  var prefix = wrap[1];
-  var suffix = wrap[2];
-  var el = document.createElement('div');
-  el.innerHTML = prefix + html + suffix;
-  while (depth--) el = el.lastChild;
-
-  // one element
-  if (el.firstChild == el.lastChild) {
-    return el.removeChild(el.firstChild);
-  }
-
-  // several elements
-  var fragment = document.createDocumentFragment();
-  while (el.firstChild) {
-    fragment.appendChild(el.removeChild(el.firstChild));
-  }
-
-  return fragment;
-}
-
-});
-
-require.register("component~classes@1.1.2", function (exports, module) {
-
-/**
- * Module dependencies.
- */
-
-var index = require("component~indexof@0.0.1");
-
-/**
- * Whitespace regexp.
- */
-
-var re = /\s+/;
-
-/**
- * toString reference.
- */
-
-var toString = Object.prototype.toString;
-
-/**
- * Wrap `el` in a `ClassList`.
- *
- * @param {Element} el
- * @return {ClassList}
- * @api public
- */
-
-module.exports = function(el){
-  return new ClassList(el);
-};
-
-/**
- * Initialize a new ClassList for `el`.
- *
- * @param {Element} el
- * @api private
- */
-
-function ClassList(el) {
-  this.el = el;
-  this.list = el.classList;
-}
-
-/**
- * Add class `name` if not already present.
- *
- * @param {String} name
- * @return {ClassList}
- * @api public
- */
-
-ClassList.prototype.add = function(name){
-  // classList
-  if (this.list) {
-    this.list.add(name);
-    return this;
-  }
-
-  // fallback
-  var arr = this.array();
-  var i = index(arr, name);
-  if (!~i) arr.push(name);
-  this.el.className = arr.join(' ');
-  return this;
-};
-
-/**
- * Remove class `name` when present, or
- * pass a regular expression to remove
- * any which match.
- *
- * @param {String|RegExp} name
- * @return {ClassList}
- * @api public
- */
-
-ClassList.prototype.remove = function(name){
-  if ('[object RegExp]' == toString.call(name)) {
-    return this.removeMatching(name);
-  }
-
-  // classList
-  if (this.list) {
-    this.list.remove(name);
-    return this;
-  }
-
-  // fallback
-  var arr = this.array();
-  var i = index(arr, name);
-  if (~i) arr.splice(i, 1);
-  this.el.className = arr.join(' ');
-  return this;
-};
-
-/**
- * Remove all classes matching `re`.
- *
- * @param {RegExp} re
- * @return {ClassList}
- * @api private
- */
-
-ClassList.prototype.removeMatching = function(re){
-  var arr = this.array();
-  for (var i = 0; i < arr.length; i++) {
-    if (re.test(arr[i])) {
-      this.remove(arr[i]);
-    }
-  }
-  return this;
-};
-
-/**
- * Toggle class `name`.
- *
- * @param {String} name
- * @return {ClassList}
- * @api public
- */
-
-ClassList.prototype.toggle = function(name){
-  // classList
-  if (this.list) {
-    this.list.toggle(name);
-    return this;
-  }
-
-  // fallback
-  if (this.has(name)) {
-    this.remove(name);
-  } else {
-    this.add(name);
-  }
-  return this;
-};
-
-/**
- * Return an array of classes.
- *
- * @return {Array}
- * @api public
- */
-
-ClassList.prototype.array = function(){
-  var str = this.el.className.replace(/^\s+|\s+$/g, '');
-  var arr = str.split(re);
-  if ('' === arr[0]) arr.shift();
-  return arr;
-};
-
-/**
- * Check if class `name` is present.
- *
- * @param {String} name
- * @return {ClassList}
- * @api public
- */
-
-ClassList.prototype.has =
-ClassList.prototype.contains = function(name){
-  return this.list
-    ? this.list.contains(name)
-    : !! ~index(this.array(), name);
-};
-
-});
-
-require.register("component~classes@1.2.1", function (exports, module) {
-/**
- * Module dependencies.
- */
-
-var index = require("component~indexof@0.0.1");
-
-/**
- * Whitespace regexp.
- */
-
-var re = /\s+/;
-
-/**
- * toString reference.
- */
-
-var toString = Object.prototype.toString;
-
-/**
- * Wrap `el` in a `ClassList`.
- *
- * @param {Element} el
- * @return {ClassList}
- * @api public
- */
-
-module.exports = function(el){
-  return new ClassList(el);
-};
-
-/**
- * Initialize a new ClassList for `el`.
- *
- * @param {Element} el
- * @api private
- */
-
-function ClassList(el) {
-  if (!el) throw new Error('A DOM element reference is required');
-  this.el = el;
-  this.list = el.classList;
-}
-
-/**
- * Add class `name` if not already present.
- *
- * @param {String} name
- * @return {ClassList}
- * @api public
- */
-
-ClassList.prototype.add = function(name){
-  // classList
-  if (this.list) {
-    this.list.add(name);
-    return this;
-  }
-
-  // fallback
-  var arr = this.array();
-  var i = index(arr, name);
-  if (!~i) arr.push(name);
-  this.el.className = arr.join(' ');
-  return this;
-};
-
-/**
- * Remove class `name` when present, or
- * pass a regular expression to remove
- * any which match.
- *
- * @param {String|RegExp} name
- * @return {ClassList}
- * @api public
- */
-
-ClassList.prototype.remove = function(name){
-  if ('[object RegExp]' == toString.call(name)) {
-    return this.removeMatching(name);
-  }
-
-  // classList
-  if (this.list) {
-    this.list.remove(name);
-    return this;
-  }
-
-  // fallback
-  var arr = this.array();
-  var i = index(arr, name);
-  if (~i) arr.splice(i, 1);
-  this.el.className = arr.join(' ');
-  return this;
-};
-
-/**
- * Remove all classes matching `re`.
- *
- * @param {RegExp} re
- * @return {ClassList}
- * @api private
- */
-
-ClassList.prototype.removeMatching = function(re){
-  var arr = this.array();
-  for (var i = 0; i < arr.length; i++) {
-    if (re.test(arr[i])) {
-      this.remove(arr[i]);
-    }
-  }
-  return this;
-};
-
-/**
- * Toggle class `name`, can force state via `force`.
- *
- * For browsers that support classList, but do not support `force` yet,
- * the mistake will be detected and corrected.
- *
- * @param {String} name
- * @param {Boolean} force
- * @return {ClassList}
- * @api public
- */
-
-ClassList.prototype.toggle = function(name, force){
-  // classList
-  if (this.list) {
-    if ("undefined" !== typeof force) {
-      if (force !== this.list.toggle(name, force)) {
-        this.list.toggle(name); // toggle again to correct
-      }
-    } else {
-      this.list.toggle(name);
-    }
-    return this;
-  }
-
-  // fallback
-  if ("undefined" !== typeof force) {
-    if (!force) {
-      this.remove(name);
-    } else {
-      this.add(name);
-    }
-  } else {
-    if (this.has(name)) {
-      this.remove(name);
-    } else {
-      this.add(name);
-    }
-  }
-
-  return this;
-};
-
-/**
- * Return an array of classes.
- *
- * @return {Array}
- * @api public
- */
-
-ClassList.prototype.array = function(){
-  var str = this.el.className.replace(/^\s+|\s+$/g, '');
-  var arr = str.split(re);
-  if ('' === arr[0]) arr.shift();
-  return arr;
-};
-
-/**
- * Check if class `name` is present.
- *
- * @param {String} name
- * @return {ClassList}
- * @api public
- */
-
-ClassList.prototype.has =
-ClassList.prototype.contains = function(name){
-  return this.list
-    ? this.list.contains(name)
-    : !! ~index(this.array(), name);
-};
-
-});
-
-require.register("component~css@0.0.2", function (exports, module) {
-
-/**
- * Properties to ignore appending "px".
- */
-
-var ignore = {
-  columnCount: true,
-  fillOpacity: true,
-  fontWeight: true,
-  lineHeight: true,
-  opacity: true,
-  orphans: true,
-  widows: true,
-  zIndex: true,
-  zoom: true
-};
-
-/**
- * Set `el` css values.
- *
- * @param {Element} el
- * @param {Object} obj
- * @return {Element}
- * @api public
- */
-
-module.exports = function(el, obj){
-  for (var key in obj) {
-    var val = obj[key];
-    if ('number' == typeof val && !ignore[key]) val += 'px';
-    el.style[key] = val;
-  }
-  return el;
-};
-
-});
-
-require.register("component~sort@0.0.3", function (exports, module) {
-
-/**
- * Expose `sort`.
- */
-
-exports = module.exports = sort;
-
-/**
- * Sort `el`'s children with the given `fn(a, b)`.
- *
- * @param {Element} el
- * @param {Function} fn
- * @api public
- */
-
-function sort(el, fn) {
-  var arr = [].slice.call(el.children).sort(fn);
-  var frag = document.createDocumentFragment();
-  for (var i = 0; i < arr.length; i++) {
-    frag.appendChild(arr[i]);
-  }
-  el.appendChild(frag);
-};
-
-/**
- * Sort descending.
- *
- * @param {Element} el
- * @param {Function} fn
- * @api public
- */
-
-exports.desc = function(el, fn){
-  sort(el, function(a, b){
-    return ~fn(a, b) + 1;
-  });
-};
-
-/**
- * Sort ascending.
- */
-
-exports.asc = sort;
-
-});
-
-require.register("component~value@1.1.0", function (exports, module) {
-
-/**
- * Module dependencies.
- */
-
-var typeOf = require("component~type@1.0.0");
-
-/**
- * Set or get `el`'s' value.
- *
- * @param {Element} el
- * @param {Mixed} val
- * @return {Mixed}
- * @api public
- */
-
-module.exports = function(el, val){
-  if (2 == arguments.length) return set(el, val);
-  return get(el);
-};
-
-/**
- * Get `el`'s value.
- */
-
-function get(el) {
-  switch (type(el)) {
-    case 'checkbox':
-    case 'radio':
-      if (el.checked) {
-        var attr = el.getAttribute('value');
-        return null == attr ? true : attr;
-      } else {
-        return false;
-      }
-    case 'radiogroup':
-      for (var i = 0, radio; radio = el[i]; i++) {
-        if (radio.checked) return radio.value;
-      }
-      break;
-    case 'select':
-      for (var i = 0, option; option = el.options[i]; i++) {
-        if (option.selected) return option.value;
-      }
-      break;
-    default:
-      return el.value;
-  }
-}
-
-/**
- * Set `el`'s value.
- */
-
-function set(el, val) {
-  switch (type(el)) {
-    case 'checkbox':
-    case 'radio':
-      if (val) {
-        el.checked = true;
-      } else {
-        el.checked = false;
-      }
-      break;
-    case 'radiogroup':
-      for (var i = 0, radio; radio = el[i]; i++) {
-        radio.checked = radio.value === val;
-      }
-      break;
-    case 'select':
-      for (var i = 0, option; option = el.options[i]; i++) {
-        option.selected = option.value === val;
-      }
-      break;
-    default:
-      el.value = val;
-  }
-}
-
-/**
- * Element type.
- */
-
-function type(el) {
-  var group = 'array' == typeOf(el) || 'object' == typeOf(el);
-  if (group) el = el[0];
-  var name = el.nodeName.toLowerCase();
-  var type = el.getAttribute('type');
-
-  if (group && type && 'radio' == type.toLowerCase()) return 'radiogroup';
-  if ('input' == name && type && 'checkbox' == type.toLowerCase()) return 'checkbox';
-  if ('input' == name && type && 'radio' == type.toLowerCase()) return 'radio';
-  if ('select' == name) return 'select';
-  return name;
-}
-
-});
-
-require.register("component~dom@0.7.1", function (exports, module) {
-/**
- * Module dependencies.
- */
-
-var delegate = require("component~delegate@0.1.0");
-var classes = require("component~classes@1.1.2");
-var indexof = require("component~indexof@0.0.1");
-var domify = require("component~domify@1.0.0");
-var events = require("component~event@0.1.0");
-var value = require("component~value@1.1.0");
-var query = require("component~query@0.0.1");
-var type = require("component~type@1.0.0");
-var css = require("component~css@0.0.2");
-
-/**
- * Attributes supported.
- */
-
-var attrs = [
-  'id',
-  'src',
-  'rel',
-  'cols',
-  'rows',
-  'name',
-  'href',
-  'title',
-  'style',
-  'width',
-  'height',
-  'tabindex',
-  'placeholder'
-];
-
-/**
- * Expose `dom()`.
- */
-
-exports = module.exports = dom;
-
-/**
- * Expose supported attrs.
- */
-
-exports.attrs = attrs;
-
-/**
- * Return a dom `List` for the given
- * `html`, selector, or element.
- *
- * @param {String|Element|List}
- * @return {List}
- * @api public
- */
-
-function dom(selector, context) {
-  // array
-  if (Array.isArray(selector)) {
-    return new List(selector);
-  }
-
-  // List
-  if (selector instanceof List) {
-    return selector;
-  }
-
-  // node
-  if (selector.nodeName) {
-    return new List([selector]);
-  }
-
-  if ('string' != typeof selector) {
-    throw new TypeError('invalid selector');
-  }
-
-  // html
-  if ('<' == selector.charAt(0)) {
-    return new List([domify(selector)], selector);
-  }
-
-  // selector
-  var ctx = context
-    ? (context.els ? context.els[0] : context)
-    : document;
-
-  return new List(query.all(selector, ctx), selector);
-}
-
-/**
- * Expose `List` constructor.
- */
-
-exports.List = List;
-
-/**
- * Initialize a new `List` with the
- * given array-ish of `els` and `selector`
- * string.
- *
- * @param {Mixed} els
- * @param {String} selector
- * @api private
- */
-
-function List(els, selector) {
-  this.els = els || [];
-  this.selector = selector;
-}
-
-/**
- * Enumerable iterator.
- */
-
-List.prototype.__iterate__ = function(){
-  var self = this;
-  return {
-    length: function(){ return self.els.length },
-    get: function(i){ return new List([self.els[i]]) }
-  }
-};
-
-/**
- * Remove elements from the DOM.
- *
- * @api public
- */
-
-List.prototype.remove = function(){
-  for (var i = 0; i < this.els.length; i++) {
-    var el = this.els[i];
-    var parent = el.parentNode;
-    if (parent) parent.removeChild(el);
-  }
-};
-
-/**
- * Set attribute `name` to `val`, or get attr `name`.
- *
- * @param {String} name
- * @param {String} [val]
- * @return {String|List} self
- * @api public
- */
-
-List.prototype.attr = function(name, val){
-  // get
-  if (1 == arguments.length) {
-    return this.els[0] && this.els[0].getAttribute(name);
-  }
-
-  // remove
-  if (null == val) {
-    return this.removeAttr(name);
-  }
-
-  // set
-  return this.forEach(function(el){
-    el.setAttribute(name, val);
-  });
-};
-
-/**
- * Remove attribute `name`.
- *
- * @param {String} name
- * @return {List} self
- * @api public
- */
-
-List.prototype.removeAttr = function(name){
-  return this.forEach(function(el){
-    el.removeAttribute(name);
-  });
-};
-
-/**
- * Set property `name` to `val`, or get property `name`.
- *
- * @param {String} name
- * @param {String} [val]
- * @return {Object|List} self
- * @api public
- */
-
-List.prototype.prop = function(name, val){
-  if (1 == arguments.length) {
-    return this.els[0] && this.els[0][name];
-  }
-
-  return this.forEach(function(el){
-    el[name] = val;
-  });
-};
-
-/**
- * Get the first element's value or set selected
- * element values to `val`.
- *
- * @param {Mixed} [val]
- * @return {Mixed}
- * @api public
- */
-
-List.prototype.val =
-List.prototype.value = function(val){
-  if (0 == arguments.length) {
-    return this.els[0]
-      ? value(this.els[0])
-      : undefined;
-  }
-
-  return this.forEach(function(el){
-    value(el, val);
-  });
-};
-
-/**
- * Return a cloned `List` with all elements cloned.
- *
- * @return {List}
- * @api public
- */
-
-List.prototype.clone = function(){
-  var arr = [];
-  for (var i = 0, len = this.els.length; i < len; ++i) {
-    arr.push(this.els[i].cloneNode(true));
-  }
-  return new List(arr);
-};
-
-/**
- * Prepend `val`.
- *
- * @param {String|Element|List} val
- * @return {List} new list
- * @api public
- */
-
-List.prototype.prepend = function(val){
-  var el = this.els[0];
-  if (!el) return this;
-  val = dom(val);
-  for (var i = 0; i < val.els.length; ++i) {
-    if (el.children.length) {
-      el.insertBefore(val.els[i], el.firstChild);
-    } else {
-      el.appendChild(val.els[i]);
-    }
-  }
-  return val;
-};
-
-/**
- * Append `val`.
- *
- * @param {String|Element|List} val
- * @return {List} new list
- * @api public
- */
-
-List.prototype.append = function(val){
-  var el = this.els[0];
-  if (!el) return this;
-  val = dom(val);
-  for (var i = 0; i < val.els.length; ++i) {
-    el.appendChild(val.els[i]);
-  }
-  return val;
-};
-
-/**
- * Append self's `el` to `val`
- *
- * @param {String|Element|List} val
- * @return {List} self
- * @api public
- */
-
-List.prototype.appendTo = function(val){
-  dom(val).append(this);
-  return this;
-};
-
-/**
- * Return a `List` containing the element at `i`.
- *
- * @param {Number} i
- * @return {List}
- * @api public
- */
-
-List.prototype.at = function(i){
-  return new List([this.els[i]], this.selector);
-};
-
-/**
- * Return a `List` containing the first element.
- *
- * @param {Number} i
- * @return {List}
- * @api public
- */
-
-List.prototype.first = function(){
-  return new List([this.els[0]], this.selector);
-};
-
-/**
- * Return a `List` containing the last element.
- *
- * @param {Number} i
- * @return {List}
- * @api public
- */
-
-List.prototype.last = function(){
-  return new List([this.els[this.els.length - 1]], this.selector);
-};
-
-/**
- * Return an `Element` at `i`.
- *
- * @param {Number} i
- * @return {Element}
- * @api public
- */
-
-List.prototype.get = function(i){
-  return this.els[i || 0];
-};
-
-/**
- * Return list length.
- *
- * @return {Number}
- * @api public
- */
-
-List.prototype.length = function(){
-  return this.els.length;
-};
-
-/**
- * Return element text.
- *
- * @param {String} str
- * @return {String|List}
- * @api public
- */
-
-List.prototype.text = function(str){
-  // TODO: real impl
-  if (1 == arguments.length) {
-    this.forEach(function(el){
-      el.textContent = str;
-    });
-    return this;
-  }
-
-  var str = '';
-  for (var i = 0; i < this.els.length; ++i) {
-    str += this.els[i].textContent;
-  }
-  return str;
-};
-
-/**
- * Return element html.
- *
- * @return {String} html
- * @api public
- */
-
-List.prototype.html = function(html){
-  if (1 == arguments.length) {
-    this.forEach(function(el){
-      el.innerHTML = html;
-    });
-  }
-  // TODO: real impl
-  return this.els[0] && this.els[0].innerHTML;
-};
-
-/**
- * Bind to `event` and invoke `fn(e)`. When
- * a `selector` is given then events are delegated.
- *
- * @param {String} event
- * @param {String} [selector]
- * @param {Function} fn
- * @param {Boolean} capture
- * @return {List}
- * @api public
- */
-
-List.prototype.on = function(event, selector, fn, capture){
-  if ('string' == typeof selector) {
-    for (var i = 0; i < this.els.length; ++i) {
-      fn._delegate = delegate.bind(this.els[i], selector, event, fn, capture);
-    }
-    return this;
-  }
-
-  capture = fn;
-  fn = selector;
-
-  for (var i = 0; i < this.els.length; ++i) {
-    events.bind(this.els[i], event, fn, capture);
-  }
-
-  return this;
-};
-
-/**
- * Unbind to `event` and invoke `fn(e)`. When
- * a `selector` is given then delegated event
- * handlers are unbound.
- *
- * @param {String} event
- * @param {String} [selector]
- * @param {Function} fn
- * @param {Boolean} capture
- * @return {List}
- * @api public
- */
-
-List.prototype.off = function(event, selector, fn, capture){
-  if ('string' == typeof selector) {
-    for (var i = 0; i < this.els.length; ++i) {
-      // TODO: add selector support back
-      delegate.unbind(this.els[i], event, fn._delegate, capture);
-    }
-    return this;
-  }
-
-  capture = fn;
-  fn = selector;
-
-  for (var i = 0; i < this.els.length; ++i) {
-    events.unbind(this.els[i], event, fn, capture);
-  }
-  return this;
-};
-
-/**
- * Iterate elements and invoke `fn(list, i)`.
- *
- * @param {Function} fn
- * @return {List} self
- * @api public
- */
-
-List.prototype.each = function(fn){
-  for (var i = 0; i < this.els.length; ++i) {
-    fn(new List([this.els[i]], this.selector), i);
-  }
-  return this;
-};
-
-/**
- * Iterate elements and invoke `fn(el, i)`.
- *
- * @param {Function} fn
- * @return {List} self
- * @api public
- */
-
-List.prototype.forEach = function(fn){
-  for (var i = 0; i < this.els.length; ++i) {
-    fn(this.els[i], i);
-  }
-  return this;
-};
-
-/**
- * Map elements invoking `fn(list, i)`.
- *
- * @param {Function} fn
- * @return {Array}
- * @api public
- */
-
-List.prototype.map = function(fn){
-  var arr = [];
-  for (var i = 0; i < this.els.length; ++i) {
-    arr.push(fn(new List([this.els[i]], this.selector), i));
-  }
-  return arr;
-};
-
-/**
- * Filter elements invoking `fn(list, i)`, returning
- * a new `List` of elements when a truthy value is returned.
- *
- * @param {Function} fn
- * @return {List}
- * @api public
- */
-
-List.prototype.select =
-List.prototype.filter = function(fn){
-  var el;
-  var list = new List([], this.selector);
-  for (var i = 0; i < this.els.length; ++i) {
-    el = this.els[i];
-    if (fn(new List([el], this.selector), i)) list.els.push(el);
-  }
-  return list;
-};
-
-/**
- * Filter elements invoking `fn(list, i)`, returning
- * a new `List` of elements when a falsey value is returned.
- *
- * @param {Function} fn
- * @return {List}
- * @api public
- */
-
-List.prototype.reject = function(fn){
-  var el;
-  var list = new List([], this.selector);
-  for (var i = 0; i < this.els.length; ++i) {
-    el = this.els[i];
-    if (!fn(new List([el], this.selector), i)) list.els.push(el);
-  }
-  return list;
-};
-
-/**
- * Add the given class `name`.
- *
- * @param {String} name
- * @return {List} self
- * @api public
- */
-
-List.prototype.addClass = function(name){
-  var el;
-  for (var i = 0; i < this.els.length; ++i) {
-    el = this.els[i];
-    el._classes = el._classes || classes(el);
-    el._classes.add(name);
-  }
-  return this;
-};
-
-/**
- * Remove the given class `name`.
- *
- * @param {String|RegExp} name
- * @return {List} self
- * @api public
- */
-
-List.prototype.removeClass = function(name){
-  var el;
-
-  if ('regexp' == type(name)) {
-    for (var i = 0; i < this.els.length; ++i) {
-      el = this.els[i];
-      el._classes = el._classes || classes(el);
-      var arr = el._classes.array();
-      for (var j = 0; j < arr.length; j++) {
-        if (name.test(arr[j])) {
-          el._classes.remove(arr[j]);
-        }
-      }
-    }
-    return this;
-  }
-
-  for (var i = 0; i < this.els.length; ++i) {
-    el = this.els[i];
-    el._classes = el._classes || classes(el);
-    el._classes.remove(name);
-  }
-
-  return this;
-};
-
-/**
- * Toggle the given class `name`,
- * optionally a `bool` may be given
- * to indicate that the class should
- * be added when truthy.
- *
- * @param {String} name
- * @param {Boolean} bool
- * @return {List} self
- * @api public
- */
-
-List.prototype.toggleClass = function(name, bool){
-  var el;
-  var fn = 'toggle';
-
-  // toggle with boolean
-  if (2 == arguments.length) {
-    fn = bool ? 'add' : 'remove';
-  }
-
-  for (var i = 0; i < this.els.length; ++i) {
-    el = this.els[i];
-    el._classes = el._classes || classes(el);
-    el._classes[fn](name);
-  }
-
-  return this;
-};
-
-/**
- * Check if the given class `name` is present.
- *
- * @param {String} name
- * @return {Boolean}
- * @api public
- */
-
-List.prototype.hasClass = function(name){
-  var el;
-  for (var i = 0; i < this.els.length; ++i) {
-    el = this.els[i];
-    el._classes = el._classes || classes(el);
-    if (el._classes.has(name)) return true;
-  }
-  return false;
-};
-
-/**
- * Set CSS `prop` to `val` or get `prop` value.
- * Also accepts an object (`prop`: `val`)
- *
- * @param {String} prop
- * @param {Mixed} val
- * @return {List|String}
- * @api public
- */
-
-List.prototype.css = function(prop, val){
-  if (2 == arguments.length) {
-    var obj = {};
-    obj[prop] = val;
-    return this.setStyle(obj);
-  }
-
-  if ('object' == type(prop)) {
-    return this.setStyle(prop);
-  }
-
-  return this.getStyle(prop);
-};
-
-/**
- * Set CSS `props`.
- *
- * @param {Object} props
- * @return {List} self
- * @api private
- */
-
-List.prototype.setStyle = function(props){
-  for (var i = 0; i < this.els.length; ++i) {
-    css(this.els[i], props);
-  }
-  return this;
-};
-
-/**
- * Get CSS `prop` value.
- *
- * @param {String} prop
- * @return {String}
- * @api private
- */
-
-List.prototype.getStyle = function(prop){
-  var el = this.els[0];
-  if (el) return el.style[prop];
-};
-
-/**
- * Find children matching the given `selector`.
- *
- * @param {String} selector
- * @return {List}
- * @api public
- */
-
-List.prototype.find = function(selector){
-  return dom(selector, this);
-};
-
-/**
- * Empty the dom list
- *
- * @return self
- * @api public
- */
-
-List.prototype.empty = function(){
-  var elem, el;
-
-  for (var i = 0; i < this.els.length; ++i) {
-    el = this.els[i];
-    while (el.firstChild) {
-      el.removeChild(el.firstChild);
-    }
-  }
-
-  return this;
-}
-
-/**
- * Attribute accessors.
- */
-
-attrs.forEach(function(name){
-  List.prototype[name] = function(val){
-    if (0 == arguments.length) return this.attr(name);
-    return this.attr(name, val);
-  };
-});
-
-
-});
-
-require.register("component~overlay@0.1.1", function (exports, module) {
-
-/**
- * Module dependencies.
- */
-
-var Emitter = require("component~emitter@1.0.0");
-var tmpl = require("component~overlay@0.1.1/template.js");
-var o = require("component~dom@0.7.1");
-
-/**
- * Expose `overlay()`.
- */
-
-exports = module.exports = overlay;
-
-/**
- * Expose `Overlay`.
- */
-
-exports.Overlay = Overlay;
-
-/**
- * Return a new `Overlay` with the given `options`.
- *
- * @param {Object|Element} options
- * @return {Overlay}
- * @api public
- */
-
-function overlay(options){
-  options = options || {};
-
-  // element
-  if (options.nodeName) {
-    options = { target: options };
-  }
-
-  return new Overlay(options);
-};
-
-/**
- * Initialize a new `Overlay`.
- *
- * @param {Object} options
- * @api public
- */
-
-function Overlay(options) {
-  Emitter.call(this);
-  options = options || {};
-  this.target = options.target || 'body';
-  this.closable = options.closable;
-  this.el = o(tmpl);
-  this.el.appendTo(this.target);
-  if (this.closable) this.el.on('click', this.hide.bind(this));
-}
-
-/**
- * Mixin emitter.
- */
-
-Emitter(Overlay.prototype);
-
-/**
- * Show the overlay.
- *
- * Emits "show" event.
- *
- * @return {Overlay}
- * @api public
- */
-
-Overlay.prototype.show = function(){
-  this.emit('show');
-  this.el.removeClass('hide');
-  return this;
-};
-
-/**
- * Hide the overlay.
- *
- * Emits "hide" event.
- *
- * @return {Overlay}
- * @api public
- */
-
-Overlay.prototype.hide = function(){
-  this.emit('hide');
-  return this.remove();
-};
-
-/**
- * Hide the overlay without emitting "hide".
- *
- * Emits "close" event.
- *
- * @return {Overlay}
- * @api public
- */
-
-Overlay.prototype.remove = function(){
-  var self = this;
-  this.emit('close');
-  this.el.addClass('hide');
-  setTimeout(function(){
-    self.el.remove();
-  }, 2000);
-  return this;
-};
-
-
-});
-
-require.register("component~overlay@0.1.1/template.js", function (exports, module) {
-module.exports = '<div class="overlay hide"></div>\n';
-});
-
-require.register("component~dialog@0.2.0", function (exports, module) {
-
-/**
- * Module dependencies.
- */
-
-var Emitter = require("component~emitter@1.0.0")
-  , overlay = require("component~overlay@0.1.1")
-  , domify = require("component~domify@1.2.2")
-  , events = require("component~event@0.1.3")
-  , classes = require("component~classes@1.2.1")
-  , query = require("component~query@0.0.3");
-
-/**
- * Active dialog.
- */
-
-var active;
-
-/**
- * Expose `dialog()`.
- */
-
-exports = module.exports = dialog;
-
-/**
- * Expose `Dialog`.
- */
-
-exports.Dialog = Dialog;
-
-/**
- * Return a new `Dialog` with the given
- * (optional) `title` and `msg`.
- *
- * @param {String} title or msg
- * @param {String} msg
- * @return {Dialog}
- * @api public
- */
-
-function dialog(title, msg){
-  switch (arguments.length) {
-    case 2:
-      return new Dialog({ title: title, message: msg });
-    case 1:
-      return new Dialog({ message: title });
-  }
-};
-
-/**
- * Initialize a new `Dialog`.
- *
- * Options:
- *
- *    - `title` dialog title
- *    - `message` a message to display
- *
- * Emits:
- *
- *    - `show` when visible
- *    - `hide` when hidden
- *
- * @param {Object} options
- * @api public
- */
-
-function Dialog(options) {
-  Emitter.call(this);
-  options = options || {};
-  this.template = require("component~dialog@0.2.0/template.html");
-  this.el = domify(this.template);
-  this._classes = classes(this.el);
-  this.render(options);
-  if (active && !active.hiding) active.hide();
-  if (exports.effect) this.effect(exports.effect);
-  this.on('escape', this.hide.bind(this));
-  active = this;
-};
-
-/**
- * Inherit from `Emitter.prototype`.
- */
-
-Dialog.prototype = new Emitter;
-
-/**
- * Render with the given `options`.
- *
- * @param {Object} options
- * @api public
- */
-
-Dialog.prototype.render = function(options){
-  var self = this
-    , el = self.el
-    , title = options.title
-    , titleEl = query('.title', el)
-    , pEl = query('p', el)
-    , msg = options.message;
-
-  events.bind(query('.close', el), 'click', function (ev) {
-    ev.preventDefault();
-    self.emit('close');
-    self.hide();
-  });
-
-  if (titleEl) {
-    if (!title) {
-      titleEl.parentNode.removeChild(titleEl);
-    } else {
-      titleEl.textContent = title;
-    }
-  }
-
-  // message
-  if ('string' == typeof msg) {
-    pEl.textContent = msg;
-  } else if (msg) {
-    pEl.parentNode.insertBefore(msg.el || msg, pEl);
-    pEl.parentNode.removeChild(pEl);
-  }
-};
-
-/**
- * Enable the dialog close link.
- *
- * @return {Dialog} for chaining
- * @api public
- */
-
-Dialog.prototype.closable = function(){
-  return this.addClass('closable');
-};
-
-/**
- * Add class `name`.
- *
- * @param {String} name
- * @return {Dialog}
- * @api public
- */
-
-Dialog.prototype.addClass = function(name){
-  this._classes.add(name);
-  return this;
-};
-
-/**
- * Set the effect to `type`.
- *
- * @param {String} type
- * @return {Dialog} for chaining
- * @api public
- */
-
-Dialog.prototype.effect = function(type){
-  this._effect = type;
-  this.addClass(type);
-  return this;
-};
-
-/**
- * Make it modal!
- *
- * @return {Dialog} for chaining
- * @api public
- */
-
-Dialog.prototype.modal = function(){
-  this._overlay = overlay();
-  return this;
-};
-
-/**
- * Add an overlay.
- *
- * @return {Dialog} for chaining
- * @api public
- */
-
-Dialog.prototype.overlay = function(opts){
-  var self = this;
-  opts = opts || { closable: true };
-  var o = overlay(opts);
-  o.on('hide', function(){
-    self._overlay = null;
-    self.hide();
-  });
-  this._overlay = o;
-  return this;
-};
-
-/**
- * Close the dialog when the escape key is pressed.
- *
- * @api public
- */
-
-Dialog.prototype.escapable = function(){
-  var self = this;
-  // Save reference to remove listener later
-  self._escKeyCallback = self._escKeyCallback || function (e) {
-    e.which = e.which || e.keyCode;
-    if (27 !== e.which) return;
-    self.emit('escape');
-  };
-  events.bind(document, 'keydown', self._escKeyCallback);
-  return this;
-};
-
-/**
- * Fixed dialogs position can be manipulated through CSS.
- *
- * @return {Dialog} for chaining
- * @api public
- */
-
-Dialog.prototype.fixed = function(){
-  this._fixed = true;
-  return this;
-}
-
-/**
- * Show the dialog.
- *
- * Emits "show" event.
- *
- * @return {Dialog} for chaining
- * @api public
- */
-
-Dialog.prototype.show = function(){
-  var overlay = this._overlay;
-  var self = this;
-
-  // overlay
-  if (overlay) {
-    overlay.show();
-    this._classes.add('modal');
-  }
-
-  // escape
-  if (!overlay || overlay.closable) this.escapable();
-
-  // position
-  document.body.appendChild(this.el);
-  if (!this._fixed) {
-    setTimeout(function() {
-      self.el.style.marginLeft = -(self.el.offsetWidth / 2) + 'px'
-    }, 0);
-  }
-  this._classes.remove('hide');
-  this.emit('show');
-  return this;
-};
-
-/**
- * Hide the overlay.
- *
- * @api private
- */
-
-Dialog.prototype.hideOverlay = function(){
-  if (!this._overlay) return;
-  this._overlay.remove();
-  this._overlay = null;
-};
-
-/**
- * Hide the dialog with optional delay of `ms`,
- * otherwise the dialog is removed immediately.
- *
- * Emits "hide" event.
- *
- * @return {Number} ms
- * @return {Dialog} for chaining
- * @api public
- */
-
-Dialog.prototype.hide = function(ms){
-  var self = this;
-
-  if (self._escKeyCallback) {
-    events.unbind(document, 'keydown', self._escKeyCallback);
-  }
-
-  // prevent thrashing - this isn't used
-  self.hiding = true;
-
-  // duration
-  if (ms) {
-    setTimeout(function(){
-      self.hide();
-    }, ms);
-    return self;
-  }
-
-  // hide / remove
-  self._classes.add('hide');
-  if (self._effect) {
-    setTimeout(function(){
-      self.remove();
-    }, 500);
-  } else {
-    self.remove();
-  }
-
-  // overlay
-  self.hideOverlay();
-
-  return self;
-};
-/**
- * Hide the dialog without potential animation.
- *
- * @return {Dialog} for chaining
- * @api public
- */
-
-Dialog.prototype.remove = function(){
-  if (this.el.parentNode) {
-    this.emit('hide');
-    this.el.parentNode.removeChild(this.el);
-  }
-  return this;
-};
-
-});
-
-require.define("component~dialog@0.2.0/template.html", "<div id=\"dialog\" class=\"hide\">\n  <div class=\"content\">\n    <span class=\"title\">Title</span>\n    <a href=\"#\" class=\"close\">&times;<em>close</em></a>\n    <div class=\"body\">\n      <p>Message</p>\n    </div>\n  </div>\n</div>\n");
-
-require.register("mikeric~rivets@v0.5.12", function (exports, module) {
-// Rivets.js
-// version: 0.5.12
-// author: Michael Richards
-// license: MIT
-(function() {
-  var Rivets,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-    __slice = [].slice,
-    __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
-
-  Rivets = {};
-
-  if (!String.prototype.trim) {
-    String.prototype.trim = function() {
-      return this.replace(/^\s+|\s+$/g, '');
-    };
-  }
-
-  Rivets.Binding = (function() {
-    function Binding(view, el, type, key, keypath, options) {
-      var identifier, regexp, value, _ref;
-      this.view = view;
-      this.el = el;
-      this.type = type;
-      this.key = key;
-      this.keypath = keypath;
-      this.options = options != null ? options : {};
-      this.update = __bind(this.update, this);
-      this.unbind = __bind(this.unbind, this);
-      this.bind = __bind(this.bind, this);
-      this.publish = __bind(this.publish, this);
-      this.sync = __bind(this.sync, this);
-      this.set = __bind(this.set, this);
-      this.eventHandler = __bind(this.eventHandler, this);
-      this.formattedValue = __bind(this.formattedValue, this);
-      if (!(this.binder = this.view.binders[type])) {
-        _ref = this.view.binders;
-        for (identifier in _ref) {
-          value = _ref[identifier];
-          if (identifier !== '*' && identifier.indexOf('*') !== -1) {
-            regexp = new RegExp("^" + (identifier.replace('*', '.+')) + "$");
-            if (regexp.test(type)) {
-              this.binder = value;
-              this.args = new RegExp("^" + (identifier.replace('*', '(.+)')) + "$").exec(type);
-              this.args.shift();
-            }
-          }
-        }
-      }
-      this.binder || (this.binder = this.view.binders['*']);
-      if (this.binder instanceof Function) {
-        this.binder = {
-          routine: this.binder
-        };
-      }
-      this.formatters = this.options.formatters || [];
-      this.model = this.key ? this.view.models[this.key] : this.view.models;
-    }
-
-    Binding.prototype.formattedValue = function(value) {
-      var args, formatter, id, _i, _len, _ref;
-      _ref = this.formatters;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        formatter = _ref[_i];
-        args = formatter.split(/\s+/);
-        id = args.shift();
-        formatter = this.model[id] instanceof Function ? this.model[id] : this.view.formatters[id];
-        if ((formatter != null ? formatter.read : void 0) instanceof Function) {
-          value = formatter.read.apply(formatter, [value].concat(__slice.call(args)));
-        } else if (formatter instanceof Function) {
-          value = formatter.apply(null, [value].concat(__slice.call(args)));
-        }
-      }
-      return value;
-    };
-
-    Binding.prototype.eventHandler = function(fn) {
-      var binding, handler;
-      handler = (binding = this).view.config.handler;
-      return function(ev) {
-        return handler.call(fn, this, ev, binding);
-      };
-    };
-
-    Binding.prototype.set = function(value) {
-      var _ref;
-      value = value instanceof Function && !this.binder["function"] ? this.formattedValue(value.call(this.model)) : this.formattedValue(value);
-      return (_ref = this.binder.routine) != null ? _ref.call(this, this.el, value) : void 0;
-    };
-
-    Binding.prototype.sync = function() {
-      return this.set(this.options.bypass ? this.model[this.keypath] : this.view.config.adapter.read(this.model, this.keypath));
-    };
-
-    Binding.prototype.publish = function() {
-      var args, formatter, id, value, _i, _len, _ref, _ref1, _ref2;
-      value = Rivets.Util.getInputValue(this.el);
-      _ref = this.formatters.slice(0).reverse();
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        formatter = _ref[_i];
-        args = formatter.split(/\s+/);
-        id = args.shift();
-        if ((_ref1 = this.view.formatters[id]) != null ? _ref1.publish : void 0) {
-          value = (_ref2 = this.view.formatters[id]).publish.apply(_ref2, [value].concat(__slice.call(args)));
-        }
-      }
-      return this.view.config.adapter.publish(this.model, this.keypath, value);
-    };
-
-    Binding.prototype.bind = function() {
-      var dependency, keypath, model, _i, _len, _ref, _ref1, _ref2, _results;
-      if ((_ref = this.binder.bind) != null) {
-        _ref.call(this, this.el);
-      }
-      if (this.options.bypass) {
-        this.sync();
-      } else {
-        this.view.config.adapter.subscribe(this.model, this.keypath, this.sync);
-        if (this.view.config.preloadData) {
-          this.sync();
-        }
-      }
-      if ((_ref1 = this.options.dependencies) != null ? _ref1.length : void 0) {
-        _ref2 = this.options.dependencies;
-        _results = [];
-        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-          dependency = _ref2[_i];
-          if (/^\./.test(dependency)) {
-            model = this.model;
-            keypath = dependency.substr(1);
-          } else {
-            dependency = dependency.split('.');
-            model = this.view.models[dependency.shift()];
-            keypath = dependency.join('.');
-          }
-          _results.push(this.view.config.adapter.subscribe(model, keypath, this.sync));
-        }
-        return _results;
-      }
-    };
-
-    Binding.prototype.unbind = function() {
-      var dependency, keypath, model, _i, _len, _ref, _ref1, _ref2, _results;
-      if ((_ref = this.binder.unbind) != null) {
-        _ref.call(this, this.el);
-      }
-      if (!this.options.bypass) {
-        this.view.config.adapter.unsubscribe(this.model, this.keypath, this.sync);
-      }
-      if ((_ref1 = this.options.dependencies) != null ? _ref1.length : void 0) {
-        _ref2 = this.options.dependencies;
-        _results = [];
-        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-          dependency = _ref2[_i];
-          if (/^\./.test(dependency)) {
-            model = this.model;
-            keypath = dependency.substr(1);
-          } else {
-            dependency = dependency.split('.');
-            model = this.view.models[dependency.shift()];
-            keypath = dependency.join('.');
-          }
-          _results.push(this.view.config.adapter.unsubscribe(model, keypath, this.sync));
-        }
-        return _results;
-      }
-    };
-
-    Binding.prototype.update = function(models) {
-      var _ref;
-      if (models == null) {
-        models = {};
-      }
-      if (this.key) {
-        if (models[this.key]) {
-          if (!this.options.bypass) {
-            this.view.config.adapter.unsubscribe(this.model, this.keypath, this.sync);
-          }
-          this.model = models[this.key];
-          if (this.options.bypass) {
-            this.sync();
-          } else {
-            this.view.config.adapter.subscribe(this.model, this.keypath, this.sync);
-            if (this.view.config.preloadData) {
-              this.sync();
-            }
-          }
-        }
-      } else {
-        this.sync();
-      }
-      return (_ref = this.binder.update) != null ? _ref.call(this, models) : void 0;
-    };
-
-    return Binding;
-
-  })();
-
-  Rivets.ComponentBinding = (function(_super) {
-    __extends(ComponentBinding, _super);
-
-    function ComponentBinding(view, el, type) {
-      var attribute, _i, _len, _ref, _ref1;
-      this.view = view;
-      this.el = el;
-      this.type = type;
-      this.unbind = __bind(this.unbind, this);
-      this.bind = __bind(this.bind, this);
-      this.update = __bind(this.update, this);
-      this.locals = __bind(this.locals, this);
-      this.component = Rivets.components[this.type];
-      this.attributes = {};
-      this.inflections = {};
-      _ref = this.el.attributes || [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        attribute = _ref[_i];
-        if (_ref1 = attribute.name, __indexOf.call(this.component.attributes, _ref1) >= 0) {
-          this.attributes[attribute.name] = attribute.value;
-        } else {
-          this.inflections[attribute.name] = attribute.value;
-        }
-      }
-    }
-
-    ComponentBinding.prototype.sync = function() {};
-
-    ComponentBinding.prototype.locals = function(models) {
-      var inverse, key, model, path, result, _i, _len, _ref, _ref1;
-      if (models == null) {
-        models = this.view.models;
-      }
-      result = {};
-      _ref = this.inflections;
-      for (key in _ref) {
-        inverse = _ref[key];
-        _ref1 = inverse.split('.');
-        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-          path = _ref1[_i];
-          result[key] = (result[key] || models)[path];
-        }
-      }
-      for (key in models) {
-        model = models[key];
-        if (result[key] == null) {
-          result[key] = model;
-        }
-      }
-      return result;
-    };
-
-    ComponentBinding.prototype.update = function(models) {
-      var _ref;
-      return (_ref = this.componentView) != null ? _ref.update(this.locals(models)) : void 0;
-    };
-
-    ComponentBinding.prototype.bind = function() {
-      var el, _ref;
-      if (this.componentView != null) {
-        return (_ref = this.componentView) != null ? _ref.bind() : void 0;
-      } else {
-        el = this.component.build.call(this.attributes);
-        (this.componentView = new Rivets.View(el, this.locals(), this.view.options)).bind();
-        return this.el.parentNode.replaceChild(el, this.el);
-      }
-    };
-
-    ComponentBinding.prototype.unbind = function() {
-      var _ref;
-      return (_ref = this.componentView) != null ? _ref.unbind() : void 0;
-    };
-
-    return ComponentBinding;
-
-  })(Rivets.Binding);
-
-  Rivets.TextBinding = (function(_super) {
-    __extends(TextBinding, _super);
-
-    function TextBinding(view, el, type, key, keypath, options) {
-      this.view = view;
-      this.el = el;
-      this.type = type;
-      this.key = key;
-      this.keypath = keypath;
-      this.options = options != null ? options : {};
-      this.sync = __bind(this.sync, this);
-      this.formatters = this.options.formatters || [];
-      this.model = this.key ? this.view.models[this.key] : this.view.models;
-    }
-
-    TextBinding.prototype.binder = {
-      routine: function(node, value) {
-        return node.data = value != null ? value : '';
-      }
-    };
-
-    TextBinding.prototype.sync = function() {
-      return TextBinding.__super__.sync.apply(this, arguments);
-    };
-
-    return TextBinding;
-
-  })(Rivets.Binding);
-
-  Rivets.View = (function() {
-    function View(els, models, options) {
-      var k, option, v, _base, _i, _len, _ref, _ref1, _ref2;
-      this.els = els;
-      this.models = models;
-      this.options = options != null ? options : {};
-      this.update = __bind(this.update, this);
-      this.publish = __bind(this.publish, this);
-      this.sync = __bind(this.sync, this);
-      this.unbind = __bind(this.unbind, this);
-      this.bind = __bind(this.bind, this);
-      this.select = __bind(this.select, this);
-      this.build = __bind(this.build, this);
-      this.componentRegExp = __bind(this.componentRegExp, this);
-      this.bindingRegExp = __bind(this.bindingRegExp, this);
-      if (!(this.els.jquery || this.els instanceof Array)) {
-        this.els = [this.els];
-      }
-      _ref = ['config', 'binders', 'formatters'];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        option = _ref[_i];
-        this[option] = {};
-        if (this.options[option]) {
-          _ref1 = this.options[option];
-          for (k in _ref1) {
-            v = _ref1[k];
-            this[option][k] = v;
-          }
-        }
-        _ref2 = Rivets[option];
-        for (k in _ref2) {
-          v = _ref2[k];
-          if ((_base = this[option])[k] == null) {
-            _base[k] = v;
-          }
-        }
-      }
-      this.build();
-    }
-
-    View.prototype.bindingRegExp = function() {
-      var prefix;
-      prefix = this.config.prefix;
-      if (prefix) {
-        return new RegExp("^data-" + prefix + "-");
-      } else {
-        return /^data-/;
-      }
-    };
-
-    View.prototype.componentRegExp = function() {
-      var _ref, _ref1;
-      return new RegExp("^" + ((_ref = (_ref1 = this.config.prefix) != null ? _ref1.toUpperCase() : void 0) != null ? _ref : 'RV') + "-");
-    };
-
-    View.prototype.build = function() {
-      var bindingRegExp, buildBinding, componentRegExp, el, parse, skipNodes, _i, _len, _ref,
-        _this = this;
-      this.bindings = [];
-      skipNodes = [];
-      bindingRegExp = this.bindingRegExp();
-      componentRegExp = this.componentRegExp();
-      buildBinding = function(binding, node, type, declaration) {
-        var context, ctx, dependencies, key, keypath, options, path, pipe, pipes, splitPath;
-        options = {};
-        pipes = (function() {
-          var _i, _len, _ref, _results;
-          _ref = declaration.split('|');
-          _results = [];
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            pipe = _ref[_i];
-            _results.push(pipe.trim());
-          }
-          return _results;
-        })();
-        context = (function() {
-          var _i, _len, _ref, _results;
-          _ref = pipes.shift().split('<');
-          _results = [];
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            ctx = _ref[_i];
-            _results.push(ctx.trim());
-          }
-          return _results;
-        })();
-        path = context.shift();
-        splitPath = path.split(/\.|:/);
-        options.formatters = pipes;
-        options.bypass = path.indexOf(':') !== -1;
-        if (splitPath[0]) {
-          key = splitPath.shift();
-        } else {
-          key = null;
-          splitPath.shift();
-        }
-        keypath = splitPath.join('.');
-        if (dependencies = context.shift()) {
-          options.dependencies = dependencies.split(/\s+/);
-        }
-        return _this.bindings.push(new Rivets[binding](_this, node, type, key, keypath, options));
-      };
-      parse = function(node) {
-        var attribute, attributes, binder, childNode, delimiters, identifier, n, parser, regexp, restTokens, startToken, text, token, tokens, type, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3, _ref4, _results;
-        if (__indexOf.call(skipNodes, node) < 0) {
-          if (node.nodeType === Node.TEXT_NODE) {
-            parser = Rivets.TextTemplateParser;
-            if (delimiters = _this.config.templateDelimiters) {
-              if ((tokens = parser.parse(node.data, delimiters)).length) {
-                if (!(tokens.length === 1 && tokens[0].type === parser.types.text)) {
-                  startToken = tokens[0], restTokens = 2 <= tokens.length ? __slice.call(tokens, 1) : [];
-                  node.data = startToken.value;
-                  if (startToken.type === 0) {
-                    node.data = startToken.value;
-                  } else {
-                    buildBinding('TextBinding', node, null, startToken.value);
-                  }
-                  for (_i = 0, _len = restTokens.length; _i < _len; _i++) {
-                    token = restTokens[_i];
-                    text = document.createTextNode(token.value);
-                    node.parentNode.appendChild(text);
-                    if (token.type === 1) {
-                      buildBinding('TextBinding', text, null, token.value);
-                    }
-                  }
-                }
-              }
-            }
-          } else if (componentRegExp.test(node.tagName)) {
-            type = node.tagName.replace(componentRegExp, '').toLowerCase();
-            _this.bindings.push(new Rivets.ComponentBinding(_this, node, type));
-          } else if (node.attributes != null) {
-            _ref = node.attributes;
-            for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
-              attribute = _ref[_j];
-              if (bindingRegExp.test(attribute.name)) {
-                type = attribute.name.replace(bindingRegExp, '');
-                if (!(binder = _this.binders[type])) {
-                  _ref1 = _this.binders;
-                  for (identifier in _ref1) {
-                    value = _ref1[identifier];
-                    if (identifier !== '*' && identifier.indexOf('*') !== -1) {
-                      regexp = new RegExp("^" + (identifier.replace('*', '.+')) + "$");
-                      if (regexp.test(type)) {
-                        binder = value;
-                      }
-                    }
-                  }
-                }
-                binder || (binder = _this.binders['*']);
-                if (binder.block) {
-                  _ref2 = node.childNodes;
-                  for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-                    n = _ref2[_k];
-                    skipNodes.push(n);
-                  }
-                  attributes = [attribute];
-                }
-              }
-            }
-            _ref3 = attributes || node.attributes;
-            for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
-              attribute = _ref3[_l];
-              if (bindingRegExp.test(attribute.name)) {
-                type = attribute.name.replace(bindingRegExp, '');
-                buildBinding('Binding', node, type, attribute.value);
-              }
-            }
-          }
-          _ref4 = node.childNodes;
-          _results = [];
-          for (_m = 0, _len4 = _ref4.length; _m < _len4; _m++) {
-            childNode = _ref4[_m];
-            _results.push(parse(childNode));
-          }
-          return _results;
-        }
-      };
-      _ref = this.els;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        el = _ref[_i];
-        parse(el);
-      }
-    };
-
-    View.prototype.select = function(fn) {
-      var binding, _i, _len, _ref, _results;
-      _ref = this.bindings;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        binding = _ref[_i];
-        if (fn(binding)) {
-          _results.push(binding);
-        }
-      }
-      return _results;
-    };
-
-    View.prototype.bind = function() {
-      var binding, _i, _len, _ref, _results;
-      _ref = this.bindings;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        binding = _ref[_i];
-        _results.push(binding.bind());
-      }
-      return _results;
-    };
-
-    View.prototype.unbind = function() {
-      var binding, _i, _len, _ref, _results;
-      _ref = this.bindings;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        binding = _ref[_i];
-        _results.push(binding.unbind());
-      }
-      return _results;
-    };
-
-    View.prototype.sync = function() {
-      var binding, _i, _len, _ref, _results;
-      _ref = this.bindings;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        binding = _ref[_i];
-        _results.push(binding.sync());
-      }
-      return _results;
-    };
-
-    View.prototype.publish = function() {
-      var binding, _i, _len, _ref, _results;
-      _ref = this.select(function(b) {
-        return b.binder.publishes;
-      });
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        binding = _ref[_i];
-        _results.push(binding.publish());
-      }
-      return _results;
-    };
-
-    View.prototype.update = function(models) {
-      var binding, key, model, _i, _len, _ref, _results;
-      if (models == null) {
-        models = {};
-      }
-      for (key in models) {
-        model = models[key];
-        this.models[key] = model;
-      }
-      _ref = this.bindings;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        binding = _ref[_i];
-        _results.push(binding.update(models));
-      }
-      return _results;
-    };
-
-    return View;
-
-  })();
-
-  Rivets.TextTemplateParser = (function() {
-    function TextTemplateParser() {}
-
-    TextTemplateParser.types = {
-      text: 0,
-      binding: 1
-    };
-
-    TextTemplateParser.parse = function(template, delimiters) {
-      var index, lastIndex, lastToken, length, substring, tokens, value;
-      tokens = [];
-      length = template.length;
-      index = 0;
-      lastIndex = 0;
-      while (lastIndex < length) {
-        index = template.indexOf(delimiters[0], lastIndex);
-        if (index < 0) {
-          tokens.push({
-            type: this.types.text,
-            value: template.slice(lastIndex)
-          });
-          break;
-        } else {
-          if (index > 0 && lastIndex < index) {
-            tokens.push({
-              type: this.types.text,
-              value: template.slice(lastIndex, index)
-            });
-          }
-          lastIndex = index + 2;
-          index = template.indexOf(delimiters[1], lastIndex);
-          if (index < 0) {
-            substring = template.slice(lastIndex - 2);
-            lastToken = tokens[tokens.length - 1];
-            if ((lastToken != null ? lastToken.type : void 0) === this.types.text) {
-              lastToken.value += substring;
-            } else {
-              tokens.push({
-                type: this.types.text,
-                value: substring
-              });
-            }
-            break;
-          }
-          value = template.slice(lastIndex, index).trim();
-          tokens.push({
-            type: this.types.binding,
-            value: value
-          });
-          lastIndex = index + 2;
-        }
-      }
-      return tokens;
-    };
-
-    return TextTemplateParser;
-
-  })();
-
-  Rivets.Util = {
-    bindEvent: function(el, event, handler) {
-      if (window.jQuery != null) {
-        el = jQuery(el);
-        if (el.on != null) {
-          return el.on(event, handler);
-        } else {
-          return el.bind(event, handler);
-        }
-      } else if (window.addEventListener != null) {
-        return el.addEventListener(event, handler, false);
-      } else {
-        event = 'on' + event;
-        return el.attachEvent(event, handler);
-      }
-    },
-    unbindEvent: function(el, event, handler) {
-      if (window.jQuery != null) {
-        el = jQuery(el);
-        if (el.off != null) {
-          return el.off(event, handler);
-        } else {
-          return el.unbind(event, handler);
-        }
-      } else if (window.removeEventListener != null) {
-        return el.removeEventListener(event, handler, false);
-      } else {
-        event = 'on' + event;
-        return el.detachEvent(event, handler);
-      }
-    },
-    getInputValue: function(el) {
-      var o, _i, _len, _results;
-      if (window.jQuery != null) {
-        el = jQuery(el);
-        switch (el[0].type) {
-          case 'checkbox':
-            return el.is(':checked');
-          default:
-            return el.val();
-        }
-      } else {
-        switch (el.type) {
-          case 'checkbox':
-            return el.checked;
-          case 'select-multiple':
-            _results = [];
-            for (_i = 0, _len = el.length; _i < _len; _i++) {
-              o = el[_i];
-              if (o.selected) {
-                _results.push(o.value);
-              }
-            }
-            return _results;
-            break;
-          default:
-            return el.value;
-        }
-      }
-    }
-  };
-
-  Rivets.binders = {
-    enabled: function(el, value) {
-      return el.disabled = !value;
-    },
-    disabled: function(el, value) {
-      return el.disabled = !!value;
-    },
-    checked: {
-      publishes: true,
-      bind: function(el) {
-        return Rivets.Util.bindEvent(el, 'change', this.publish);
-      },
-      unbind: function(el) {
-        return Rivets.Util.unbindEvent(el, 'change', this.publish);
-      },
-      routine: function(el, value) {
-        var _ref;
-        if (el.type === 'radio') {
-          return el.checked = ((_ref = el.value) != null ? _ref.toString() : void 0) === (value != null ? value.toString() : void 0);
-        } else {
-          return el.checked = !!value;
-        }
-      }
-    },
-    unchecked: {
-      publishes: true,
-      bind: function(el) {
-        return Rivets.Util.bindEvent(el, 'change', this.publish);
-      },
-      unbind: function(el) {
-        return Rivets.Util.unbindEvent(el, 'change', this.publish);
-      },
-      routine: function(el, value) {
-        var _ref;
-        if (el.type === 'radio') {
-          return el.checked = ((_ref = el.value) != null ? _ref.toString() : void 0) !== (value != null ? value.toString() : void 0);
-        } else {
-          return el.checked = !value;
-        }
-      }
-    },
-    show: function(el, value) {
-      return el.style.display = value ? '' : 'none';
-    },
-    hide: function(el, value) {
-      return el.style.display = value ? 'none' : '';
-    },
-    html: function(el, value) {
-      return el.innerHTML = value != null ? value : '';
-    },
-    value: {
-      publishes: true,
-      bind: function(el) {
-        return Rivets.Util.bindEvent(el, 'change', this.publish);
-      },
-      unbind: function(el) {
-        return Rivets.Util.unbindEvent(el, 'change', this.publish);
-      },
-      routine: function(el, value) {
-        var o, _i, _len, _ref, _ref1, _ref2, _results;
-        if (window.jQuery != null) {
-          el = jQuery(el);
-          if ((value != null ? value.toString() : void 0) !== ((_ref = el.val()) != null ? _ref.toString() : void 0)) {
-            return el.val(value != null ? value : '');
-          }
-        } else {
-          if (el.type === 'select-multiple') {
-            if (value != null) {
-              _results = [];
-              for (_i = 0, _len = el.length; _i < _len; _i++) {
-                o = el[_i];
-                _results.push(o.selected = (_ref1 = o.value, __indexOf.call(value, _ref1) >= 0));
-              }
-              return _results;
-            }
-          } else if ((value != null ? value.toString() : void 0) !== ((_ref2 = el.value) != null ? _ref2.toString() : void 0)) {
-            return el.value = value != null ? value : '';
-          }
-        }
-      }
-    },
-    text: function(el, value) {
-      if (el.innerText != null) {
-        return el.innerText = value != null ? value : '';
-      } else {
-        return el.textContent = value != null ? value : '';
-      }
-    },
-    "if": {
-      block: true,
-      bind: function(el) {
-        var attr, declaration;
-        if (this.marker == null) {
-          attr = ['data', this.view.config.prefix, this.type].join('-').replace('--', '-');
-          declaration = el.getAttribute(attr);
-          this.marker = document.createComment(" rivets: " + this.type + " " + declaration + " ");
-          el.removeAttribute(attr);
-          el.parentNode.insertBefore(this.marker, el);
-          return el.parentNode.removeChild(el);
-        }
-      },
-      unbind: function() {
-        var _ref;
-        return (_ref = this.nested) != null ? _ref.unbind() : void 0;
-      },
-      routine: function(el, value) {
-        var key, model, models, options, _ref;
-        if (!!value === (this.nested == null)) {
-          if (value) {
-            models = {};
-            _ref = this.view.models;
-            for (key in _ref) {
-              model = _ref[key];
-              models[key] = model;
-            }
-            options = {
-              binders: this.view.options.binders,
-              formatters: this.view.options.formatters,
-              config: this.view.options.config
-            };
-            (this.nested = new Rivets.View(el, models, options)).bind();
-            return this.marker.parentNode.insertBefore(el, this.marker.nextSibling);
-          } else {
-            el.parentNode.removeChild(el);
-            this.nested.unbind();
-            return delete this.nested;
-          }
-        }
-      },
-      update: function(models) {
-        var _ref;
-        return (_ref = this.nested) != null ? _ref.update(models) : void 0;
-      }
-    },
-    unless: {
-      block: true,
-      bind: function(el) {
-        return Rivets.binders["if"].bind.call(this, el);
-      },
-      unbind: function() {
-        return Rivets.binders["if"].unbind.call(this);
-      },
-      routine: function(el, value) {
-        return Rivets.binders["if"].routine.call(this, el, !value);
-      },
-      update: function(models) {
-        return Rivets.binders["if"].update.call(this, models);
-      }
-    },
-    "on-*": {
-      "function": true,
-      unbind: function(el) {
-        if (this.handler) {
-          return Rivets.Util.unbindEvent(el, this.args[0], this.handler);
-        }
-      },
-      routine: function(el, value) {
-        if (this.handler) {
-          Rivets.Util.unbindEvent(el, this.args[0], this.handler);
-        }
-        return Rivets.Util.bindEvent(el, this.args[0], this.handler = this.eventHandler(value));
-      }
-    },
-    "each-*": {
-      block: true,
-      bind: function(el) {
-        var attr;
-        if (this.marker == null) {
-          attr = ['data', this.view.config.prefix, this.type].join('-').replace('--', '-');
-          this.marker = document.createComment(" rivets: " + this.type + " ");
-          this.iterated = [];
-          el.removeAttribute(attr);
-          el.parentNode.insertBefore(this.marker, el);
-          return el.parentNode.removeChild(el);
-        }
-      },
-      unbind: function(el) {
-        var view, _i, _len, _ref, _results;
-        if (this.iterated != null) {
-          _ref = this.iterated;
-          _results = [];
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            view = _ref[_i];
-            _results.push(view.unbind());
-          }
-          return _results;
-        }
-      },
-      routine: function(el, collection) {
-        var data, i, index, k, key, model, modelName, options, previous, template, v, view, _i, _j, _len, _len1, _ref, _ref1, _ref2, _results;
-        modelName = this.args[0];
-        collection = collection || [];
-        if (this.iterated.length > collection.length) {
-          _ref = Array(this.iterated.length - collection.length);
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            i = _ref[_i];
-            view = this.iterated.pop();
-            view.unbind();
-            this.marker.parentNode.removeChild(view.els[0]);
-          }
-        }
-        _results = [];
-        for (index = _j = 0, _len1 = collection.length; _j < _len1; index = ++_j) {
-          model = collection[index];
-          data = {};
-          data[modelName] = model;
-          if (this.iterated[index] == null) {
-            _ref1 = this.view.models;
-            for (key in _ref1) {
-              model = _ref1[key];
-              if (data[key] == null) {
-                data[key] = model;
-              }
-            }
-            previous = this.iterated.length ? this.iterated[this.iterated.length - 1].els[0] : this.marker;
-            options = {
-              binders: this.view.options.binders,
-              formatters: this.view.options.formatters,
-              config: {}
-            };
-            _ref2 = this.view.options.config;
-            for (k in _ref2) {
-              v = _ref2[k];
-              options.config[k] = v;
-            }
-            options.config.preloadData = true;
-            template = el.cloneNode(true);
-            view = new Rivets.View(template, data, options);
-            view.bind();
-            this.iterated.push(view);
-            _results.push(this.marker.parentNode.insertBefore(template, previous.nextSibling));
-          } else if (this.iterated[index].models[modelName] !== model) {
-            _results.push(this.iterated[index].update(data));
-          } else {
-            _results.push(void 0);
-          }
-        }
-        return _results;
-      },
-      update: function(models) {
-        var data, key, model, view, _i, _len, _ref, _results;
-        data = {};
-        for (key in models) {
-          model = models[key];
-          if (key !== this.args[0]) {
-            data[key] = model;
-          }
-        }
-        _ref = this.iterated;
-        _results = [];
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          view = _ref[_i];
-          _results.push(view.update(data));
-        }
-        return _results;
-      }
-    },
-    "class-*": function(el, value) {
-      var elClass;
-      elClass = " " + el.className + " ";
-      if (!value === (elClass.indexOf(" " + this.args[0] + " ") !== -1)) {
-        return el.className = value ? "" + el.className + " " + this.args[0] : elClass.replace(" " + this.args[0] + " ", ' ').trim();
-      }
-    },
-    "*": function(el, value) {
-      if (value) {
-        return el.setAttribute(this.type, value);
-      } else {
-        return el.removeAttribute(this.type);
-      }
-    }
-  };
-
-  Rivets.components = {};
-
-  Rivets.config = {
-    preloadData: true,
-    handler: function(context, ev, binding) {
-      return this.call(context, ev, binding.view.models);
-    }
-  };
-
-  Rivets.formatters = {};
-
-  Rivets.factory = function(exports) {
-    exports._ = Rivets;
-    exports.binders = Rivets.binders;
-    exports.components = Rivets.components;
-    exports.formatters = Rivets.formatters;
-    exports.config = Rivets.config;
-    exports.configure = function(options) {
-      var property, value;
-      if (options == null) {
-        options = {};
-      }
-      for (property in options) {
-        value = options[property];
-        Rivets.config[property] = value;
-      }
-    };
-    return exports.bind = function(el, models, options) {
-      var view;
-      if (models == null) {
-        models = {};
-      }
-      if (options == null) {
-        options = {};
-      }
-      view = new Rivets.View(el, models, options);
-      view.bind();
-      return view;
-    };
-  };
-
-  if (typeof exports === 'object') {
-    Rivets.factory(exports);
-  } else if (typeof define === 'function' && define.amd) {
-    define(['exports'], function(exports) {
-      Rivets.factory(this.rivets = exports);
-      return exports;
-    });
-  } else {
-    Rivets.factory(this.rivets = {});
-  }
-
-}).call(this);
 
 });
 

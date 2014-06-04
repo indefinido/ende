@@ -28,7 +28,7 @@ scheduler = function(options) {
           return _this.deliver();
         };
         clearTimeout(timeout);
-        return timeout = setTimeout(deliver, 500 || options.wait);
+        return timeout = setTimeout(deliver, 20 || options.wait);
       }
     }
   });
@@ -58,14 +58,7 @@ jQuery.extend(scheduler, {
       }
     },
     deliver: function() {
-      var keypath, observer, _ref;
-
-      _ref = this.target.observation.observers;
-      for (keypath in _ref) {
-        observer = _ref[keypath];
-        observer.deliver();
-      }
-      return true;
+      return this.target.observation.deliver();
     },
     setter: function(object, keypath, callback) {
       var current_setter;

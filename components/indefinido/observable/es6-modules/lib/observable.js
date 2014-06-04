@@ -55,7 +55,7 @@ jQuery.extend(observable, {
     object.observation.scheduler.destroy();
     delete object.observation;
     delete object.observed;
-    return true;
+    return object;
   },
   methods: {
     subscribe: function(keypath_or_callback, callback) {
