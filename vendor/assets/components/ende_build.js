@@ -19838,7 +19838,8 @@ associable = {
           old_resource = this[resource];
           Object.defineProperty(record, resource.toString(), {
             get: $.proxy(descriptors.belongs_to.resource.getter, association_proxy),
-            set: $.proxy(descriptors.belongs_to.resource.setter, association_proxy)
+            set: $.proxy(descriptors.belongs_to.resource.setter, association_proxy),
+            configurable: true
           });
           _results.push(this[resource] = old_resource);
         }
@@ -19892,7 +19893,9 @@ dirtyable = {
       return this.observed.dirty;
     },
     set: function(value) {
-      return this.observed.dirty = value;
+      this.observed.dirty = value;
+      this.observation.scheduler.schedule()
+      return value;
     }
   },
   record: {
@@ -20318,7 +20321,7 @@ restful = {
       return callback.call(this);
     },
     reload: function() {
-      var data, param, params, promise, _i, _len;
+      var data, param, params, promise,_i, _len;
 
       params = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
       data = params.pop();
@@ -20382,7 +20385,9 @@ restful = {
         delete attributes[association_name];
         delete attributes[association_name + "_attributes"];
         if (association_attributes) {
-          this[association_name] = this["build_" + association_name](association_attributes);
+          associated = this[association_name] || this["build_" + association_name]();
+          associated.assign_attributes(association_attributes);
+          this[association_name] = associated;
         }
       }
       _ref3 = model[this.resource.toString()].belongs_to;
@@ -20392,7 +20397,9 @@ restful = {
         delete attributes[association_name];
         delete attributes[association_name + "_attributes"];
         if (association_attributes) {
-          this[association_name] = this["build_" + association_name](association_attributes);
+          associated = this[association_name] || this["build_" + association_name]();
+          associated.assign_attributes(association_attributes);
+          this[association_name] = associated;
         }
       }
       _results = [];
@@ -20815,7 +20822,7 @@ scopable = {
       }
       return true;
     }
-  },
+},
   after_mix: function() {
     var name, property, type, _results;
 
@@ -21300,6 +21307,9 @@ associationable = stampit({
         throw new Error('Only has_one associations are supported to validates_associated');
       }
       associated_validation = record[attribute].validate();
+      // observed =  record.observation.observers.self.oldObject_
+      // observed && (observed[attribute].validation = associated_validation)
+
       associated_validation.done(function() {
         if (record[attribute].errors.length) {
           return record.errors.add(attribute, 'associated', this.options);
@@ -21802,7 +21812,7 @@ var isKind = _dereq_('./isKind');
 
 
     /**
-     * Checks if the value is created by the `Object` constructor.
+ * Checks if the value is created by the `Object` constructor.
      */
     function isPlainObject(value) {
         return (!!value
@@ -27111,3 +27121,4 @@ require.register("ende/vendor/assets/javascripts/spin/spin.js", function (export
 });
 
 require("ende")
+                     
