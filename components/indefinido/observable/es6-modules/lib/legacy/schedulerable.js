@@ -16,7 +16,7 @@ scheduler = function(options) {
     };
   }
   jQuery.extend(options, {
-    keypaths: {
+    schedulable_keypaths: {
       value: []
     },
     schedule: {
@@ -37,13 +37,13 @@ scheduler = function(options) {
 
 jQuery.extend(scheduler, {
   methods: {
-    property: function(object, keypath) {
+    schedulable: function(object, keypath) {
       var observer, observers, value;
 
-      if (this.keypaths.indexOf(keypath) !== -1) {
+      if (this.schedulable_keypaths.indexOf(keypath) !== -1) {
         return;
       }
-      this.keypaths.push(keypath);
+      this.schedulable_keypaths.push(keypath);
       observers = object.observation.observers;
       observer = observers[keypath];
       value = observer.path_.getValueFrom(object);
@@ -54,7 +54,8 @@ jQuery.extend(scheduler, {
         configurable: true
       });
       if (value !== observer.path_.getValueFrom(object)) {
-        return observer.setValue(value);
+        observer.setValue(value);
+        return object.observation.deliver();
       }
     },
     deliver: function() {
@@ -68,12 +69,14 @@ jQuery.extend(scheduler, {
         return function(value) {
           current_setter.call(this, value);
           this.observed[keypath] = value;
-          return this.observation.scheduler.schedule();
+          this.observation.scheduler.schedule();
+          return value;
         };
       } else {
         return function(value) {
           this.observed[keypath] = value;
-          return this.observation.scheduler.schedule();
+          this.observation.scheduler.schedule();
+          return value;
         };
       }
     },
@@ -91,13 +94,36 @@ jQuery.extend(scheduler, {
 });
 
 schedulerable = function(observable) {
+  schedulerable.storage_for(observable);
+  schedulerable.schedulable_observers();
+  return schedulerable.augment(observable);
+};
+
+schedulerable.storage_for = function(observable) {};
+
+schedulerable.schedulable_observers = function() {
+  import {Path} from '../../vendor/observe-js/observe.js';
+  var original;
+
+  original = Path.prototype.setValueFrom;
+  return Path.prototype.setValueFrom = function(object) {
+    var changed;
+
+    changed = original.apply(this, arguments);
+    if (changed) {
+      return object.observation.scheduler.schedule();
+    }
+  };
+};
+
+schedulerable.augment = function(observable) {
   var original;
 
   original = observable.methods.subscribe;
   observable.methods.subscribe = function(keypath, callback) {
     original.apply(this, arguments);
     if (typeof keypath !== 'function') {
-      return this.observation.scheduler.property(this, keypath);
+      return this.observation.scheduler.schedulable(this, keypath);
     }
   };
   return jQuery.extend((function() {

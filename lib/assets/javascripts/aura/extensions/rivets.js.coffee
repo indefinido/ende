@@ -1,3 +1,4 @@
+
 'use strict';
 
 # TODO require formatters through aura instead of directly loding a module
@@ -10,15 +11,15 @@ define 'aura/extensions/rivets', ['aura/extensions/rivets/formatters'], (formatt
   Rivets                   = rivets._
 
   with_component           = 'indefinido~observable@es6-modules/lib/adapters/rivets.js'
-  observable_configuration = require with_component
+  observable_adapter       = require with_component
 
   with_component           = 'segmentio~extend@1.0.0'
   extend                   = require with_component
 
   extend rivets.formatters, formatters
 
-  rivets.configure observable_configuration
   rivets.configure
+    adapter: observable_adapter
     prefix: ''
     templateDelimiters: ['{{', '}}']
 
