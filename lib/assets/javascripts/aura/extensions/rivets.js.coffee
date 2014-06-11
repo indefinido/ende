@@ -226,6 +226,48 @@ define 'aura/extensions/rivets', ['aura/extensions/rivets/formatters'], (formatt
         else if value?.toString() isnt el.value?.toString()
           el.value = if value? then value else ''
 
+  Rivets.Binding::sync = ->
+    if @model isnt @observer.object_
+      current_model = @observer.object_
+      @observer = @model.observation.observers[@keypath]
+
+      if @options.dependencies?.length
+        if current_model
+          for dependency in @options.dependencies
+            dependency = dependency.substring 1
+            current_model.unsubscribe dependency, @sync
+
+          for dependency in @options.dependencies
+            dependency = dependency.substring 1
+            @model.subscribe dependency, @sync
+
+    @set if @options.bypass
+      @model[@keypath]
+    else
+      @view.config.adapter.read @model, @keypath
+
+  Rivets.Binding::bind = ->
+    @binder.bind?.call @, @el
+
+    if @options.bypass
+      @sync()
+    else
+      @view.config.adapter.subscribe @model, @keypath, @sync
+      @observer = @model.observation.observers[@keypath]
+      @sync() if @view.config.preloadData
+
+
+    if @options.dependencies?.length
+      for dependency in @options.dependencies
+        if /^\./.test dependency
+          model = @model
+          keypath = dependency.substr 1
+        else
+          dependency = dependency.split '.'
+          model = @view.models[dependency.shift()]
+          keypath = dependency.join '.'
+
+        @view.config.adapter.subscribe model, keypath, @sync
 
   require:
     paths:
@@ -233,7 +275,7 @@ define 'aura/extensions/rivets', ['aura/extensions/rivets/formatters'], (formatt
       # formatters: 'aura/extensions/rivets/formatters'
       observable: true
 
-  version: '0.1.1'
+  version: '0.1.2'
 
   initialize: (application) ->
     # TODO optimize formatters with r.js, and put module names under
