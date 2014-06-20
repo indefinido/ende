@@ -165,7 +165,8 @@ define ->
   extract_options: ->
     options =  _.omit @options, 'el', 'ref', '_ref', 'name', 'require', 'baseUrl', 'theme', 'resource'
 
-    dynamic_options = _.omit options, Object.keys(@constructor.__super__.options)
+    # TODO merge default options in prototype
+    dynamic_options = _.omit options, Object.keys(@__proto__.options)
 
     keys = Object.keys dynamic_options
     throw new TypeError "Too many keys on options object! #{keys.join(', ')}" unless keys.length == 1

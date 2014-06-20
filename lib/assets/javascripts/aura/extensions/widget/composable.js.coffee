@@ -32,6 +32,7 @@ define 'aura/extensions/widget/composable', ->
       for advice in advices
 
         # in order to preserve declaration order, we must reverse the callbacks order
+        # TODO rename advice.name to advice.type
         advice.callbacks.reverse() if advice.name == 'before'
 
         # Advice with all callbacks
@@ -42,27 +43,43 @@ define 'aura/extensions/widget/composable', ->
     advisor.advisable = (factory) ->
       original = factory.compose
 
+      compose_advices = (advices, composed_advices = {}) ->
+        for advice in advices
+          composed_advices[advice.key] ||= []
+          composed_advices[advice.key] = composed_advices[advice.key].concat advice.callbacks
+
+        composed_advices
+
+      composable_advices  = (stamps...) ->
+        advices = []
+        for stamped in stamps
+          {fixed: {methods: stamp_methods}} = stamped
+          advices = advices.concat extract_advices stamp_methods
+
+        # Create a ultimate stamp with all advices arrays or functions
+        # merged, that will ultimatly override the prototype chain
+        # definitions
+        #
+        # TODO do not store advices definitions in the prototype chain
+        stamps.push stamp compose_advices advices
+
+        stamps
+
+      # Move current factory composition advices to a composable form
+      # {fixed: {methods: composition_methods}} = factory.composition
+      # compose_advices extract_advices(composition_methods), composition_methods
+
       stamp.mixIn factory,
         compose: (stamps...) ->
-          {fixed: {methods: composition_methods}} = @composition
-          advices = extract_advices composition_methods
-
-          for stamped in stamps
-            {fixed: {methods: stamp_methods}} = stamped
-            advices = advices.concat extract_advices stamp_methods
-
-          adviced_stamp = {}
-          for advice in advices
-            adviced_stamp[advice.key] ||= []
-            adviced_stamp[advice.key] = adviced_stamp[advice.key].concat advice.callbacks
-
-          # Create a ultimate stamp with all advices arrays or functions merged
-          # TODO do not store advices definitions in the prototype chain
-          stamps.push stamp adviced_stamp
-
-          original.apply factory, stamps
+          stamps.unshift factory.composition
+          original.apply factory, composable_advices stamps...
 
         advice: advisor.advice
+
+
+    composable = advisor.composable
+    advisor.composable = ->
+      advisor.advisable composable.apply advisor, arguments
 
     advisor
 
@@ -121,7 +138,7 @@ define 'aura/extensions/widget/composable', ->
 
     {core: {Widgets, util: {extend}, stamp}} = application
 
-    Widgets = composerable advisorable Widgets
+    Widgets = advisorable composerable Widgets
 
     # THINK how to at the same time respect aura ways of instantiating
     # widgets and preserve widget logic composability

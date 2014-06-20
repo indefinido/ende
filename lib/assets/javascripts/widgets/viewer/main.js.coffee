@@ -1,14 +1,13 @@
-
 'use strict';
 
-lazy_requires = ['observable', 'advisable']
+lazy_require = 'advisable'
 define [
   './states/index',
   './presenters/default',
   'jquery.inview',
   'stampit/stampit',
-  lazy_requires[0],
-  lazy_requires[1]], (templates, presenter, inview, stampit, observable, advisable) ->
+  'observable',
+  lazy_require], (templates, presenter, inview, stampit, observable, advisable) ->
 
   scopable = (widget) ->
     deferred = widget.sandbox.data.deferred()
@@ -30,6 +29,7 @@ define [
 
       return unless total_pages?
 
+      # TODO set default abortion to decreatse page numbers amount
       scope.page ++page_number
 
       if page_number <= total_pages
@@ -64,7 +64,7 @@ define [
     scrolled: ->
       @widget.sandbox.emit "#{@widget.name}.#{@widget.identifier}.flip" if @bottoned()
   ,
-    buffer: 800
+    buffer: 400
   , ->
     @scroll_container = $ window
 
@@ -126,7 +126,32 @@ define [
     viewed: (event, in_view, horizontal, vertical) ->
       boo[if in_view then 'pride' else 'shame'] event.target
 
-  version: '0.2.1'
+
+  # TODO Move each handler to independent features
+  handleable = stampit
+    handleables:
+      item:
+        hover: (event, models) ->
+          if event.type == 'mouseenter'
+            @hover models.item
+          else if event.type == 'mouseleave'
+            @hover null
+          else
+            throw new TypeError 'viewer.handlers.hover: Event type incompatible with hovering.'
+
+        clicked: (event, models) -> @select models.item
+
+  , {}, ->
+
+    throw new TypeError "Widget property is mandatory for handleable stamp" unless @widget?
+
+    @handlers =
+      item:
+        clicked: $.proxy @handleables.item.clicked, @widget
+        hover  : $.proxy @handleables.item.hover  , @widget
+
+    @
+  version: '0.2.4'
 
   # TODO better separation of concerns
   # TODO Current remote page that is beign displayed
@@ -157,7 +182,15 @@ define [
     # We extend presentation.selected just to assign all values of the item model
     # TODO call presenter to do this job
     @sandbox.util.extend @presentation.selected   , item.model.json?() || item.model
+
+    # TODO change paramters to item, item.model
     @sandbox.emit "viewer.#{@identifier}.selected", item.model
+
+  # Called when hover in and out from model
+  hover: (item) ->
+    # TODO call presenter to do this job
+    # @sandbox.util.extend @presentation.hovered   , item.model.json?() || item.model
+    @sandbox.emit "viewer.#{@identifier}.hovered", item, item && item.model
 
   scope_to: (scope, child_scope) ->
     # Singuralize in order to accept association scopes, since
@@ -166,15 +199,13 @@ define [
     sent_scope    = @inflector.singularize scope.resource.toString()
     current_scope = @inflector.singularize @scope.resource.toString()
 
+    deferred      = @sandbox.data.deferred()
+
     if sent_scope != current_scope
       throw new TypeError "Invalid scope sent to viewer@#{@identifier} sent: '#{sent_scope}', expected: '#{current_scope}'"
 
     # For sobsequent usages we must store the scope
     @scope = scope
-
-    # TODO better hierachical event distribution
-    for { _widget: widget } in @sandbox._children?
-      widget.scope_to? child_scope
 
     @sandbox.emit "viewer.#{@identifier}.scope_changed", @scope
 
@@ -184,6 +215,15 @@ define [
         scope_data: observable scope.scope.data
 
     @repopulate()
+
+  # TODO rename this method
+  # TODO also move this to an external tag
+  statused: (status) ->
+    if status
+      @status = status
+      @sandbox.emit "viewer.#{@identifier}.status_changed", status
+    else
+      @status
 
   repopulate: ->
     unless @fetching?
@@ -195,9 +235,10 @@ define [
 
     # TODO store spinner instance, instead of creating a new one every time
     unless @load?
-      @load   = @sandbox.ui.loader @$el.find '.results .items'
+      @load   = @sandbox.ui.loader @$results
 
       # TODO implement status for viewer widget
+      @statused 'loading'
       @$el.addClass 'idle'
       @$el.removeClass 'loading'
 
@@ -212,11 +253,8 @@ define [
       records = _.map records, @resource, @resource unless records[0]?.resource or records[0]?.itemable
 
       # TODO implement Array.concat ou Array.merge in observer, and
-      # use it here instead of pushing each record
+      # use it here instead of overriding all records
       viewer.items = records
-
-      # Start widgets created by bindings
-      @syncronize_children()
 
     @fetching.done (records) =>
       if viewer.items.length
@@ -231,21 +269,20 @@ define [
       @sandbox.emit "viewer.#{@identifier}.populated", records, @
 
     @fetching.always =>
-      # TODO implement status for viewer widget
-      @$el.addClass 'idle'
-      @$el.removeClass 'loading'
-
       if @load?
         @load.stop()
         @load = null
 
+      # TODO implement status for viewer widget
+      @$el.removeClass 'loading'
+      @statused 'idle'
+      @$el.addClass 'idle'
 
-  populate: (handlers) ->
-    sandbox = @sandbox
-
-    @load   = @sandbox.ui.loader @$results
+  populate: ->
+    @load   = @sandbox.ui.loader @$el
 
     # TODO implement status for viewer widget
+    @statused 'loading'
     @$el.removeClass 'idle'
     @$el.addClass 'loading'
 
@@ -270,9 +307,12 @@ define [
 
       @load.stop()
 
-      @presentation = @presenter records, @scope
+      # TODO do not send records as parameter
+      @presentation = @presenter records, @scope, @handleable
 
+      # Initialize elements
       @$el.html templates[@options.resource]
+      @$results = @$el.find '.results .items'
 
       if records.length
         # boo.initialize @$el.find '.results .items'
@@ -282,7 +322,14 @@ define [
 
       # TODO move binders to application
       @inherit_parent_presentation()
-      @bind @presentation, @presenter.presentation
+      # TODO on bind execute presentation_options method and extend and inherit from presenter what needed
+      @bind @presentation, @sandbox.util.extend(true, @presenter.presentation, @options.presentation)
+
+      @presentation.viewer.subscribe 'items', =>
+        # Start possible widgets created by items with widget
+        # instantiation markup
+        @syncronize_children()
+
 
       # Start widgets that may have been created by bindings
       @sandbox.emit 'aura.sandbox.start', @sandbox
@@ -299,7 +346,7 @@ define [
 
 
   plugins: (options) ->
-    deferreds = []
+    deferreds = [@]
 
     deferreds.push paginable  widget: @ if options.page
     deferreds.push scrollable widget: @ if options.scroll
@@ -310,6 +357,7 @@ define [
   # TODO move this method to an extension
   syncronize_children: ->
     @sandbox._children ||= []
+    @sandbox._widget   ||= @
 
     # Add possible new childs
     @constructor.startAll(@$el).done (widgets...) =>
@@ -318,6 +366,12 @@ define [
         widget.sandbox._parent = @sandbox
 
       @sandbox._children = @sandbox._children.concat widgets
+
+      for widget in widgets
+        # TODO emit this event only when all siblings have initialized
+        @sandbox.emit "#{widget.name}.#{widget.identifier}.siblings_initialized", @sandbox._children
+
+      true
 
     # TODO better internal aura widget selection
     # Prevent other child to be instantiated
@@ -402,43 +456,56 @@ define [
   initialize: (options) ->
     # TODO import core extensions in another place
     @resource      = @sandbox.resource options.resource
-    @scope         = model = @resource
+    @scope         = @resource
+
+    # Instantiate it's on handleable factory
+    widget         = @
+    widgetable     = stampit().enclose -> @widget = widget; @
+    @handleable    = stampit.compose widgetable, handleable
 
     {sandbox: {util: {@inflector}}}   = @
 
     @sandbox.on "viewer.#{@identifier}.scope", @scope_to, @
 
-    # Iniitalize plugins
+    # Initalize plugins
+    # TODO think how to implement plugins api
     loading = @plugins options
 
+    @statused 'idle'
     @$el.addClass "viewer widget #{@inflector.cssify @identifier} idle clearfix"
 
-    loading.done => @require_custom options
+    loading.done (widget) ->
+      widget.require_custom options.resource
 
-  require_custom: (options) ->
+  # TODO externalize this code to an extension
+  require_custom: (resource) ->
+    deferred = @sandbox.data.deferred()
+
     # Fetch custom templates
     # TODO better custom templates structure and custom presenter
     # TODO better segregation of concerns on this code
     # TODO handle case where custom presenter does not exist!
     require [
-      "text!./widgets/viewer/templates/default/#{options.resource}.html"
-      "./widgets/viewer/presenters/#{options.resource}"
+      "text!./widgets/viewer/templates/default/#{resource}.html"
+      "./widgets/viewer/presenters/#{resource}"
       ], (custom_default_template, custom_presenter) =>
 
-      # TODO Better way to preserve widgets handlers
-      handlers     =
-        item:
-          clicked: (event, models) =>
-            @select models.item
+      unless presenter.hasOwnProperty 'handlers'
+        Object.defineProperty presenter, 'handlers',
+          get: -> throw new Error "presenter.hanlder is deprecated, please compose upon handleable"
+          set: -> throw new Error "presenter.hanlder is deprecated, please compose upon handleable"
 
-      presenter.handlers = handlers
-
-      custom_default_template and templates[options.resource] = custom_default_template
-      @presenter = @sandbox.util.extend custom_presenter, presenter if custom_presenter
-
-      @$results = @$el.find '.results .items'
+      custom_default_template and templates[resource] = custom_default_template
+      @presenter  = @sandbox.util.extend custom_presenter, presenter if custom_presenter
 
       # Fetch default data
-      @populate handlers
+      @populate()
 
-    true
+      deferred.resolveWith @, [resource]
+
+    , (error) =>
+      # TODO handle other status codes with xhr error
+      @sandbox.logger.error "Error when loading presenter and template for resource '#{resource}':\n\n", error.message + "\n\n", error
+      deferred.rejectWith @, arguments
+
+    deferred

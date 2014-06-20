@@ -6,8 +6,12 @@ define 'aura/extensions/widget/lifecycleable', ->
   with_component = 'jquery'
   jQuery         = require with_component
 
+  with_component = 'stampit/stampit'
+  stampit        = require with_component
+
   core           = null
 
+  # TODO transform into a composable
   lifecycleable =
     injection: (definition) ->
       options           = definition.options
@@ -50,7 +54,7 @@ define 'aura/extensions/widget/lifecycleable', ->
       options.require.packages.push name: options.ref, location: widgetsPath + "/" + widgetName
       options.name  = widgetName
 
-      unless options.el
+      unless options.el?
         options.el  = jQuery '<div class="widget"></div>'
         @root.append options.el
 
@@ -58,24 +62,27 @@ define 'aura/extensions/widget/lifecycleable', ->
 
       definition
 
-  recyclable =
-    constructor: (options) ->
-
-      # TODO only listen to this specific sandbox stop
-      @sandbox.on 'aura.sandbox.stop', (sandbox) =>
-        @stopped() if @sandbox.ref == sandbox.ref
-
-      @sandbox.on 'aura.sandbox.start', (sandbox) =>
-        @started() if @sandbox.ref == sandbox.ref
-
-      recyclable.super.constructor.call @, options
-
-      @initialized()
-
+  recyclable = stampit(
     inject: (name, options) ->
       core.inject name, options
 
+    injection: -> lifecycleable.injection arguments...
+
+    before_initialize: ->
+      # TODO only listen to this specific sandbox stop
+      # TODO stop listening when sandbox starts or stops
+      @sandbox.on 'aura.sandbox.stop', (sandbox) ->
+        @stopped() if @sandbox.ref == sandbox.ref
+      , @
+
+      @sandbox.on 'aura.sandbox.start', (sandbox) ->
+        @started() if @sandbox.ref == sandbox.ref
+      , @
+
     initialized: ->
+      # TODO think how to access parent widget in children ones
+      @sandbox._widget ||= @
+
       @sandbox.emit "#{@name}.#{@identifier}.initialized", @
 
     started: ->
@@ -84,6 +91,8 @@ define 'aura/extensions/widget/lifecycleable', ->
     # TODO Remove when updating to aura 0.9
     stopped: ->
       @$el.remove()
+
+  ).enclose -> @initialized()
 
   (application) ->
 
@@ -100,12 +109,19 @@ define 'aura/extensions/widget/lifecycleable', ->
       lifecycleable.sources    = application.config.widgets.sources
       lifecycleable.find       = core.dom.find
 
-      # TODO Keep searching for root until found, and only throw
-      # exception if someone tries to initialize widgets in root
-      # without a valid root selector
-      lifecycleable.root       = core.dom.find app.startOptions.widgets || 'body'
+      Object.defineProperty lifecycleable, 'root',
+        get: ->
+          root = core.dom.find app.startOptions.widgets
+          throw new TypeError "No root node found for selector '#{app.startOptions.widgets}'." unless root.length != 0
 
-      throw new TypeError "No root node found for selector '#{app.startOptions.widgets}'." unless lifecycleable.root.length != 0
+          # TODO Cache and override root when found
+          # TODO check how this will integrate with mocha specs
+          # Object.defineProperty lifecycleable, 'root', value: root
+
+          root
+
+        configurable: true
+
 
       lifecycleable.decamelize = core.util.decamelize
       lifecycleable.capitalize = core.util.capitalize
@@ -141,7 +157,4 @@ define 'aura/extensions/widget/lifecycleable', ->
         params[2] = @ if params.length < 3
         core.inject params...
 
-      # Add support for element removal after stoping widget
-      # TODO replace Base.extend inheritance to stampit composition
-      core.Widgets.Base = core.Widgets.Base.extend recyclable
-      recyclable.super  = core.Widgets.Base.__super__
+      core.Widgets.Base.compose recyclable
