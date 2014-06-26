@@ -92,10 +92,10 @@ define ->
     @sandbox.logger.log "initialized!"
 
     # TODO integrate component and requirejs in a more consize way
-    with_component = 'dialog'
+    with_component = 'component~dialog@0.2.0'
     dialog  = require(with_component).Dialog
 
-    with_component = 'component-overlay'
+    with_component = 'component~overlay@0.1.1'
     overlay = require with_component
 
     @sandbox.util.extend dialog.prototype, dialog_extensions

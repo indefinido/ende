@@ -67,7 +67,7 @@ define ['./states/index', './presenter'], (templates, presenter) ->
     sandbox.on 'user.password_recovered'       , recoverer.recovered
 
     # Will also initialize sandbox!
-    @$el.attr 'data-class', 'base.classes < base.status'
+    @$el.attr 'data-class', 'base.classes < .status'
     @presentation  = presenter authenticator, recoverer, base
     authentication = @presentation.authenticator
     recovery       = @presentation.recoverer

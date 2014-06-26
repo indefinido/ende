@@ -320,8 +320,10 @@ define [
       else
         @$el.addClass 'empty'
 
-      # TODO move binders to application
+      # TODO externalize parent presentation inheritation to a
+      # elementless widget
       @inherit_parent_presentation()
+      # TODO move binders to application
       # TODO on bind execute presentation_options method and extend and inherit from presenter what needed
       @bind @presentation, @sandbox.util.extend(true, @presenter.presentation, @options.presentation)
 
@@ -351,6 +353,7 @@ define [
     deferreds.push paginable  widget: @ if options.page
     deferreds.push scrollable widget: @ if options.scroll
     deferreds.push scopable   @         if options.scope or options.scopable
+
 
     @sandbox.data.when deferreds...
 
