@@ -10,9 +10,9 @@ define 'aura/extensions/routes', (routes) ->
   with_component = 'jquery'
   window.jQuery = window.$ = require with_component
   # TODO Remove .call null
-  loader.require.call null, 'ened/vendor/assets/javascripts/lennon/lennon.js'
+  loader.require.call null, 'ende/vendor/assets/javascripts/lennon/lennon.js'
 
-  query  = loader.require.call null, 'querystring'
+  query  = loader.require.call null, 'component~querystring@1.3.0'
   router = null
 
   # TODO rename to router stationg
@@ -136,7 +136,7 @@ define 'aura/extensions/routes', (routes) ->
 
       toString: -> window.location
 
-    version: '0.2.1'
+    version: '0.2.2'
 
     initialize: (application) ->
       {logger} = application
