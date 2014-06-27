@@ -19531,13 +19531,16 @@ associable = {
             parent_resource: this.resource,
             owner: record
           };
-          old_resource = this[resource];
+          old_resource = record[resource];
           Object.defineProperty(record, resource.toString(), {
             get: $.proxy(descriptors.belongs_to.resource.getter, association_proxy),
             set: $.proxy(descriptors.belongs_to.resource.setter, association_proxy),
             configurable: true
           });
-          _results.push(this[resource] = old_resource);
+
+          record.after_initialize.push(function () {this[resource] = old_resource;});
+          _results.push(true);
+
         }
         return _results;
       }
@@ -20028,7 +20031,7 @@ restful = {
       promise.done(this.assign_attributes);
       promise.fail(this.failed);
       this.reloading = promise;
-      this.ready = function() {
+      this.ready =function() {
         console.warn("resource.ready was deprecated, please use resource.reloading.done");
         return promise.done.apply(promise, arguments);
       };
@@ -26820,3 +26823,4 @@ require.register("ende/vendor/assets/javascripts/spin/spin.js", function (export
 });
 
 require("ende")
+   
