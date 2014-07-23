@@ -22,7 +22,7 @@ define 'es6-map-shim' , ['es5-shim'  , 'config/load_components'], ->
 define 'es6-shim'     , ['es6-map-shim', 'es5-shim'  , 'config/load_components'], ->
   # Fix wrong object order definition in internet explorer
   # TODO send a pull request to use dependency only after object definition
-  require "paulmillr~es6-shim@0.10.1"
+  require "paulmillr~es6-shim@0.14.0"
 
   require "indefinido~observable@es6-modules"
 

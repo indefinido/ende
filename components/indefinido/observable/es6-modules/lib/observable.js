@@ -52,7 +52,6 @@ jQuery.extend(observable, {
       delete object[name];
     }
     object.observation.destroy();
-    object.observation.scheduler.destroy();
     delete object.observation;
     delete object.observed;
     return object;
