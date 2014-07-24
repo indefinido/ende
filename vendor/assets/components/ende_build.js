@@ -13927,104 +13927,6 @@ require.register("paulmillr~es6-shim@0.14.0", function (exports, module) {
 
 });
 
-require.register("component~trim@0.0.1", function (exports, module) {
-
-exports = module.exports = trim;
-
-function trim(str){
-  if (str.trim) return str.trim();
-  return str.replace(/^\s*|\s*$/g, '');
-}
-
-exports.left = function(str){
-  if (str.trimLeft) return str.trimLeft();
-  return str.replace(/^\s*/, '');
-};
-
-exports.right = function(str){
-  if (str.trimRight) return str.trimRight();
-  return str.replace(/\s*$/, '');
-};
-
-});
-
-require.register("component~querystring@1.3.0", function (exports, module) {
-
-/**
- * Module dependencies.
- */
-
-var encode = encodeURIComponent;
-var decode = decodeURIComponent;
-var trim = require("component~trim@0.0.1");
-var type = require("component~type@1.0.0");
-
-/**
- * Parse the given query `str`.
- *
- * @param {String} str
- * @return {Object}
- * @api public
- */
-
-exports.parse = function(str){
-  if ('string' != typeof str) return {};
-
-  str = trim(str);
-  if ('' == str) return {};
-  if ('?' == str.charAt(0)) str = str.slice(1);
-
-  var obj = {};
-  var pairs = str.split('&');
-  for (var i = 0; i < pairs.length; i++) {
-    var parts = pairs[i].split('=');
-    var key = decode(parts[0]);
-    var m;
-
-    if (m = /(\w+)\[(\d+)\]/.exec(key)) {
-      obj[m[1]] = obj[m[1]] || [];
-      obj[m[1]][m[2]] = decode(parts[1]);
-      continue;
-    }
-
-    obj[parts[0]] = null == parts[1]
-      ? ''
-      : decode(parts[1]);
-  }
-
-  return obj;
-};
-
-/**
- * Stringify the given `obj`.
- *
- * @param {Object} obj
- * @return {String}
- * @api public
- */
-
-exports.stringify = function(obj){
-  if (!obj) return '';
-  var pairs = [];
-
-  for (var key in obj) {
-    var value = obj[key];
-
-    if ('array' == type(value)) {
-      for (var i = 0; i < value.length; ++i) {
-        pairs.push(encode(key + '[' + i + ']') + '=' + encode(value[i]));
-      }
-      continue;
-    }
-
-    pairs.push(encode(key) + '=' + encode(obj[key]));
-  }
-
-  return pairs.join('&');
-};
-
-});
-
 require.register("mikeric~rivets@v0.5.12", function (exports, module) {
 // Rivets.js
 // version: 0.5.12
@@ -15044,6 +14946,104 @@ require.register("mikeric~rivets@v0.5.12", function (exports, module) {
   }
 
 }).call(this);
+
+});
+
+require.register("component~trim@0.0.1", function (exports, module) {
+
+exports = module.exports = trim;
+
+function trim(str){
+  if (str.trim) return str.trim();
+  return str.replace(/^\s*|\s*$/g, '');
+}
+
+exports.left = function(str){
+  if (str.trimLeft) return str.trimLeft();
+  return str.replace(/^\s*/, '');
+};
+
+exports.right = function(str){
+  if (str.trimRight) return str.trimRight();
+  return str.replace(/\s*$/, '');
+};
+
+});
+
+require.register("component~querystring@1.3.0", function (exports, module) {
+
+/**
+ * Module dependencies.
+ */
+
+var encode = encodeURIComponent;
+var decode = decodeURIComponent;
+var trim = require("component~trim@0.0.1");
+var type = require("component~type@1.0.0");
+
+/**
+ * Parse the given query `str`.
+ *
+ * @param {String} str
+ * @return {Object}
+ * @api public
+ */
+
+exports.parse = function(str){
+  if ('string' != typeof str) return {};
+
+  str = trim(str);
+  if ('' == str) return {};
+  if ('?' == str.charAt(0)) str = str.slice(1);
+
+  var obj = {};
+  var pairs = str.split('&');
+  for (var i = 0; i < pairs.length; i++) {
+    var parts = pairs[i].split('=');
+    var key = decode(parts[0]);
+    var m;
+
+    if (m = /(\w+)\[(\d+)\]/.exec(key)) {
+      obj[m[1]] = obj[m[1]] || [];
+      obj[m[1]][m[2]] = decode(parts[1]);
+      continue;
+    }
+
+    obj[parts[0]] = null == parts[1]
+      ? ''
+      : decode(parts[1]);
+  }
+
+  return obj;
+};
+
+/**
+ * Stringify the given `obj`.
+ *
+ * @param {Object} obj
+ * @return {String}
+ * @api public
+ */
+
+exports.stringify = function(obj){
+  if (!obj) return '';
+  var pairs = [];
+
+  for (var key in obj) {
+    var value = obj[key];
+
+    if ('array' == type(value)) {
+      for (var i = 0; i < value.length; ++i) {
+        pairs.push(encode(key + '[' + i + ']') + '=' + encode(value[i]));
+      }
+      continue;
+    }
+
+    pairs.push(encode(key) + '=' + encode(obj[key]));
+  }
+
+  return pairs.join('&');
+};
 
 });
 
@@ -18396,42 +18396,45 @@ model.associable = {
 
 require.register("indefinido~indemma@master/lib/record/dirtyable.js", function (exports, module) {
 'use strict';
-var dirt, dirtyable, model, record;
+var dirtyable, model, record;
 
 dirtyable = {
   ignores: ['dirty', 'resource', 'route', 'initial_route', 'after_initialize', 'before_initialize', 'parent_resource', 'nested_attributes', 'reloading', 'ready', 'saving', 'salvation', 'sustained', 'element', 'default', 'lock', 'validated', 'validation', 'errors', 'dirty'],
   reserved_filter: function(name) {
-    return dirtyable.ignores.indexOf(name) === -1;
-  },
-  descriptor: {
-    get: function() {
-      return this.observed.dirty;
-    },
-    set: function(value) {
-      return this.observed.dirty = value;
-    }
+    return this.ignores.indexOf(name) === -1;
   },
   record: {
-    after_initialize: function() {
-      Object.defineProperty(this, 'dirty', dirtyable.descriptor);
-      this.observed.dirty = !!this._id;
-      return this.subscribe(function(added, removed, changed, past) {
-        this.dirty || (this.dirty = !!Object.keys(changed).filter(dirtyable.reserved_filter).length);
-        this.dirty || (this.dirty = !!Object.keys(added).filter(dirtyable.reserved_filter).length);
-        return this.dirty || (this.dirty = !!Object.keys(removed).filter(dirtyable.reserved_filter).length);
-      });
-    }
+    after_initialize: [
+      function() {
+        return this.subscribe(function(added, removed, changed, past) {
+          return this.dirty || (this.dirty = !!Object.keys($.extend({}, added, removed, changed)).filter(dirtyable.reserved_filter, dirtyable).length);
+        });
+      }
+    ]
   }
 };
 
 if (!Object.observe) {
-  dirt = dirtyable.descriptor.set;
-  dirtyable.descriptor.set = function(value) {
-    value = dirt.apply(this, arguments);
-    this.observation.scheduler.schedule();
-    return value;
-  };
+  $.extend(dirtyable, {
+    descriptor: {
+      get: function() {
+        return this.observed.dirty;
+      },
+      set: function(value) {
+        this.observed.dirty = value;
+        this.observation.scheduler.schedule();
+        return value;
+      }
+    }
+  });
+  dirtyable.record.after_initialize.push(function() {
+    return Object.defineProperty(this, 'dirty', dirtyable.descriptor);
+  });
 }
+
+dirtyable.record.after_initialize.push(function() {
+  return this.dirty = !!this._id;
+});
 
 model = window.model;
 
@@ -18440,7 +18443,7 @@ record = window.record;
 model.dirtyable = true;
 
 record.mix(function(recordable) {
-  return recordable.after_initialize.push(dirtyable.record.after_initialize);
+  return recordable.after_initialize = recordable.after_initialize.concat(dirtyable.record.after_initialize);
 });
 
 model.mix(function(modelable) {});
@@ -18538,7 +18541,7 @@ queryable = {
   storage: storable(),
   find: function(key) {
     if (!key) {
-      throw new TypeError("InvalidFind: resource.find was called with a falsey value");
+      throw new TypeError("InvalidFind: " + (this.resource.toString()) + ".find was called with a falsey value");
     }
     return this.storage.store(key);
   },
@@ -19675,6 +19678,10 @@ errorsable = stampit({
 });
 
 initializers = {
+  ignores: ['dirty', 'resource', 'route', 'initial_route', 'after_initialize', 'before_initialize', 'parent_resource', 'nested_attributes', 'reloading', 'ready', 'saving', 'salvation', 'sustained', 'element', 'default', 'lock', 'validated', 'validation', 'errors', 'dirty'],
+  reserved_filter: function(name) {
+    return this.ignores.indexOf(name) === -1;
+  },
   define_triggers: function() {
     this.errors = errorsable({
       model: model[this.resource]
@@ -19686,8 +19693,11 @@ initializers = {
     });
     this.validated = false;
     this.validation = null;
-    this.subscribe('dirty', function(value) {
-      return value && (this.validated = false);
+    this.subscribe(function(added, removed, changed) {
+      var modified;
+
+      modified = !!Object.keys($.extend(added, removed, changed)).filter(initializers.reserved_filter, initializers).length;
+      return modified && (this.validated = false);
     });
     return Object.defineProperty(this, 'valid', {
       get: function() {
@@ -19781,13 +19791,7 @@ extensions = {
       this.validation.done(doned);
       this.validation.fail(failed);
       return this.validation.done(function(record) {
-        var old_dirty;
-
-        old_dirty = record.dirty;
-        record.dirty = null;
-        record.validated || (record.validated = true);
-        record.observed.dirty = old_dirty;
-        return record;
+        return record.validated || (record.validated = true);
       });
     }
   }
@@ -21296,31 +21300,6 @@ ClassList.prototype.contains = function(name){
 
 });
 
-require.register("component~query@0.0.1", function (exports, module) {
-
-function one(selector, el) {
-  return el.querySelector(selector);
-}
-
-exports = module.exports = function(selector, el){
-  el = el || document;
-  return one(selector, el);
-};
-
-exports.all = function(selector, el){
-  el = el || document;
-  return el.querySelectorAll(selector);
-};
-
-exports.engine = function(obj){
-  if (!obj.one) throw new Error('.one callback required');
-  if (!obj.all) throw new Error('.all callback required');
-  one = obj.one;
-  exports.all = obj.all;
-};
-
-});
-
 require.register("component~emitter@1.0.0", function (exports, module) {
 
 /**
@@ -21477,6 +21456,31 @@ Emitter.prototype.listeners = function(event){
 
 Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
+};
+
+});
+
+require.register("component~query@0.0.1", function (exports, module) {
+
+function one(selector, el) {
+  return el.querySelector(selector);
+}
+
+exports = module.exports = function(selector, el){
+  el = el || document;
+  return one(selector, el);
+};
+
+exports.all = function(selector, el){
+  el = el || document;
+  return el.querySelectorAll(selector);
+};
+
+exports.engine = function(obj){
+  if (!obj.one) throw new Error('.one callback required');
+  if (!obj.all) throw new Error('.all callback required');
+  one = obj.one;
+  exports.all = obj.all;
 };
 
 });
