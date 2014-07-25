@@ -117,14 +117,19 @@ schedulerable.schedulable_observers = function() {
 };
 
 schedulerable.augment = function(observable) {
-  var original;
+  var subscribe, unobserve;
 
-  original = observable.methods.subscribe;
+  subscribe = observable.methods.subscribe;
   observable.methods.subscribe = function(keypath, callback) {
-    original.apply(this, arguments);
+    subscribe.apply(this, arguments);
     if (typeof keypath !== 'function') {
       return this.observation.scheduler.schedulable(this, keypath);
     }
+  };
+  unobserve = observable.unobserve;
+  observable.unobserve = function() {
+    unobserve.apply(this, arguments);
+    return object.observation.scheduler.destroy();
   };
   return jQuery.extend((function() {
     var object;

@@ -226,20 +226,26 @@ define 'aura/extensions/rivets', ['aura/extensions/rivets/formatters'], (formatt
         else if value?.toString() isnt el.value?.toString()
           el.value = if value? then value else ''
 
+  Rivets.Binding::keypath_from_dependency = (dependency) ->
+    if dependency.startsWith '.'
+      dependency.substring 1
+    else
+      path = dependency.split '.'
+      path.shift()
+      path.join '.'
+
   Rivets.Binding::sync = ->
-    if @model isnt @observer.object_
-      current_model = @observer.object_
+    if @model isnt @observer?.object_
+      current_model = @observer?.object_
       @observer = @model.observation.observers[@keypath]
 
       if @options.dependencies?.length
         if current_model
           for dependency in @options.dependencies
-            dependency = dependency.substring 1
-            current_model.unsubscribe dependency, @sync
+            current_model.unsubscribe @keypath_from_dependency(dependency), @sync
 
           for dependency in @options.dependencies
-            dependency = dependency.substring 1
-            @model.subscribe dependency, @sync
+            @model.subscribe @keypath_from_dependency(dependency), @sync
 
     @set if @options.bypass
       @model[@keypath]

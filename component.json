@@ -7,8 +7,8 @@
   "dependencies": {
     "mikeric/rivets": "v0.5.12",
     "segmentio/extend": "*",
-    "pluma/assimilate": "*",
-    "paulmillr/es6-shim": "*",
+    "pluma/assimilate": ">= 0.4.0",
+    "paulmillr/es6-shim": "0.14.0",
     "component/type": "*",
     "component/bind": "*",
     "component/jquery": "*",

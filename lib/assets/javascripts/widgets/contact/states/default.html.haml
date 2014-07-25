@@ -1,0 +1,39 @@
+%h2 Fale com a gente
+
+%form.form
+  .form-group{data: {class: {invalid: 'message.errors.name' }}}
+    %span.required-mark{ title: "obrigatório" } *
+    %input.form-control{ placeholder: "Nome", required: true, autofocus: true, data: { value: "message.name" } }
+    %i.validation &times;
+    .tooltip.right
+      .tooltip-inner {{message.errors.name}}
+      .tooltip-arrow
+
+  .form-group{data: {class: {invalid: 'message.errors.email' }}}
+    %span.required-mark{ title: "obrigatório" } *
+    %input.form-control{ type: 'email', placeholder: "E-mail", required: :required, data: { value: "message.email" } }
+    %i.validation &times;
+    .tooltip.right
+      .tooltip-inner {{message.errors.email}}
+      .tooltip-arrow
+
+  .form-group{data: {class: {invalid: 'message.errors.subject' }}}
+    %span.required-mark{ title: "obrigatório" } *
+    %input.form-control{ placeholder: "Assunto", data: { value: "message.subject" } }
+    %i.validation &times;
+    .tooltip.right
+      .tooltip-inner {{message.errors.subject}}
+      .tooltip-arrow
+
+  .form-group{data: {class: {invalid: 'message.errors.body' }}}
+    %span.required-mark{ title: "obrigatório" } *
+    %textarea.form-control{ placeholder: "Mensagem", required: :required, data: { value: "message.body" }, rows: 6 }
+    %i.validation &times;
+    .tooltip.right
+      .tooltip-inner {{message.errors.body}}
+      .tooltip-arrow
+
+  %button.btn.btn-success.btn-block{data: {html: 'sender.button_label', on: {click: 'sender.send'}}} Enviar mensagem
+
+  %br
+  %br

@@ -20,7 +20,7 @@ requirejs.config
 
 # Prevent aura from defining jquery erroniously
 define 'jquery'    , ['config/load_components'], ->
-  window.jQuery = window.$ = require 'component~jquery@1.9.1'
+  window.jQuery = window.$ = require 'component~jquery@1.0.0'
 
 define 'modernizr' , ['config/load_components'], ->
   require 'components~modernizr@2.6.2'
