@@ -137,7 +137,7 @@ define 'aura/extensions/states', ['states'], (states) ->
         get: -> state.current
 
       # TODO clearer startup sequence
-      application.core.metabolize = (root) ->
+      application.core.metabolize = (root = 'body') ->
         # If any initialized flow changed the application state
         # before the widgets initialization, store its state pass
         # through the default state and go back to the old state

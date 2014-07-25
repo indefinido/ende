@@ -45,6 +45,9 @@ define 'aura/extensions/widget/eventable', ['stampit', 'es6-map-shim'], (stampit
       @identifier = @options.identifier or @options.resource or matches[2]
       @sandbox.identifier = @identifier
 
+    on: (event_name, handler, context) -> @sandbox.on "#{@name}.#{@identifier}.#{event_name}", handler, context || @
+    emit: (event_name, data...) -> @sandbox.emit "#{@name}.#{@identifier}.#{event_name}", data...
+
   version: '0.1.0'
 
   initialize: (application) ->

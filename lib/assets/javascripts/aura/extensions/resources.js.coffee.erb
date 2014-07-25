@@ -1,5 +1,5 @@
 <% # TODO mover para helper
-base_path        = Rails.root.join('app', 'assets', 'javascripts', 'models')
+base_path        = Rails.root.join('app', 'assets', 'javascripts', 'resources')
 models_list      = Dir.glob(Rails.root.join(base_path, '**', '*.js*'))
 models_list.map! do |file|
    file.sub! base_path.to_s + '/', ''
@@ -8,7 +8,7 @@ models_list.map! do |file|
    next nil if file =~ /~/
 
    entries         = file.split /\// || []
-   entries.unshift 'models'
+   entries.unshift 'resources'
    entries.push    File.basename entries.pop, '.js.coffee'
    File.join *entries
 
@@ -20,12 +20,10 @@ end
 
 %>
 
+
 'use strict'
 
-
-root = exports ? this
-
-define 'aura/extensions/models', <%= models_list.to_json  %>, (resources...) ->
+define 'aura/extensions/resources', <%= models_list.to_json  %>, (resources...) ->
 
   # TODO better require api for indemma
   indemma = require 'indefinido~indemma@master'
@@ -47,7 +45,7 @@ define 'aura/extensions/models', <%= models_list.to_json  %>, (resources...) ->
 
   name: 'resources'
 
-  version: '0.1.2'
+  version: '0.2.0'
 
   # Extension definition
   initialize: (application) ->
@@ -68,7 +66,7 @@ define 'aura/extensions/models', <%= models_list.to_json  %>, (resources...) ->
     core.resource = core.model  = sandbox.resource = sandbox.model = (name) ->
       # TODO use a Map internally in indemma
       model = indemma.model[name]
-      throw new TypeError unless model?
+      throw new TypeError "Resource not found with name: #{name}\nCheck for the definition on assets/javascripts/resources/#{name}.js.coffee" unless model?
       model
 
     # TODO rename core.models and core.domain, to core.resources, completely
@@ -85,3 +83,4 @@ define 'aura/extensions/models', <%= models_list.to_json  %>, (resources...) ->
     core.util._.map resources, (definition) ->
       resource = indemma.model.call definition
       indemma.model.every.push resource
+
