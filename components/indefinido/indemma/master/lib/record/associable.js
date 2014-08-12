@@ -95,18 +95,31 @@ descriptors = {
         return this.owner.observed[this.resource + '_id'];
       },
       setter: function(resource_id) {
-        var association_name, current_resource_id, _ref;
+        var association_name, change, current_resource_id, _ref, _ref1;
 
         association_name = this.resource.toString();
-        if (!resource_id) {
+        if (resource_id == null) {
           this.dirty = true;
-          this.owner[association_name] = resource_id;
+          this.owner[association_name] = null;
           return resource_id;
         }
         current_resource_id = (_ref = this.owner.observed[association_name]) != null ? _ref._id : void 0;
         if (resource_id !== current_resource_id) {
           this.owner.observed[association_name + '_id'] = resource_id;
           this.owner.observed[association_name] = null;
+          if (!Object.observe) {
+            if ((_ref1 = this.owner.observation.observers[association_name + '_id']) != null) {
+              _ref1.check_();
+            }
+          } else {
+            change = {
+              oldValue: current_resource_id,
+              type: 'update',
+              name: association_name + '_id',
+              object: this.owner
+            };
+            Object.getNotifier(this.owner).notify(change);
+          }
         }
         return resource_id;
       }
@@ -119,7 +132,7 @@ descriptors = {
         associated = this.owner.observed[association_name];
         associated_id = this.owner.observed[association_name + '_id'];
         if (!(((associated != null ? associated._id : void 0) != null) || associated_id)) {
-          return associated;
+          return associated || null;
         }
         if (associated != null ? associated.sustained : void 0) {
           return associated;
@@ -140,8 +153,29 @@ descriptors = {
         return this.owner.observed[association_name] = associated;
       },
       setter: function(associated) {
-        this.owner.observed[this.resource.toString()] = associated;
-        return this.owner.observed[this.resource.toString() + '_id'] = associated ? associated._id : null;
+        var association_name, change, current_value, _ref;
+
+        association_name = this.resource.toString();
+        current_value = this.owner.observed[association_name];
+        if (current_value === associated) {
+          return;
+        }
+        this.owner.observed[association_name] = associated;
+        this.owner.observed[association_name + '_id'] = associated ? associated._id : null;
+        if (!Object.observe) {
+          if ((_ref = this.owner.observation.observers[association_name]) != null) {
+            _ref.check_();
+          }
+        } else {
+          change = {
+            oldValue: current_value,
+            type: 'update',
+            name: association_name,
+            object: this.owner
+          };
+          Object.getNotifier(this.owner).notify(change);
+        }
+        return associated;
       }
     }
   }
@@ -167,10 +201,9 @@ callbacks = {
             }
             association.resource = model.singularize(association.resource);
             association.add.apply(association, associations_attributes);
-            _results.push(association.resource = model.pluralize(association.resource));
-          } else {
-            _results.push(void 0);
+            association.resource = model.pluralize(association.resource);
           }
+          _results.push(delete this["" + association_name + "_attributes"]);
         }
         return _results;
       }
@@ -284,6 +317,7 @@ associable = {
           association_proxy[this.resource.toString()] = this;
           this["build_" + resource] = $.proxy(singular.build, association_proxy);
           this["create_" + resource] = $.proxy(singular.create, association_proxy);
+          this["" + association_name + "_attributes"] = $.extend(this[association_name], this["" + association_name + "_attributes"]);
         }
         callbacks.has_one.nest_attributes.call(this);
       }
@@ -329,13 +363,15 @@ associable = {
             parent_resource: this.resource,
             owner: record
           };
-          old_resource = this[resource];
+          old_resource = record[resource];
           Object.defineProperty(record, resource.toString(), {
             get: $.proxy(descriptors.belongs_to.resource.getter, association_proxy),
             set: $.proxy(descriptors.belongs_to.resource.setter, association_proxy),
             configurable: true
           });
-          _results.push(this[resource] = old_resource);
+          _results.push(record.after_initialize.push((function() {
+            return this[resource] = old_resource;
+          })));
         }
         return _results;
       }
