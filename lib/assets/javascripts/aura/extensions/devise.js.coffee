@@ -66,6 +66,13 @@ define 'aura/extensions/devise', ->
           sandbox.signed_in = false
           mediator.emit 'session.restoration_failed'
 
+          # TODO change when restoring the session through GET #show
+          # Ignore session restoration errors, for now
+          @errors.clear()
+
+          # TODO implement #show on devise/sessions_controller, and
+          # try to restore session not by creating a new one, but
+          # trying to retrieve the current one
           attempt.rejectWith @, arguments
 
         restoration.always ->
