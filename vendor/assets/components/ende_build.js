@@ -14727,7 +14727,7 @@ require.register("indefinido~observable@es6-modules/vendor/shims/accessors.js", 
 });
 
 require.register("indefinido~observable@es6-modules/vendor/shims/array.indexOf.js", function (exports, module) {
-if (!Array.prototype.indexOf) { 
+if (!Array.prototype.indexOf) {
     Array.prototype.indexOf = function(obj, start) {
          for (var i = (start || 0), j = this.length; i < j; i++) {
              if (this[i] === obj) { return i; }
@@ -15389,13 +15389,14 @@ associable = {
             owner: record
           };
           old_resource = record[resource];
+          old_resource_id = record[resource + '_id'];
           Object.defineProperty(record, resource.toString(), {
             get: $.proxy(descriptors.belongs_to.resource.getter, association_proxy),
             set: $.proxy(descriptors.belongs_to.resource.setter, association_proxy),
             configurable: true
           });
           _results.push(record.after_initialize.push((function() {
-            return this[resource] = old_resource;
+            (this[resource] = old_resource) || (this[resource + '_id'] = old_resource_id)
           })));
         }
         return _results;
@@ -17834,7 +17835,7 @@ var compose = function compose() {
 /**
  * Take an old-fashioned JS constructor and return a stampit stamp
  * that you can freely compose with other stamps.
- * @param  {Function} Constructor 
+ * @param  {Function} Constructor
  * @return {Function}             A composable stampit factory
  *                                (aka stamp).
  */
@@ -17888,173 +17889,173 @@ License along with OWL Pluralization.  If not, see
 if ( typeof owl === 'undefined' ) owl = {};
 
 owl.pluralize = (function() {
-	var userDefined = {};
+    var userDefined = {};
 
-	function capitalizeSame(word, sampleWord) {
-		if ( sampleWord.match(/^[A-Z]/) ) {
-			return word.charAt(0).toUpperCase() + word.slice(1);
-		} else {
-			return word;
-		}
-	}
+    function capitalizeSame(word, sampleWord) {
+        if ( sampleWord.match(/^[A-Z]/) ) {
+            return word.charAt(0).toUpperCase() + word.slice(1);
+        } else {
+            return word;
+        }
+    }
 
-	// returns a plain Object having the given keys,
-	// all with value 1, which can be used for fast lookups.
-	function toKeys(keys) {
-		keys = keys.split(',');
-		var keysLength = keys.length;
-		var table = {};
-		for ( var i=0; i < keysLength; i++ ) {
-			table[ keys[i] ] = 1;
-		}
-		return table;
-	}
+    // returns a plain Object having the given keys,
+    // all with value 1, which can be used for fast lookups.
+    function toKeys(keys) {
+        keys = keys.split(',');
+        var keysLength = keys.length;
+        var table = {};
+        for ( var i=0; i < keysLength; i++ ) {
+            table[ keys[i] ] = 1;
+        }
+        return table;
+    }
 
-	// words that are always singular, always plural, or the same in both forms.
-	var uninflected = toKeys("aircraft,advice,blues,corn,molasses,equipment,gold,information,cotton,jewelry,kin,legislation,luck,luggage,moose,music,offspring,rice,silver,trousers,wheat,bison,bream,breeches,britches,carp,chassis,clippers,cod,contretemps,corps,debris,diabetes,djinn,eland,elk,flounder,gallows,graffiti,headquarters,herpes,high,homework,innings,jackanapes,mackerel,measles,mews,mumps,news,pincers,pliers,proceedings,rabies,salmon,scissors,sea,series,shears,species,swine,trout,tuna,whiting,wildebeest,pike,oats,tongs,dregs,snuffers,victuals,tweezers,vespers,pinchers,bellows,cattle");
+    // words that are always singular, always plural, or the same in both forms.
+    var uninflected = toKeys("aircraft,advice,blues,corn,molasses,equipment,gold,information,cotton,jewelry,kin,legislation,luck,luggage,moose,music,offspring,rice,silver,trousers,wheat,bison,bream,breeches,britches,carp,chassis,clippers,cod,contretemps,corps,debris,diabetes,djinn,eland,elk,flounder,gallows,graffiti,headquarters,herpes,high,homework,innings,jackanapes,mackerel,measles,mews,mumps,news,pincers,pliers,proceedings,rabies,salmon,scissors,sea,series,shears,species,swine,trout,tuna,whiting,wildebeest,pike,oats,tongs,dregs,snuffers,victuals,tweezers,vespers,pinchers,bellows,cattle");
 
-	var irregular = {
-		// pronouns
-		I: 'we',
-		you: 'you',
-		he: 'they',
-		it: 'they',  // or them
-		me: 'us',
-		you: 'you',
-		him: 'them',
-		them: 'them',
-		myself: 'ourselves',
-		yourself: 'yourselves',
-		himself: 'themselves',
-		herself: 'themselves',
-		itself: 'themselves',
-		themself: 'themselves',
-		oneself: 'oneselves',
+    var irregular = {
+        // pronouns
+        I: 'we',
+        you: 'you',
+        he: 'they',
+        it: 'they',  // or them
+        me: 'us',
+        you: 'you',
+        him: 'them',
+        them: 'them',
+        myself: 'ourselves',
+        yourself: 'yourselves',
+        himself: 'themselves',
+        herself: 'themselves',
+        itself: 'themselves',
+        themself: 'themselves',
+        oneself: 'oneselves',
 
-		child: 'children',
-		dwarf: 'dwarfs',  // dwarfs are real; dwarves are fantasy.
-		mongoose: 'mongooses',
-		mythos: 'mythoi',
-		ox: 'oxen',
-		soliloquy: 'soliloquies',
-		trilby: 'trilbys',
-		person: 'people',
-		forum: 'forums', // fora is ok but uncommon.
+        child: 'children',
+        dwarf: 'dwarfs',  // dwarfs are real; dwarves are fantasy.
+        mongoose: 'mongooses',
+        mythos: 'mythoi',
+        ox: 'oxen',
+        soliloquy: 'soliloquies',
+        trilby: 'trilbys',
+        person: 'people',
+        forum: 'forums', // fora is ok but uncommon.
 
-		// latin plural in popular usage.
-		syllabus: 'syllabi',
-		alumnus: 'alumni', 
-		genus: 'genera',
-		viscus: 'viscera',
-		stigma: 'stigmata'
-	};
+        // latin plural in popular usage.
+        syllabus: 'syllabi',
+        alumnus: 'alumni', 
+        genus: 'genera',
+        viscus: 'viscera',
+        stigma: 'stigmata'
+    };
 
-	var suffixRules = [
-		// common suffixes
-		[ /man$/i, 'men' ],
-		[ /([lm])ouse$/i, '$1ice' ],
-		[ /tooth$/i, 'teeth' ],
-		[ /goose$/i, 'geese' ],
-		[ /foot$/i, 'feet' ],
-		[ /zoon$/i, 'zoa' ],
-		[ /([tcsx])is$/i, '$1es' ],
+    var suffixRules = [
+        // common suffixes
+        [ /man$/i, 'men' ],
+        [ /([lm])ouse$/i, '$1ice' ],
+        [ /tooth$/i, 'teeth' ],
+        [ /goose$/i, 'geese' ],
+        [ /foot$/i, 'feet' ],
+        [ /zoon$/i, 'zoa' ],
+        [ /([tcsx])is$/i, '$1es' ],
 
-		// fully assimilated suffixes
-		[ /ix$/i, 'ices' ],
-		[ /^(cod|mur|sil|vert)ex$/i, '$1ices' ],
-		[ /^(agend|addend|memorand|millenni|dat|extrem|bacteri|desiderat|strat|candelabr|errat|ov|symposi)um$/i, '$1a' ],
-		[ /^(apheli|hyperbat|periheli|asyndet|noumen|phenomen|criteri|organ|prolegomen|\w+hedr)on$/i, '$1a' ],
-		[ /^(alumn|alg|vertebr)a$/i, '$1ae' ],
-		
-		// churches, classes, boxes, etc.
-		[ /([cs]h|ss|x)$/i, '$1es' ],
+        // fully assimilated suffixes
+        [ /ix$/i, 'ices' ],
+        [ /^(cod|mur|sil|vert)ex$/i, '$1ices' ],
+        [ /^(agend|addend|memorand|millenni|dat|extrem|bacteri|desiderat|strat|candelabr|errat|ov|symposi)um$/i, '$1a' ],
+        [ /^(apheli|hyperbat|periheli|asyndet|noumen|phenomen|criteri|organ|prolegomen|\w+hedr)on$/i, '$1a' ],
+        [ /^(alumn|alg|vertebr)a$/i, '$1ae' ],
+        
+        // churches, classes, boxes, etc.
+        [ /([cs]h|ss|x)$/i, '$1es' ],
 
-		// words with -ves plural form
-		[ /([aeo]l|[^d]ea|ar)f$/i, '$1ves' ],
-		[ /([nlw]i)fe$/i, '$1ves' ],
+        // words with -ves plural form
+        [ /([aeo]l|[^d]ea|ar)f$/i, '$1ves' ],
+        [ /([nlw]i)fe$/i, '$1ves' ],
 
-		// -y
-		[ /([aeiou])y$/i, '$1ys' ],
-		[ /(^[A-Z][a-z]*)y$/, '$1ys' ], // case sensitive!
-		[ /y$/i, 'ies' ],
+        // -y
+        [ /([aeiou])y$/i, '$1ys' ],
+        [ /(^[A-Z][a-z]*)y$/, '$1ys' ], // case sensitive!
+        [ /y$/i, 'ies' ],
 
-		// -o
-		[ /([aeiou])o$/i, '$1os' ],
-		[ /^(pian|portic|albin|generalissim|manifest|archipelag|ghett|medic|armadill|guan|octav|command|infern|phot|ditt|jumb|pr|dynam|ling|quart|embry|lumbag|rhin|fiasc|magnet|styl|alt|contralt|sopran|bass|crescend|temp|cant|sol|kimon)o$/i, '$1os' ],
-		[ /o$/i, 'oes' ],
+        // -o
+        [ /([aeiou])o$/i, '$1os' ],
+        [ /^(pian|portic|albin|generalissim|manifest|archipelag|ghett|medic|armadill|guan|octav|command|infern|phot|ditt|jumb|pr|dynam|ling|quart|embry|lumbag|rhin|fiasc|magnet|styl|alt|contralt|sopran|bass|crescend|temp|cant|sol|kimon)o$/i, '$1os' ],
+        [ /o$/i, 'oes' ],
 
-		// words ending in s...
-		[ /s$/i, 'ses' ]
-	];
+        // words ending in s...
+        [ /s$/i, 'ses' ]
+    ];
 
-	// pluralizes the given singular noun.  There are three ways to call it:
-	//   pluralize(noun) -> pluralNoun
-	//     Returns the plural of the given noun.
-	//   Example: 
-	//     pluralize("person") -> "people"
-	//     pluralize("me") -> "us"
-	//
-	//   pluralize(noun, count) -> plural or singular noun
-	//   Inflect the noun according to the count, returning the singular noun
-	//   if the count is 1.
-	//   Examples:
-	//     pluralize("person", 3) -> "people"
-	//     pluralize("person", 1) -> "person"
-	//     pluralize("person", 0) -> "people"
-	//
-	//   pluralize(noun, count, plural) -> plural or singular noun
-	//   you can provide an irregular plural yourself as the 3rd argument.
-	//   Example:
-	//     pluralize("château", 2 "châteaux") -> "châteaux"
-	function pluralize(word, count, plural) {
-		// handle the empty string reasonably.
-		if ( word === '' ) return '';
+    // pluralizes the given singular noun.  There are three ways to call it:
+    //   pluralize(noun) -> pluralNoun
+    //     Returns the plural of the given noun.
+    //   Example: 
+    //     pluralize("person") -> "people"
+    //     pluralize("me") -> "us"
+    //
+    //   pluralize(noun, count) -> plural or singular noun
+    //   Inflect the noun according to the count, returning the singular noun
+    //   if the count is 1.
+    //   Examples:
+    //     pluralize("person", 3) -> "people"
+    //     pluralize("person", 1) -> "person"
+    //     pluralize("person", 0) -> "people"
+    //
+    //   pluralize(noun, count, plural) -> plural or singular noun
+    //   you can provide an irregular plural yourself as the 3rd argument.
+    //   Example:
+    //     pluralize("château", 2 "châteaux") -> "châteaux"
+    function pluralize(word, count, plural) {
+        // handle the empty string reasonably.
+        if ( word === '' ) return '';
 
-		// singular case.
-		if ( count === 1 ) return word;
+        // singular case.
+        if ( count === 1 ) return word;
 
-		// life is very easy if an explicit plural was provided.
-		if ( typeof plural === 'string' ) return plural;
+        // life is very easy if an explicit plural was provided.
+        if ( typeof plural === 'string' ) return plural;
 
-		var lowerWord = word.toLowerCase();
+        var lowerWord = word.toLowerCase();
 
-		// user defined rules have the highest priority.
-		if ( lowerWord in userDefined ) {
-			return capitalizeSame(userDefined[lowerWord], word);
-		}
+        // user defined rules have the highest priority.
+        if ( lowerWord in userDefined ) {
+            return capitalizeSame(userDefined[lowerWord], word);
+        }
 
-		// single letters are pluralized with 's, "I got five A's on
-		// my report card."
-		if ( word.match(/^[A-Z]$/) ) return word + "'s";
+        // single letters are pluralized with 's, "I got five A's on
+        // my report card."
+        if ( word.match(/^[A-Z]$/) ) return word + "'s";
 
-		// some word don't change form when plural.
-		if ( word.match(/fish$|ois$|sheep$|deer$|pox$|itis$/i) ) return word;
-		if ( word.match(/^[A-Z][a-z]*ese$/) ) return word;  // Nationalities.
-		if ( lowerWord in uninflected ) return word;
+        // some word don't change form when plural.
+        if ( word.match(/fish$|ois$|sheep$|deer$|pox$|itis$/i) ) return word;
+        if ( word.match(/^[A-Z][a-z]*ese$/) ) return word;  // Nationalities.
+        if ( lowerWord in uninflected ) return word;
 
-		// there's a known set of words with irregular plural forms.
-		if ( lowerWord in irregular ) {
-			return capitalizeSame(irregular[lowerWord], word);
-		}
-		
-		// try to pluralize the word depending on its suffix.
-		var suffixRulesLength = suffixRules.length;
-		for ( var i=0; i < suffixRulesLength; i++ ) {
-			var rule = suffixRules[i];
-			if ( word.match(rule[0]) ) {
-				return word.replace(rule[0], rule[1]);
-			}
-		}
+        // there's a known set of words with irregular plural forms.
+        if ( lowerWord in irregular ) {
+            return capitalizeSame(irregular[lowerWord], word);
+        }
+        
+        // try to pluralize the word depending on its suffix.
+        var suffixRulesLength = suffixRules.length;
+        for ( var i=0; i < suffixRulesLength; i++ ) {
+            var rule = suffixRules[i];
+            if ( word.match(rule[0]) ) {
+                return word.replace(rule[0], rule[1]);
+            }
+        }
 
-		// if all else fails, just add s.
-		return word + 's';
-	}
+        // if all else fails, just add s.
+        return word + 's';
+    }
 
-	pluralize.define = function(word, plural) {
-		userDefined[word.toLowerCase()] = plural;
-	}
+    pluralize.define = function(word, plural) {
+        userDefined[word.toLowerCase()] = plural;
+    }
 
-	return pluralize;
+    return pluralize;
 
 })();
 
@@ -23564,7 +23565,7 @@ require.register("ende/vendor/assets/javascripts/jquery/inputmask.js", function 
 
 (function ($) {
     if ($.fn.inputmask === undefined) {
-        //helper functions    
+        //helper functions
         function isInputEventSupported(eventName) {
             var el = document.createElement('input'),
             eventName = 'on' + eventName,
@@ -23817,7 +23818,7 @@ require.register("ende/vendor/assets/javascripts/jquery/inputmask.js", function 
             }
 
             function isValid(pos, c, strict) { //strict true ~ no correction or autofill
-                strict = strict === true; //always set a value to strict to prevent possible strange behavior in the extensions 
+                strict = strict === true; //always set a value to strict to prevent possible strange behavior in the extensions
 
                 function _isValid(position, activeMaskset, c, strict) {
                     var testPos = determineTestPosition(position), loopend = c ? 1 : 0, chrs = '', buffer = activeMaskset["buffer"];
@@ -24265,7 +24266,7 @@ require.register("ende/vendor/assets/javascripts/jquery/inputmask.js", function 
                             }
                         });
                     }
-                    if (getMaskLength() >= maxLength && maxLength > -1) { //FF sets no defined max length to -1 
+                    if (getMaskLength() >= maxLength && maxLength > -1) { //FF sets no defined max length to -1
                         if (maxLength < getActiveBufferTemplate().length) getActiveBufferTemplate().length = maxLength;
                         if (getActiveMaskSet()['greedy'] == false) {
                             getActiveMaskSet()['repeat'] = Math.round(maxLength / getActiveBufferTemplate().length);
@@ -24862,7 +24863,7 @@ require.register("ende/vendor/assets/javascripts/jquery/inputmask.js", function 
                                         }
                                     }
                                     if (minimalForwardPosition > getActiveMaskSet()["p"])
-                                        getActiveMaskSet()["p"] = minimalForwardPosition; //needed for checkval strict 
+                                        getActiveMaskSet()["p"] = minimalForwardPosition; //needed for checkval strict
                                 }
                             });
 
@@ -25038,7 +25039,7 @@ require.register("ende/vendor/assets/javascripts/jquery/inputmask.js", function 
 
         $.fn.inputmask = function (fn, options) {
             var opts = $.extend(true, {}, $.inputmask.defaults, options),
-            	masksets,
+                masksets,
                 activeMasksetIndex = 0;
 
             if (typeof fn === "string") {
@@ -25109,7 +25110,7 @@ require.register("ende/vendor/assets/javascripts/jquery/inputmask.js", function 
                             return masksets[activeMasksetIndex]['_buffer'].join('');
                         }
                         else return "";
-                    case "hasMaskedValue": //check wheter the returned value is masked or not; currently only works reliable when using jquery.val fn to retrieve the value 
+                    case "hasMaskedValue": //check wheter the returned value is masked or not; currently only works reliable when using jquery.val fn to retrieve the value
                         return this.data('_inputmask') ? !this.data('_inputmask')['opts'].autoUnmask : false;
                     case "isComplete":
                         masksets = this.data('_inputmask')['masksets'];
@@ -25425,7 +25426,7 @@ require.register("ende/vendor/assets/javascripts/jquery/inview.js", function (ex
             visiblePartX,
             visiblePartY,
             visiblePartsMerged;
-        
+
         // Don't ask me why because I haven't figured out yet:
         // viewportOffset and viewportSize are sometimes suddenly null in Firefox 5.
         // Even though it sounds weird:
@@ -25434,7 +25435,7 @@ require.register("ende/vendor/assets/javascripts/jquery/inview.js", function (ex
         if (!viewportOffset || !viewportSize) {
           return;
         }
-        
+
         if (elementOffset.top + elementSize.height > viewportOffset.top &&
             elementOffset.top < viewportOffset.top + viewportSize.height &&
             elementOffset.left + elementSize.width > viewportOffset.left &&
@@ -25459,7 +25460,7 @@ require.register("ende/vendor/assets/javascripts/jquery/inview.js", function (ex
   $(w).bind("scroll resize", function() {
     viewportSize = viewportOffset = null;
   });
-  
+
   // IE < 9 scrolls to focused elements without firing the "scroll" event
   if (!documentElement.addEventListener && documentElement.attachEvent) {
     documentElement.attachEvent("onfocusin", function() {
@@ -25812,11 +25813,11 @@ if (!Function.prototype.bind) {
             boundArgs.push("$" + i);
         }
 
-        // XXX Build a dynamic function with desired amount of arguments is the only 
-        // way to set the length property of a function. 
-        // In environments where Content Security Policies enabled (Chrome extensions, 
-        // for ex.) all use of eval or Function costructor throws an exception. 
-        // However in all of these environments Function.prototype.bind exists 
+        // XXX Build a dynamic function with desired amount of arguments is the only
+        // way to set the length property of a function.
+        // In environments where Content Security Policies enabled (Chrome extensions,
+        // for ex.) all use of eval or Function costructor throws an exception.
+        // However in all of these environments Function.prototype.bind exists
         // and so this code will never be executed.
         var bound = Function("binder", "return function(" + boundArgs.join(",") + "){return binder.apply(this,arguments)}")(binder);
 
