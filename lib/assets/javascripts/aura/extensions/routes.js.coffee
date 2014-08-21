@@ -1,10 +1,11 @@
 'use strict'
 
-define 'aura/extensions/routes', (routes) ->
+define 'aura/extensions/routes', ['modernizr'], (routes) ->
 
   # TODO Remove .call null
   # TODO Remove modernizr global variable dependency from this extension
-  loader.require.call null, 'modernizr'
+  # loader.require.call null, 'modernizr'
+
   # TODO rename from ened to ende
   # TODO Remove jquery global variable dependency from this extension
   with_component = 'jquery'
