@@ -39,7 +39,7 @@ define ['./states/index', './presenter'], (templates, presenter) ->
             user.save accreditation.done, accreditation.failed
           else
             ui.status = "error blocked"
-            ui.button_label = "Confira os errors acima."
+            ui.button_label = "Ops... confira os errors acima."
 
             setTimeout ->
               ui.status = "error"
@@ -77,7 +77,7 @@ define ['./states/index', './presenter'], (templates, presenter) ->
         , 2000
 
         ui.status = "success blocked"
-        ui.button_label = "Cadastro realizado! Preparando seu mural de anúncios..."
+        ui.button_label = "Cadastro concluído, redirecionando..."
 
       failed: =>
         sandbox.emit "accreditor.#{@identifier}.accreditation_failed", @errors
