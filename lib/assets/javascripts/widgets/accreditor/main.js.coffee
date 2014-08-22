@@ -1,4 +1,4 @@
-  define ['./states/index', './presenter'], (templates, presenter) ->
+define ['./states/index', './presenter'], (templates, presenter) ->
 
   type: 'Base'
 
