@@ -7,4 +7,5 @@ define [lazy_require], (observable) ->
 
     # TODO create view_model
     message       : message
+    message_errors: message.errors.messages
     sender        : sender
