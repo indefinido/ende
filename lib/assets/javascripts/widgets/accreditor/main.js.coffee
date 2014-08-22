@@ -1,4 +1,4 @@
-define ['./states/index', './presenter'], (templates, presenter) ->
+  define ['./states/index', './presenter'], (templates, presenter) ->
 
   type: 'Base'
 
@@ -39,7 +39,7 @@ define ['./states/index', './presenter'], (templates, presenter) ->
             user.save accreditation.done, accreditation.failed
           else
             ui.status = "error blocked"
-            ui.button_label = "Ops... confira os errors acima."
+            ui.button_label = "Ops... confira os dados acima."
 
             setTimeout ->
               ui.status = "error"
