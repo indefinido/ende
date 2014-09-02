@@ -47,7 +47,7 @@ define ->
         el.on 'click', '.close', (event) =>
           @emit 'close'
           @hide()
-          false
+          event.preventDefault()
 
       # Positionate modal after widget insertions, when widget starts
       # visible
@@ -78,7 +78,7 @@ define ->
 
   dialog: null
 
-  version: '0.1.1'
+  version: '0.1.2'
 
   options:
 
