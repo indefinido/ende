@@ -303,7 +303,7 @@ define [
 
     # Initialize dependencies
     # TODO replace with strategy pattern, please!
-    deferred.done (records) =>
+    @fetching = deferred.done (records) =>
 
       @load.stop()
 
