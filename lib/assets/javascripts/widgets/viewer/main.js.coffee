@@ -151,7 +151,7 @@ define [
         hover  : $.proxy @handleables.item.hover  , @widget
 
     @
-  version: '0.2.4'
+  version: '0.2.5'
 
   # TODO better separation of concerns
   # TODO Current remote page that is beign displayed
@@ -268,15 +268,15 @@ define [
 
       @sandbox.emit "viewer.#{@identifier}.populated", records, @
 
-    @fetching.always =>
-      if @load?
-        @load.stop()
-        @load = null
+      @fetching.always =>
+        if @load?
+          @load.stop()
+          @load = null
 
-      # TODO implement status for viewer widget
-      @$el.removeClass 'loading'
-      @statused 'idle'
-      @$el.addClass 'idle'
+        # TODO implement status for viewer widget
+        @$el.removeClass 'loading'
+        @statused 'idle'
+        @$el.addClass 'idle'
 
   populate: ->
     @load   = @sandbox.ui.loader @$el
@@ -340,6 +340,17 @@ define [
       @handles 'click', 'back', '.back'
 
       @sandbox.emit "viewer.#{@identifier}.populated", records, @
+
+
+    deferred.always =>
+      if @load?
+        @load.stop()
+        @load = null
+
+      # TODO implement status for viewer widget
+      @$el.removeClass 'loading'
+      @statused 'idle'
+      @$el.addClass 'idle'
 
 
     deferred.fail =>
