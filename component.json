@@ -2,7 +2,7 @@
   "name": "ende",
   "repo": "indefinido/ende",
   "description": "Core web application functionacility",
-  "version": "0.5.20",
+  "version": "0.5.22",
   "keywords": [],
   "dependencies": {
     "mikeric/rivets": "v0.5.12",
