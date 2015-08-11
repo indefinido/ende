@@ -48,5 +48,7 @@ define 'value_objects/phone', ->
         formatted_number or ''
 
     toJSON: ->
+      null unless @area_code and @number
+      
       area_code: @area_code
       number: @number

@@ -20,6 +20,89 @@ function require(name) {
 }
 
 /**
+ * Meta info, accessible in the global scope unless you use AMD option.
+ */
+
+require.loader = 'component';
+
+/**
+ * Internal helper object, contains a sorting function for semantiv versioning
+ */
+require.helper = {};
+require.helper.semVerSort = function(a, b) {
+  var aArray = a.version.split('.');
+  var bArray = b.version.split('.');
+  for (var i=0; i<aArray.length; ++i) {
+    var aInt = parseInt(aArray[i], 10);
+    var bInt = parseInt(bArray[i], 10);
+    if (aInt === bInt) {
+      var aLex = aArray[i].substr((""+aInt).length);
+      var bLex = bArray[i].substr((""+bInt).length);
+      if (aLex === '' && bLex !== '') return 1;
+      if (aLex !== '' && bLex === '') return -1;
+      if (aLex !== '' && bLex !== '') return aLex > bLex ? 1 : -1;
+      continue;
+    } else if (aInt > bInt) {
+      return 1;
+    } else {
+      return -1;
+    }
+  }
+  return 0;
+}
+
+/**
+ * Find and require a module which name starts with the provided name.
+ * If multiple modules exists, the highest semver is used. 
+ * This function can only be used for remote dependencies.
+
+ * @param {String} name - module name: `user~repo`
+ * @param {Boolean} returnPath - returns the canonical require path if true, 
+ *                               otherwise it returns the epxorted module
+ */
+require.latest = function (name, returnPath) {
+  function showError(name) {
+    throw new Error('failed to find latest module of "' + name + '"');
+  }
+  // only remotes with semvers, ignore local files conataining a '/'
+  var versionRegexp = /(.*)~(.*)@v?(\d+\.\d+\.\d+[^\/]*)$/;
+  var remoteRegexp = /(.*)~(.*)/;
+  if (!remoteRegexp.test(name)) showError(name);
+  var moduleNames = Object.keys(require.modules);
+  var semVerCandidates = [];
+  var otherCandidates = []; // for instance: name of the git branch
+  for (var i=0; i<moduleNames.length; i++) {
+    var moduleName = moduleNames[i];
+    if (new RegExp(name + '@').test(moduleName)) {
+        var version = moduleName.substr(name.length+1);
+        var semVerMatch = versionRegexp.exec(moduleName);
+        if (semVerMatch != null) {
+          semVerCandidates.push({version: version, name: moduleName});
+        } else {
+          otherCandidates.push({version: version, name: moduleName});
+        } 
+    }
+  }
+  if (semVerCandidates.concat(otherCandidates).length === 0) {
+    showError(name);
+  }
+  if (semVerCandidates.length > 0) {
+    var module = semVerCandidates.sort(require.helper.semVerSort).pop().name;
+    if (returnPath === true) {
+      return module;
+    }
+    return require(module);
+  }
+  // if the build contains more than one branch of the same module
+  // you should not use this funciton
+  var module = otherCandidates.sort(function(a, b) {return a.name > b.name})[0].name;
+  if (returnPath === true) {
+    return module;
+  }
+  return require(module);
+}
+
+/**
  * Registered modules.
  */
 
@@ -11973,14 +12056,14 @@ window.Modernizr = (function( window, document, undefined ) {
 });
 
 require.register("indefinido~advisable@master", function (exports, module) {
-module.exports = require("indefinido~advisable@master/lib/advisable.js");
+module.exports = require('indefinido~advisable@master/lib/advisable.js');
 
 });
 
 require.register("indefinido~advisable@master/lib/advisable.js", function (exports, module) {
 var $, advice, mixin;
 
-$ = require("component~jquery@1.0.0");
+$ = require('component~jquery@1.0.0');
 
 advice = {
   around: function(base, wrapped) {
@@ -12038,6 +12121,1028 @@ mixin = {
 exports.mixin = function(object) {
   return $.extend(object, mixin);
 };
+
+});
+
+require.register("mikeric~rivets@v0.5.12", function (exports, module) {
+// Rivets.js
+// version: 0.5.12
+// author: Michael Richards
+// license: MIT
+(function() {
+  var Rivets,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __slice = [].slice,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+
+  Rivets = {};
+
+  if (!String.prototype.trim) {
+    String.prototype.trim = function() {
+      return this.replace(/^\s+|\s+$/g, '');
+    };
+  }
+
+  Rivets.Binding = (function() {
+    function Binding(view, el, type, key, keypath, options) {
+      var identifier, regexp, value, _ref;
+      this.view = view;
+      this.el = el;
+      this.type = type;
+      this.key = key;
+      this.keypath = keypath;
+      this.options = options != null ? options : {};
+      this.update = __bind(this.update, this);
+      this.unbind = __bind(this.unbind, this);
+      this.bind = __bind(this.bind, this);
+      this.publish = __bind(this.publish, this);
+      this.sync = __bind(this.sync, this);
+      this.set = __bind(this.set, this);
+      this.eventHandler = __bind(this.eventHandler, this);
+      this.formattedValue = __bind(this.formattedValue, this);
+      if (!(this.binder = this.view.binders[type])) {
+        _ref = this.view.binders;
+        for (identifier in _ref) {
+          value = _ref[identifier];
+          if (identifier !== '*' && identifier.indexOf('*') !== -1) {
+            regexp = new RegExp("^" + (identifier.replace('*', '.+')) + "$");
+            if (regexp.test(type)) {
+              this.binder = value;
+              this.args = new RegExp("^" + (identifier.replace('*', '(.+)')) + "$").exec(type);
+              this.args.shift();
+            }
+          }
+        }
+      }
+      this.binder || (this.binder = this.view.binders['*']);
+      if (this.binder instanceof Function) {
+        this.binder = {
+          routine: this.binder
+        };
+      }
+      this.formatters = this.options.formatters || [];
+      this.model = this.key ? this.view.models[this.key] : this.view.models;
+    }
+
+    Binding.prototype.formattedValue = function(value) {
+      var args, formatter, id, _i, _len, _ref;
+      _ref = this.formatters;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        formatter = _ref[_i];
+        args = formatter.split(/\s+/);
+        id = args.shift();
+        formatter = this.model[id] instanceof Function ? this.model[id] : this.view.formatters[id];
+        if ((formatter != null ? formatter.read : void 0) instanceof Function) {
+          value = formatter.read.apply(formatter, [value].concat(__slice.call(args)));
+        } else if (formatter instanceof Function) {
+          value = formatter.apply(null, [value].concat(__slice.call(args)));
+        }
+      }
+      return value;
+    };
+
+    Binding.prototype.eventHandler = function(fn) {
+      var binding, handler;
+      handler = (binding = this).view.config.handler;
+      return function(ev) {
+        return handler.call(fn, this, ev, binding);
+      };
+    };
+
+    Binding.prototype.set = function(value) {
+      var _ref;
+      value = value instanceof Function && !this.binder["function"] ? this.formattedValue(value.call(this.model)) : this.formattedValue(value);
+      return (_ref = this.binder.routine) != null ? _ref.call(this, this.el, value) : void 0;
+    };
+
+    Binding.prototype.sync = function() {
+      return this.set(this.options.bypass ? this.model[this.keypath] : this.view.config.adapter.read(this.model, this.keypath));
+    };
+
+    Binding.prototype.publish = function() {
+      var args, formatter, id, value, _i, _len, _ref, _ref1, _ref2;
+      value = Rivets.Util.getInputValue(this.el);
+      _ref = this.formatters.slice(0).reverse();
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        formatter = _ref[_i];
+        args = formatter.split(/\s+/);
+        id = args.shift();
+        if ((_ref1 = this.view.formatters[id]) != null ? _ref1.publish : void 0) {
+          value = (_ref2 = this.view.formatters[id]).publish.apply(_ref2, [value].concat(__slice.call(args)));
+        }
+      }
+      return this.view.config.adapter.publish(this.model, this.keypath, value);
+    };
+
+    Binding.prototype.bind = function() {
+      var dependency, keypath, model, _i, _len, _ref, _ref1, _ref2, _results;
+      if ((_ref = this.binder.bind) != null) {
+        _ref.call(this, this.el);
+      }
+      if (this.options.bypass) {
+        this.sync();
+      } else {
+        this.view.config.adapter.subscribe(this.model, this.keypath, this.sync);
+        if (this.view.config.preloadData) {
+          this.sync();
+        }
+      }
+      if ((_ref1 = this.options.dependencies) != null ? _ref1.length : void 0) {
+        _ref2 = this.options.dependencies;
+        _results = [];
+        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+          dependency = _ref2[_i];
+          if (/^\./.test(dependency)) {
+            model = this.model;
+            keypath = dependency.substr(1);
+          } else {
+            dependency = dependency.split('.');
+            model = this.view.models[dependency.shift()];
+            keypath = dependency.join('.');
+          }
+          _results.push(this.view.config.adapter.subscribe(model, keypath, this.sync));
+        }
+        return _results;
+      }
+    };
+
+    Binding.prototype.unbind = function() {
+      var dependency, keypath, model, _i, _len, _ref, _ref1, _ref2, _results;
+      if ((_ref = this.binder.unbind) != null) {
+        _ref.call(this, this.el);
+      }
+      if (!this.options.bypass) {
+        this.view.config.adapter.unsubscribe(this.model, this.keypath, this.sync);
+      }
+      if ((_ref1 = this.options.dependencies) != null ? _ref1.length : void 0) {
+        _ref2 = this.options.dependencies;
+        _results = [];
+        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+          dependency = _ref2[_i];
+          if (/^\./.test(dependency)) {
+            model = this.model;
+            keypath = dependency.substr(1);
+          } else {
+            dependency = dependency.split('.');
+            model = this.view.models[dependency.shift()];
+            keypath = dependency.join('.');
+          }
+          _results.push(this.view.config.adapter.unsubscribe(model, keypath, this.sync));
+        }
+        return _results;
+      }
+    };
+
+    Binding.prototype.update = function(models) {
+      var _ref;
+      if (models == null) {
+        models = {};
+      }
+      if (this.key) {
+        if (models[this.key]) {
+          if (!this.options.bypass) {
+            this.view.config.adapter.unsubscribe(this.model, this.keypath, this.sync);
+          }
+          this.model = models[this.key];
+          if (this.options.bypass) {
+            this.sync();
+          } else {
+            this.view.config.adapter.subscribe(this.model, this.keypath, this.sync);
+            if (this.view.config.preloadData) {
+              this.sync();
+            }
+          }
+        }
+      } else {
+        this.sync();
+      }
+      return (_ref = this.binder.update) != null ? _ref.call(this, models) : void 0;
+    };
+
+    return Binding;
+
+  })();
+
+  Rivets.ComponentBinding = (function(_super) {
+    __extends(ComponentBinding, _super);
+
+    function ComponentBinding(view, el, type) {
+      var attribute, _i, _len, _ref, _ref1;
+      this.view = view;
+      this.el = el;
+      this.type = type;
+      this.unbind = __bind(this.unbind, this);
+      this.bind = __bind(this.bind, this);
+      this.update = __bind(this.update, this);
+      this.locals = __bind(this.locals, this);
+      this.component = Rivets.components[this.type];
+      this.attributes = {};
+      this.inflections = {};
+      _ref = this.el.attributes || [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        attribute = _ref[_i];
+        if (_ref1 = attribute.name, __indexOf.call(this.component.attributes, _ref1) >= 0) {
+          this.attributes[attribute.name] = attribute.value;
+        } else {
+          this.inflections[attribute.name] = attribute.value;
+        }
+      }
+    }
+
+    ComponentBinding.prototype.sync = function() {};
+
+    ComponentBinding.prototype.locals = function(models) {
+      var inverse, key, model, path, result, _i, _len, _ref, _ref1;
+      if (models == null) {
+        models = this.view.models;
+      }
+      result = {};
+      _ref = this.inflections;
+      for (key in _ref) {
+        inverse = _ref[key];
+        _ref1 = inverse.split('.');
+        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+          path = _ref1[_i];
+          result[key] = (result[key] || models)[path];
+        }
+      }
+      for (key in models) {
+        model = models[key];
+        if (result[key] == null) {
+          result[key] = model;
+        }
+      }
+      return result;
+    };
+
+    ComponentBinding.prototype.update = function(models) {
+      var _ref;
+      return (_ref = this.componentView) != null ? _ref.update(this.locals(models)) : void 0;
+    };
+
+    ComponentBinding.prototype.bind = function() {
+      var el, _ref;
+      if (this.componentView != null) {
+        return (_ref = this.componentView) != null ? _ref.bind() : void 0;
+      } else {
+        el = this.component.build.call(this.attributes);
+        (this.componentView = new Rivets.View(el, this.locals(), this.view.options)).bind();
+        return this.el.parentNode.replaceChild(el, this.el);
+      }
+    };
+
+    ComponentBinding.prototype.unbind = function() {
+      var _ref;
+      return (_ref = this.componentView) != null ? _ref.unbind() : void 0;
+    };
+
+    return ComponentBinding;
+
+  })(Rivets.Binding);
+
+  Rivets.TextBinding = (function(_super) {
+    __extends(TextBinding, _super);
+
+    function TextBinding(view, el, type, key, keypath, options) {
+      this.view = view;
+      this.el = el;
+      this.type = type;
+      this.key = key;
+      this.keypath = keypath;
+      this.options = options != null ? options : {};
+      this.sync = __bind(this.sync, this);
+      this.formatters = this.options.formatters || [];
+      this.model = this.key ? this.view.models[this.key] : this.view.models;
+    }
+
+    TextBinding.prototype.binder = {
+      routine: function(node, value) {
+        return node.data = value != null ? value : '';
+      }
+    };
+
+    TextBinding.prototype.sync = function() {
+      return TextBinding.__super__.sync.apply(this, arguments);
+    };
+
+    return TextBinding;
+
+  })(Rivets.Binding);
+
+  Rivets.View = (function() {
+    function View(els, models, options) {
+      var k, option, v, _base, _i, _len, _ref, _ref1, _ref2;
+      this.els = els;
+      this.models = models;
+      this.options = options != null ? options : {};
+      this.update = __bind(this.update, this);
+      this.publish = __bind(this.publish, this);
+      this.sync = __bind(this.sync, this);
+      this.unbind = __bind(this.unbind, this);
+      this.bind = __bind(this.bind, this);
+      this.select = __bind(this.select, this);
+      this.build = __bind(this.build, this);
+      this.componentRegExp = __bind(this.componentRegExp, this);
+      this.bindingRegExp = __bind(this.bindingRegExp, this);
+      if (!(this.els.jquery || this.els instanceof Array)) {
+        this.els = [this.els];
+      }
+      _ref = ['config', 'binders', 'formatters'];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        option = _ref[_i];
+        this[option] = {};
+        if (this.options[option]) {
+          _ref1 = this.options[option];
+          for (k in _ref1) {
+            v = _ref1[k];
+            this[option][k] = v;
+          }
+        }
+        _ref2 = Rivets[option];
+        for (k in _ref2) {
+          v = _ref2[k];
+          if ((_base = this[option])[k] == null) {
+            _base[k] = v;
+          }
+        }
+      }
+      this.build();
+    }
+
+    View.prototype.bindingRegExp = function() {
+      var prefix;
+      prefix = this.config.prefix;
+      if (prefix) {
+        return new RegExp("^data-" + prefix + "-");
+      } else {
+        return /^data-/;
+      }
+    };
+
+    View.prototype.componentRegExp = function() {
+      var _ref, _ref1;
+      return new RegExp("^" + ((_ref = (_ref1 = this.config.prefix) != null ? _ref1.toUpperCase() : void 0) != null ? _ref : 'RV') + "-");
+    };
+
+    View.prototype.build = function() {
+      var bindingRegExp, buildBinding, componentRegExp, el, parse, skipNodes, _i, _len, _ref,
+        _this = this;
+      this.bindings = [];
+      skipNodes = [];
+      bindingRegExp = this.bindingRegExp();
+      componentRegExp = this.componentRegExp();
+      buildBinding = function(binding, node, type, declaration) {
+        var context, ctx, dependencies, key, keypath, options, path, pipe, pipes, splitPath;
+        options = {};
+        pipes = (function() {
+          var _i, _len, _ref, _results;
+          _ref = declaration.split('|');
+          _results = [];
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            pipe = _ref[_i];
+            _results.push(pipe.trim());
+          }
+          return _results;
+        })();
+        context = (function() {
+          var _i, _len, _ref, _results;
+          _ref = pipes.shift().split('<');
+          _results = [];
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            ctx = _ref[_i];
+            _results.push(ctx.trim());
+          }
+          return _results;
+        })();
+        path = context.shift();
+        splitPath = path.split(/\.|:/);
+        options.formatters = pipes;
+        options.bypass = path.indexOf(':') !== -1;
+        if (splitPath[0]) {
+          key = splitPath.shift();
+        } else {
+          key = null;
+          splitPath.shift();
+        }
+        keypath = splitPath.join('.');
+        if (dependencies = context.shift()) {
+          options.dependencies = dependencies.split(/\s+/);
+        }
+        return _this.bindings.push(new Rivets[binding](_this, node, type, key, keypath, options));
+      };
+      parse = function(node) {
+        var attribute, attributes, binder, childNode, delimiters, identifier, n, parser, regexp, restTokens, startToken, text, token, tokens, type, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3, _ref4, _results;
+        if (__indexOf.call(skipNodes, node) < 0) {
+          if (node.nodeType === Node.TEXT_NODE) {
+            parser = Rivets.TextTemplateParser;
+            if (delimiters = _this.config.templateDelimiters) {
+              if ((tokens = parser.parse(node.data, delimiters)).length) {
+                if (!(tokens.length === 1 && tokens[0].type === parser.types.text)) {
+                  startToken = tokens[0], restTokens = 2 <= tokens.length ? __slice.call(tokens, 1) : [];
+                  node.data = startToken.value;
+                  if (startToken.type === 0) {
+                    node.data = startToken.value;
+                  } else {
+                    buildBinding('TextBinding', node, null, startToken.value);
+                  }
+                  for (_i = 0, _len = restTokens.length; _i < _len; _i++) {
+                    token = restTokens[_i];
+                    text = document.createTextNode(token.value);
+                    node.parentNode.appendChild(text);
+                    if (token.type === 1) {
+                      buildBinding('TextBinding', text, null, token.value);
+                    }
+                  }
+                }
+              }
+            }
+          } else if (componentRegExp.test(node.tagName)) {
+            type = node.tagName.replace(componentRegExp, '').toLowerCase();
+            _this.bindings.push(new Rivets.ComponentBinding(_this, node, type));
+          } else if (node.attributes != null) {
+            _ref = node.attributes;
+            for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
+              attribute = _ref[_j];
+              if (bindingRegExp.test(attribute.name)) {
+                type = attribute.name.replace(bindingRegExp, '');
+                if (!(binder = _this.binders[type])) {
+                  _ref1 = _this.binders;
+                  for (identifier in _ref1) {
+                    value = _ref1[identifier];
+                    if (identifier !== '*' && identifier.indexOf('*') !== -1) {
+                      regexp = new RegExp("^" + (identifier.replace('*', '.+')) + "$");
+                      if (regexp.test(type)) {
+                        binder = value;
+                      }
+                    }
+                  }
+                }
+                binder || (binder = _this.binders['*']);
+                if (binder.block) {
+                  _ref2 = node.childNodes;
+                  for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+                    n = _ref2[_k];
+                    skipNodes.push(n);
+                  }
+                  attributes = [attribute];
+                }
+              }
+            }
+            _ref3 = attributes || node.attributes;
+            for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
+              attribute = _ref3[_l];
+              if (bindingRegExp.test(attribute.name)) {
+                type = attribute.name.replace(bindingRegExp, '');
+                buildBinding('Binding', node, type, attribute.value);
+              }
+            }
+          }
+          _ref4 = node.childNodes;
+          _results = [];
+          for (_m = 0, _len4 = _ref4.length; _m < _len4; _m++) {
+            childNode = _ref4[_m];
+            _results.push(parse(childNode));
+          }
+          return _results;
+        }
+      };
+      _ref = this.els;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        el = _ref[_i];
+        parse(el);
+      }
+    };
+
+    View.prototype.select = function(fn) {
+      var binding, _i, _len, _ref, _results;
+      _ref = this.bindings;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        binding = _ref[_i];
+        if (fn(binding)) {
+          _results.push(binding);
+        }
+      }
+      return _results;
+    };
+
+    View.prototype.bind = function() {
+      var binding, _i, _len, _ref, _results;
+      _ref = this.bindings;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        binding = _ref[_i];
+        _results.push(binding.bind());
+      }
+      return _results;
+    };
+
+    View.prototype.unbind = function() {
+      var binding, _i, _len, _ref, _results;
+      _ref = this.bindings;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        binding = _ref[_i];
+        _results.push(binding.unbind());
+      }
+      return _results;
+    };
+
+    View.prototype.sync = function() {
+      var binding, _i, _len, _ref, _results;
+      _ref = this.bindings;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        binding = _ref[_i];
+        _results.push(binding.sync());
+      }
+      return _results;
+    };
+
+    View.prototype.publish = function() {
+      var binding, _i, _len, _ref, _results;
+      _ref = this.select(function(b) {
+        return b.binder.publishes;
+      });
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        binding = _ref[_i];
+        _results.push(binding.publish());
+      }
+      return _results;
+    };
+
+    View.prototype.update = function(models) {
+      var binding, key, model, _i, _len, _ref, _results;
+      if (models == null) {
+        models = {};
+      }
+      for (key in models) {
+        model = models[key];
+        this.models[key] = model;
+      }
+      _ref = this.bindings;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        binding = _ref[_i];
+        _results.push(binding.update(models));
+      }
+      return _results;
+    };
+
+    return View;
+
+  })();
+
+  Rivets.TextTemplateParser = (function() {
+    function TextTemplateParser() {}
+
+    TextTemplateParser.types = {
+      text: 0,
+      binding: 1
+    };
+
+    TextTemplateParser.parse = function(template, delimiters) {
+      var index, lastIndex, lastToken, length, substring, tokens, value;
+      tokens = [];
+      length = template.length;
+      index = 0;
+      lastIndex = 0;
+      while (lastIndex < length) {
+        index = template.indexOf(delimiters[0], lastIndex);
+        if (index < 0) {
+          tokens.push({
+            type: this.types.text,
+            value: template.slice(lastIndex)
+          });
+          break;
+        } else {
+          if (index > 0 && lastIndex < index) {
+            tokens.push({
+              type: this.types.text,
+              value: template.slice(lastIndex, index)
+            });
+          }
+          lastIndex = index + 2;
+          index = template.indexOf(delimiters[1], lastIndex);
+          if (index < 0) {
+            substring = template.slice(lastIndex - 2);
+            lastToken = tokens[tokens.length - 1];
+            if ((lastToken != null ? lastToken.type : void 0) === this.types.text) {
+              lastToken.value += substring;
+            } else {
+              tokens.push({
+                type: this.types.text,
+                value: substring
+              });
+            }
+            break;
+          }
+          value = template.slice(lastIndex, index).trim();
+          tokens.push({
+            type: this.types.binding,
+            value: value
+          });
+          lastIndex = index + 2;
+        }
+      }
+      return tokens;
+    };
+
+    return TextTemplateParser;
+
+  })();
+
+  Rivets.Util = {
+    bindEvent: function(el, event, handler) {
+      if (window.jQuery != null) {
+        el = jQuery(el);
+        if (el.on != null) {
+          return el.on(event, handler);
+        } else {
+          return el.bind(event, handler);
+        }
+      } else if (window.addEventListener != null) {
+        return el.addEventListener(event, handler, false);
+      } else {
+        event = 'on' + event;
+        return el.attachEvent(event, handler);
+      }
+    },
+    unbindEvent: function(el, event, handler) {
+      if (window.jQuery != null) {
+        el = jQuery(el);
+        if (el.off != null) {
+          return el.off(event, handler);
+        } else {
+          return el.unbind(event, handler);
+        }
+      } else if (window.removeEventListener != null) {
+        return el.removeEventListener(event, handler, false);
+      } else {
+        event = 'on' + event;
+        return el.detachEvent(event, handler);
+      }
+    },
+    getInputValue: function(el) {
+      var o, _i, _len, _results;
+      if (window.jQuery != null) {
+        el = jQuery(el);
+        switch (el[0].type) {
+          case 'checkbox':
+            return el.is(':checked');
+          default:
+            return el.val();
+        }
+      } else {
+        switch (el.type) {
+          case 'checkbox':
+            return el.checked;
+          case 'select-multiple':
+            _results = [];
+            for (_i = 0, _len = el.length; _i < _len; _i++) {
+              o = el[_i];
+              if (o.selected) {
+                _results.push(o.value);
+              }
+            }
+            return _results;
+            break;
+          default:
+            return el.value;
+        }
+      }
+    }
+  };
+
+  Rivets.binders = {
+    enabled: function(el, value) {
+      return el.disabled = !value;
+    },
+    disabled: function(el, value) {
+      return el.disabled = !!value;
+    },
+    checked: {
+      publishes: true,
+      bind: function(el) {
+        return Rivets.Util.bindEvent(el, 'change', this.publish);
+      },
+      unbind: function(el) {
+        return Rivets.Util.unbindEvent(el, 'change', this.publish);
+      },
+      routine: function(el, value) {
+        var _ref;
+        if (el.type === 'radio') {
+          return el.checked = ((_ref = el.value) != null ? _ref.toString() : void 0) === (value != null ? value.toString() : void 0);
+        } else {
+          return el.checked = !!value;
+        }
+      }
+    },
+    unchecked: {
+      publishes: true,
+      bind: function(el) {
+        return Rivets.Util.bindEvent(el, 'change', this.publish);
+      },
+      unbind: function(el) {
+        return Rivets.Util.unbindEvent(el, 'change', this.publish);
+      },
+      routine: function(el, value) {
+        var _ref;
+        if (el.type === 'radio') {
+          return el.checked = ((_ref = el.value) != null ? _ref.toString() : void 0) !== (value != null ? value.toString() : void 0);
+        } else {
+          return el.checked = !value;
+        }
+      }
+    },
+    show: function(el, value) {
+      return el.style.display = value ? '' : 'none';
+    },
+    hide: function(el, value) {
+      return el.style.display = value ? 'none' : '';
+    },
+    html: function(el, value) {
+      return el.innerHTML = value != null ? value : '';
+    },
+    value: {
+      publishes: true,
+      bind: function(el) {
+        return Rivets.Util.bindEvent(el, 'change', this.publish);
+      },
+      unbind: function(el) {
+        return Rivets.Util.unbindEvent(el, 'change', this.publish);
+      },
+      routine: function(el, value) {
+        var o, _i, _len, _ref, _ref1, _ref2, _results;
+        if (window.jQuery != null) {
+          el = jQuery(el);
+          if ((value != null ? value.toString() : void 0) !== ((_ref = el.val()) != null ? _ref.toString() : void 0)) {
+            return el.val(value != null ? value : '');
+          }
+        } else {
+          if (el.type === 'select-multiple') {
+            if (value != null) {
+              _results = [];
+              for (_i = 0, _len = el.length; _i < _len; _i++) {
+                o = el[_i];
+                _results.push(o.selected = (_ref1 = o.value, __indexOf.call(value, _ref1) >= 0));
+              }
+              return _results;
+            }
+          } else if ((value != null ? value.toString() : void 0) !== ((_ref2 = el.value) != null ? _ref2.toString() : void 0)) {
+            return el.value = value != null ? value : '';
+          }
+        }
+      }
+    },
+    text: function(el, value) {
+      if (el.innerText != null) {
+        return el.innerText = value != null ? value : '';
+      } else {
+        return el.textContent = value != null ? value : '';
+      }
+    },
+    "if": {
+      block: true,
+      bind: function(el) {
+        var attr, declaration;
+        if (this.marker == null) {
+          attr = ['data', this.view.config.prefix, this.type].join('-').replace('--', '-');
+          declaration = el.getAttribute(attr);
+          this.marker = document.createComment(" rivets: " + this.type + " " + declaration + " ");
+          el.removeAttribute(attr);
+          el.parentNode.insertBefore(this.marker, el);
+          return el.parentNode.removeChild(el);
+        }
+      },
+      unbind: function() {
+        var _ref;
+        return (_ref = this.nested) != null ? _ref.unbind() : void 0;
+      },
+      routine: function(el, value) {
+        var key, model, models, options, _ref;
+        if (!!value === (this.nested == null)) {
+          if (value) {
+            models = {};
+            _ref = this.view.models;
+            for (key in _ref) {
+              model = _ref[key];
+              models[key] = model;
+            }
+            options = {
+              binders: this.view.options.binders,
+              formatters: this.view.options.formatters,
+              config: this.view.options.config
+            };
+            (this.nested = new Rivets.View(el, models, options)).bind();
+            return this.marker.parentNode.insertBefore(el, this.marker.nextSibling);
+          } else {
+            el.parentNode.removeChild(el);
+            this.nested.unbind();
+            return delete this.nested;
+          }
+        }
+      },
+      update: function(models) {
+        var _ref;
+        return (_ref = this.nested) != null ? _ref.update(models) : void 0;
+      }
+    },
+    unless: {
+      block: true,
+      bind: function(el) {
+        return Rivets.binders["if"].bind.call(this, el);
+      },
+      unbind: function() {
+        return Rivets.binders["if"].unbind.call(this);
+      },
+      routine: function(el, value) {
+        return Rivets.binders["if"].routine.call(this, el, !value);
+      },
+      update: function(models) {
+        return Rivets.binders["if"].update.call(this, models);
+      }
+    },
+    "on-*": {
+      "function": true,
+      unbind: function(el) {
+        if (this.handler) {
+          return Rivets.Util.unbindEvent(el, this.args[0], this.handler);
+        }
+      },
+      routine: function(el, value) {
+        if (this.handler) {
+          Rivets.Util.unbindEvent(el, this.args[0], this.handler);
+        }
+        return Rivets.Util.bindEvent(el, this.args[0], this.handler = this.eventHandler(value));
+      }
+    },
+    "each-*": {
+      block: true,
+      bind: function(el) {
+        var attr;
+        if (this.marker == null) {
+          attr = ['data', this.view.config.prefix, this.type].join('-').replace('--', '-');
+          this.marker = document.createComment(" rivets: " + this.type + " ");
+          this.iterated = [];
+          el.removeAttribute(attr);
+          el.parentNode.insertBefore(this.marker, el);
+          return el.parentNode.removeChild(el);
+        }
+      },
+      unbind: function(el) {
+        var view, _i, _len, _ref, _results;
+        if (this.iterated != null) {
+          _ref = this.iterated;
+          _results = [];
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            view = _ref[_i];
+            _results.push(view.unbind());
+          }
+          return _results;
+        }
+      },
+      routine: function(el, collection) {
+        var data, i, index, k, key, model, modelName, options, previous, template, v, view, _i, _j, _len, _len1, _ref, _ref1, _ref2, _results;
+        modelName = this.args[0];
+        collection = collection || [];
+        if (this.iterated.length > collection.length) {
+          _ref = Array(this.iterated.length - collection.length);
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            i = _ref[_i];
+            view = this.iterated.pop();
+            view.unbind();
+            this.marker.parentNode.removeChild(view.els[0]);
+          }
+        }
+        _results = [];
+        for (index = _j = 0, _len1 = collection.length; _j < _len1; index = ++_j) {
+          model = collection[index];
+          data = {};
+          data[modelName] = model;
+          if (this.iterated[index] == null) {
+            _ref1 = this.view.models;
+            for (key in _ref1) {
+              model = _ref1[key];
+              if (data[key] == null) {
+                data[key] = model;
+              }
+            }
+            previous = this.iterated.length ? this.iterated[this.iterated.length - 1].els[0] : this.marker;
+            options = {
+              binders: this.view.options.binders,
+              formatters: this.view.options.formatters,
+              config: {}
+            };
+            _ref2 = this.view.options.config;
+            for (k in _ref2) {
+              v = _ref2[k];
+              options.config[k] = v;
+            }
+            options.config.preloadData = true;
+            template = el.cloneNode(true);
+            view = new Rivets.View(template, data, options);
+            view.bind();
+            this.iterated.push(view);
+            _results.push(this.marker.parentNode.insertBefore(template, previous.nextSibling));
+          } else if (this.iterated[index].models[modelName] !== model) {
+            _results.push(this.iterated[index].update(data));
+          } else {
+            _results.push(void 0);
+          }
+        }
+        return _results;
+      },
+      update: function(models) {
+        var data, key, model, view, _i, _len, _ref, _results;
+        data = {};
+        for (key in models) {
+          model = models[key];
+          if (key !== this.args[0]) {
+            data[key] = model;
+          }
+        }
+        _ref = this.iterated;
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          view = _ref[_i];
+          _results.push(view.update(data));
+        }
+        return _results;
+      }
+    },
+    "class-*": function(el, value) {
+      var elClass;
+      elClass = " " + el.className + " ";
+      if (!value === (elClass.indexOf(" " + this.args[0] + " ") !== -1)) {
+        return el.className = value ? "" + el.className + " " + this.args[0] : elClass.replace(" " + this.args[0] + " ", ' ').trim();
+      }
+    },
+    "*": function(el, value) {
+      if (value) {
+        return el.setAttribute(this.type, value);
+      } else {
+        return el.removeAttribute(this.type);
+      }
+    }
+  };
+
+  Rivets.components = {};
+
+  Rivets.config = {
+    preloadData: true,
+    handler: function(context, ev, binding) {
+      return this.call(context, ev, binding.view.models);
+    }
+  };
+
+  Rivets.formatters = {};
+
+  Rivets.factory = function(exports) {
+    exports._ = Rivets;
+    exports.binders = Rivets.binders;
+    exports.components = Rivets.components;
+    exports.formatters = Rivets.formatters;
+    exports.config = Rivets.config;
+    exports.configure = function(options) {
+      var property, value;
+      if (options == null) {
+        options = {};
+      }
+      for (property in options) {
+        value = options[property];
+        Rivets.config[property] = value;
+      }
+    };
+    return exports.bind = function(el, models, options) {
+      var view;
+      if (models == null) {
+        models = {};
+      }
+      if (options == null) {
+        options = {};
+      }
+      view = new Rivets.View(el, models, options);
+      view.bind();
+      return view;
+    };
+  };
+
+  if (typeof exports === 'object') {
+    Rivets.factory(exports);
+  } else if (typeof define === 'function' && define.amd) {
+    define(['exports'], function(exports) {
+      Rivets.factory(this.rivets = exports);
+      return exports;
+    });
+  } else {
+    Rivets.factory(this.rivets = {});
+  }
+
+}).call(this);
 
 });
 
@@ -13927,1028 +15032,6 @@ require.register("paulmillr~es6-shim@0.14.0", function (exports, module) {
 
 });
 
-require.register("mikeric~rivets@v0.5.12", function (exports, module) {
-// Rivets.js
-// version: 0.5.12
-// author: Michael Richards
-// license: MIT
-(function() {
-  var Rivets,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-    __slice = [].slice,
-    __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
-
-  Rivets = {};
-
-  if (!String.prototype.trim) {
-    String.prototype.trim = function() {
-      return this.replace(/^\s+|\s+$/g, '');
-    };
-  }
-
-  Rivets.Binding = (function() {
-    function Binding(view, el, type, key, keypath, options) {
-      var identifier, regexp, value, _ref;
-      this.view = view;
-      this.el = el;
-      this.type = type;
-      this.key = key;
-      this.keypath = keypath;
-      this.options = options != null ? options : {};
-      this.update = __bind(this.update, this);
-      this.unbind = __bind(this.unbind, this);
-      this.bind = __bind(this.bind, this);
-      this.publish = __bind(this.publish, this);
-      this.sync = __bind(this.sync, this);
-      this.set = __bind(this.set, this);
-      this.eventHandler = __bind(this.eventHandler, this);
-      this.formattedValue = __bind(this.formattedValue, this);
-      if (!(this.binder = this.view.binders[type])) {
-        _ref = this.view.binders;
-        for (identifier in _ref) {
-          value = _ref[identifier];
-          if (identifier !== '*' && identifier.indexOf('*') !== -1) {
-            regexp = new RegExp("^" + (identifier.replace('*', '.+')) + "$");
-            if (regexp.test(type)) {
-              this.binder = value;
-              this.args = new RegExp("^" + (identifier.replace('*', '(.+)')) + "$").exec(type);
-              this.args.shift();
-            }
-          }
-        }
-      }
-      this.binder || (this.binder = this.view.binders['*']);
-      if (this.binder instanceof Function) {
-        this.binder = {
-          routine: this.binder
-        };
-      }
-      this.formatters = this.options.formatters || [];
-      this.model = this.key ? this.view.models[this.key] : this.view.models;
-    }
-
-    Binding.prototype.formattedValue = function(value) {
-      var args, formatter, id, _i, _len, _ref;
-      _ref = this.formatters;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        formatter = _ref[_i];
-        args = formatter.split(/\s+/);
-        id = args.shift();
-        formatter = this.model[id] instanceof Function ? this.model[id] : this.view.formatters[id];
-        if ((formatter != null ? formatter.read : void 0) instanceof Function) {
-          value = formatter.read.apply(formatter, [value].concat(__slice.call(args)));
-        } else if (formatter instanceof Function) {
-          value = formatter.apply(null, [value].concat(__slice.call(args)));
-        }
-      }
-      return value;
-    };
-
-    Binding.prototype.eventHandler = function(fn) {
-      var binding, handler;
-      handler = (binding = this).view.config.handler;
-      return function(ev) {
-        return handler.call(fn, this, ev, binding);
-      };
-    };
-
-    Binding.prototype.set = function(value) {
-      var _ref;
-      value = value instanceof Function && !this.binder["function"] ? this.formattedValue(value.call(this.model)) : this.formattedValue(value);
-      return (_ref = this.binder.routine) != null ? _ref.call(this, this.el, value) : void 0;
-    };
-
-    Binding.prototype.sync = function() {
-      return this.set(this.options.bypass ? this.model[this.keypath] : this.view.config.adapter.read(this.model, this.keypath));
-    };
-
-    Binding.prototype.publish = function() {
-      var args, formatter, id, value, _i, _len, _ref, _ref1, _ref2;
-      value = Rivets.Util.getInputValue(this.el);
-      _ref = this.formatters.slice(0).reverse();
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        formatter = _ref[_i];
-        args = formatter.split(/\s+/);
-        id = args.shift();
-        if ((_ref1 = this.view.formatters[id]) != null ? _ref1.publish : void 0) {
-          value = (_ref2 = this.view.formatters[id]).publish.apply(_ref2, [value].concat(__slice.call(args)));
-        }
-      }
-      return this.view.config.adapter.publish(this.model, this.keypath, value);
-    };
-
-    Binding.prototype.bind = function() {
-      var dependency, keypath, model, _i, _len, _ref, _ref1, _ref2, _results;
-      if ((_ref = this.binder.bind) != null) {
-        _ref.call(this, this.el);
-      }
-      if (this.options.bypass) {
-        this.sync();
-      } else {
-        this.view.config.adapter.subscribe(this.model, this.keypath, this.sync);
-        if (this.view.config.preloadData) {
-          this.sync();
-        }
-      }
-      if ((_ref1 = this.options.dependencies) != null ? _ref1.length : void 0) {
-        _ref2 = this.options.dependencies;
-        _results = [];
-        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-          dependency = _ref2[_i];
-          if (/^\./.test(dependency)) {
-            model = this.model;
-            keypath = dependency.substr(1);
-          } else {
-            dependency = dependency.split('.');
-            model = this.view.models[dependency.shift()];
-            keypath = dependency.join('.');
-          }
-          _results.push(this.view.config.adapter.subscribe(model, keypath, this.sync));
-        }
-        return _results;
-      }
-    };
-
-    Binding.prototype.unbind = function() {
-      var dependency, keypath, model, _i, _len, _ref, _ref1, _ref2, _results;
-      if ((_ref = this.binder.unbind) != null) {
-        _ref.call(this, this.el);
-      }
-      if (!this.options.bypass) {
-        this.view.config.adapter.unsubscribe(this.model, this.keypath, this.sync);
-      }
-      if ((_ref1 = this.options.dependencies) != null ? _ref1.length : void 0) {
-        _ref2 = this.options.dependencies;
-        _results = [];
-        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-          dependency = _ref2[_i];
-          if (/^\./.test(dependency)) {
-            model = this.model;
-            keypath = dependency.substr(1);
-          } else {
-            dependency = dependency.split('.');
-            model = this.view.models[dependency.shift()];
-            keypath = dependency.join('.');
-          }
-          _results.push(this.view.config.adapter.unsubscribe(model, keypath, this.sync));
-        }
-        return _results;
-      }
-    };
-
-    Binding.prototype.update = function(models) {
-      var _ref;
-      if (models == null) {
-        models = {};
-      }
-      if (this.key) {
-        if (models[this.key]) {
-          if (!this.options.bypass) {
-            this.view.config.adapter.unsubscribe(this.model, this.keypath, this.sync);
-          }
-          this.model = models[this.key];
-          if (this.options.bypass) {
-            this.sync();
-          } else {
-            this.view.config.adapter.subscribe(this.model, this.keypath, this.sync);
-            if (this.view.config.preloadData) {
-              this.sync();
-            }
-          }
-        }
-      } else {
-        this.sync();
-      }
-      return (_ref = this.binder.update) != null ? _ref.call(this, models) : void 0;
-    };
-
-    return Binding;
-
-  })();
-
-  Rivets.ComponentBinding = (function(_super) {
-    __extends(ComponentBinding, _super);
-
-    function ComponentBinding(view, el, type) {
-      var attribute, _i, _len, _ref, _ref1;
-      this.view = view;
-      this.el = el;
-      this.type = type;
-      this.unbind = __bind(this.unbind, this);
-      this.bind = __bind(this.bind, this);
-      this.update = __bind(this.update, this);
-      this.locals = __bind(this.locals, this);
-      this.component = Rivets.components[this.type];
-      this.attributes = {};
-      this.inflections = {};
-      _ref = this.el.attributes || [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        attribute = _ref[_i];
-        if (_ref1 = attribute.name, __indexOf.call(this.component.attributes, _ref1) >= 0) {
-          this.attributes[attribute.name] = attribute.value;
-        } else {
-          this.inflections[attribute.name] = attribute.value;
-        }
-      }
-    }
-
-    ComponentBinding.prototype.sync = function() {};
-
-    ComponentBinding.prototype.locals = function(models) {
-      var inverse, key, model, path, result, _i, _len, _ref, _ref1;
-      if (models == null) {
-        models = this.view.models;
-      }
-      result = {};
-      _ref = this.inflections;
-      for (key in _ref) {
-        inverse = _ref[key];
-        _ref1 = inverse.split('.');
-        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-          path = _ref1[_i];
-          result[key] = (result[key] || models)[path];
-        }
-      }
-      for (key in models) {
-        model = models[key];
-        if (result[key] == null) {
-          result[key] = model;
-        }
-      }
-      return result;
-    };
-
-    ComponentBinding.prototype.update = function(models) {
-      var _ref;
-      return (_ref = this.componentView) != null ? _ref.update(this.locals(models)) : void 0;
-    };
-
-    ComponentBinding.prototype.bind = function() {
-      var el, _ref;
-      if (this.componentView != null) {
-        return (_ref = this.componentView) != null ? _ref.bind() : void 0;
-      } else {
-        el = this.component.build.call(this.attributes);
-        (this.componentView = new Rivets.View(el, this.locals(), this.view.options)).bind();
-        return this.el.parentNode.replaceChild(el, this.el);
-      }
-    };
-
-    ComponentBinding.prototype.unbind = function() {
-      var _ref;
-      return (_ref = this.componentView) != null ? _ref.unbind() : void 0;
-    };
-
-    return ComponentBinding;
-
-  })(Rivets.Binding);
-
-  Rivets.TextBinding = (function(_super) {
-    __extends(TextBinding, _super);
-
-    function TextBinding(view, el, type, key, keypath, options) {
-      this.view = view;
-      this.el = el;
-      this.type = type;
-      this.key = key;
-      this.keypath = keypath;
-      this.options = options != null ? options : {};
-      this.sync = __bind(this.sync, this);
-      this.formatters = this.options.formatters || [];
-      this.model = this.key ? this.view.models[this.key] : this.view.models;
-    }
-
-    TextBinding.prototype.binder = {
-      routine: function(node, value) {
-        return node.data = value != null ? value : '';
-      }
-    };
-
-    TextBinding.prototype.sync = function() {
-      return TextBinding.__super__.sync.apply(this, arguments);
-    };
-
-    return TextBinding;
-
-  })(Rivets.Binding);
-
-  Rivets.View = (function() {
-    function View(els, models, options) {
-      var k, option, v, _base, _i, _len, _ref, _ref1, _ref2;
-      this.els = els;
-      this.models = models;
-      this.options = options != null ? options : {};
-      this.update = __bind(this.update, this);
-      this.publish = __bind(this.publish, this);
-      this.sync = __bind(this.sync, this);
-      this.unbind = __bind(this.unbind, this);
-      this.bind = __bind(this.bind, this);
-      this.select = __bind(this.select, this);
-      this.build = __bind(this.build, this);
-      this.componentRegExp = __bind(this.componentRegExp, this);
-      this.bindingRegExp = __bind(this.bindingRegExp, this);
-      if (!(this.els.jquery || this.els instanceof Array)) {
-        this.els = [this.els];
-      }
-      _ref = ['config', 'binders', 'formatters'];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        option = _ref[_i];
-        this[option] = {};
-        if (this.options[option]) {
-          _ref1 = this.options[option];
-          for (k in _ref1) {
-            v = _ref1[k];
-            this[option][k] = v;
-          }
-        }
-        _ref2 = Rivets[option];
-        for (k in _ref2) {
-          v = _ref2[k];
-          if ((_base = this[option])[k] == null) {
-            _base[k] = v;
-          }
-        }
-      }
-      this.build();
-    }
-
-    View.prototype.bindingRegExp = function() {
-      var prefix;
-      prefix = this.config.prefix;
-      if (prefix) {
-        return new RegExp("^data-" + prefix + "-");
-      } else {
-        return /^data-/;
-      }
-    };
-
-    View.prototype.componentRegExp = function() {
-      var _ref, _ref1;
-      return new RegExp("^" + ((_ref = (_ref1 = this.config.prefix) != null ? _ref1.toUpperCase() : void 0) != null ? _ref : 'RV') + "-");
-    };
-
-    View.prototype.build = function() {
-      var bindingRegExp, buildBinding, componentRegExp, el, parse, skipNodes, _i, _len, _ref,
-        _this = this;
-      this.bindings = [];
-      skipNodes = [];
-      bindingRegExp = this.bindingRegExp();
-      componentRegExp = this.componentRegExp();
-      buildBinding = function(binding, node, type, declaration) {
-        var context, ctx, dependencies, key, keypath, options, path, pipe, pipes, splitPath;
-        options = {};
-        pipes = (function() {
-          var _i, _len, _ref, _results;
-          _ref = declaration.split('|');
-          _results = [];
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            pipe = _ref[_i];
-            _results.push(pipe.trim());
-          }
-          return _results;
-        })();
-        context = (function() {
-          var _i, _len, _ref, _results;
-          _ref = pipes.shift().split('<');
-          _results = [];
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            ctx = _ref[_i];
-            _results.push(ctx.trim());
-          }
-          return _results;
-        })();
-        path = context.shift();
-        splitPath = path.split(/\.|:/);
-        options.formatters = pipes;
-        options.bypass = path.indexOf(':') !== -1;
-        if (splitPath[0]) {
-          key = splitPath.shift();
-        } else {
-          key = null;
-          splitPath.shift();
-        }
-        keypath = splitPath.join('.');
-        if (dependencies = context.shift()) {
-          options.dependencies = dependencies.split(/\s+/);
-        }
-        return _this.bindings.push(new Rivets[binding](_this, node, type, key, keypath, options));
-      };
-      parse = function(node) {
-        var attribute, attributes, binder, childNode, delimiters, identifier, n, parser, regexp, restTokens, startToken, text, token, tokens, type, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3, _ref4, _results;
-        if (__indexOf.call(skipNodes, node) < 0) {
-          if (node.nodeType === Node.TEXT_NODE) {
-            parser = Rivets.TextTemplateParser;
-            if (delimiters = _this.config.templateDelimiters) {
-              if ((tokens = parser.parse(node.data, delimiters)).length) {
-                if (!(tokens.length === 1 && tokens[0].type === parser.types.text)) {
-                  startToken = tokens[0], restTokens = 2 <= tokens.length ? __slice.call(tokens, 1) : [];
-                  node.data = startToken.value;
-                  if (startToken.type === 0) {
-                    node.data = startToken.value;
-                  } else {
-                    buildBinding('TextBinding', node, null, startToken.value);
-                  }
-                  for (_i = 0, _len = restTokens.length; _i < _len; _i++) {
-                    token = restTokens[_i];
-                    text = document.createTextNode(token.value);
-                    node.parentNode.appendChild(text);
-                    if (token.type === 1) {
-                      buildBinding('TextBinding', text, null, token.value);
-                    }
-                  }
-                }
-              }
-            }
-          } else if (componentRegExp.test(node.tagName)) {
-            type = node.tagName.replace(componentRegExp, '').toLowerCase();
-            _this.bindings.push(new Rivets.ComponentBinding(_this, node, type));
-          } else if (node.attributes != null) {
-            _ref = node.attributes;
-            for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
-              attribute = _ref[_j];
-              if (bindingRegExp.test(attribute.name)) {
-                type = attribute.name.replace(bindingRegExp, '');
-                if (!(binder = _this.binders[type])) {
-                  _ref1 = _this.binders;
-                  for (identifier in _ref1) {
-                    value = _ref1[identifier];
-                    if (identifier !== '*' && identifier.indexOf('*') !== -1) {
-                      regexp = new RegExp("^" + (identifier.replace('*', '.+')) + "$");
-                      if (regexp.test(type)) {
-                        binder = value;
-                      }
-                    }
-                  }
-                }
-                binder || (binder = _this.binders['*']);
-                if (binder.block) {
-                  _ref2 = node.childNodes;
-                  for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-                    n = _ref2[_k];
-                    skipNodes.push(n);
-                  }
-                  attributes = [attribute];
-                }
-              }
-            }
-            _ref3 = attributes || node.attributes;
-            for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
-              attribute = _ref3[_l];
-              if (bindingRegExp.test(attribute.name)) {
-                type = attribute.name.replace(bindingRegExp, '');
-                buildBinding('Binding', node, type, attribute.value);
-              }
-            }
-          }
-          _ref4 = node.childNodes;
-          _results = [];
-          for (_m = 0, _len4 = _ref4.length; _m < _len4; _m++) {
-            childNode = _ref4[_m];
-            _results.push(parse(childNode));
-          }
-          return _results;
-        }
-      };
-      _ref = this.els;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        el = _ref[_i];
-        parse(el);
-      }
-    };
-
-    View.prototype.select = function(fn) {
-      var binding, _i, _len, _ref, _results;
-      _ref = this.bindings;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        binding = _ref[_i];
-        if (fn(binding)) {
-          _results.push(binding);
-        }
-      }
-      return _results;
-    };
-
-    View.prototype.bind = function() {
-      var binding, _i, _len, _ref, _results;
-      _ref = this.bindings;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        binding = _ref[_i];
-        _results.push(binding.bind());
-      }
-      return _results;
-    };
-
-    View.prototype.unbind = function() {
-      var binding, _i, _len, _ref, _results;
-      _ref = this.bindings;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        binding = _ref[_i];
-        _results.push(binding.unbind());
-      }
-      return _results;
-    };
-
-    View.prototype.sync = function() {
-      var binding, _i, _len, _ref, _results;
-      _ref = this.bindings;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        binding = _ref[_i];
-        _results.push(binding.sync());
-      }
-      return _results;
-    };
-
-    View.prototype.publish = function() {
-      var binding, _i, _len, _ref, _results;
-      _ref = this.select(function(b) {
-        return b.binder.publishes;
-      });
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        binding = _ref[_i];
-        _results.push(binding.publish());
-      }
-      return _results;
-    };
-
-    View.prototype.update = function(models) {
-      var binding, key, model, _i, _len, _ref, _results;
-      if (models == null) {
-        models = {};
-      }
-      for (key in models) {
-        model = models[key];
-        this.models[key] = model;
-      }
-      _ref = this.bindings;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        binding = _ref[_i];
-        _results.push(binding.update(models));
-      }
-      return _results;
-    };
-
-    return View;
-
-  })();
-
-  Rivets.TextTemplateParser = (function() {
-    function TextTemplateParser() {}
-
-    TextTemplateParser.types = {
-      text: 0,
-      binding: 1
-    };
-
-    TextTemplateParser.parse = function(template, delimiters) {
-      var index, lastIndex, lastToken, length, substring, tokens, value;
-      tokens = [];
-      length = template.length;
-      index = 0;
-      lastIndex = 0;
-      while (lastIndex < length) {
-        index = template.indexOf(delimiters[0], lastIndex);
-        if (index < 0) {
-          tokens.push({
-            type: this.types.text,
-            value: template.slice(lastIndex)
-          });
-          break;
-        } else {
-          if (index > 0 && lastIndex < index) {
-            tokens.push({
-              type: this.types.text,
-              value: template.slice(lastIndex, index)
-            });
-          }
-          lastIndex = index + 2;
-          index = template.indexOf(delimiters[1], lastIndex);
-          if (index < 0) {
-            substring = template.slice(lastIndex - 2);
-            lastToken = tokens[tokens.length - 1];
-            if ((lastToken != null ? lastToken.type : void 0) === this.types.text) {
-              lastToken.value += substring;
-            } else {
-              tokens.push({
-                type: this.types.text,
-                value: substring
-              });
-            }
-            break;
-          }
-          value = template.slice(lastIndex, index).trim();
-          tokens.push({
-            type: this.types.binding,
-            value: value
-          });
-          lastIndex = index + 2;
-        }
-      }
-      return tokens;
-    };
-
-    return TextTemplateParser;
-
-  })();
-
-  Rivets.Util = {
-    bindEvent: function(el, event, handler) {
-      if (window.jQuery != null) {
-        el = jQuery(el);
-        if (el.on != null) {
-          return el.on(event, handler);
-        } else {
-          return el.bind(event, handler);
-        }
-      } else if (window.addEventListener != null) {
-        return el.addEventListener(event, handler, false);
-      } else {
-        event = 'on' + event;
-        return el.attachEvent(event, handler);
-      }
-    },
-    unbindEvent: function(el, event, handler) {
-      if (window.jQuery != null) {
-        el = jQuery(el);
-        if (el.off != null) {
-          return el.off(event, handler);
-        } else {
-          return el.unbind(event, handler);
-        }
-      } else if (window.removeEventListener != null) {
-        return el.removeEventListener(event, handler, false);
-      } else {
-        event = 'on' + event;
-        return el.detachEvent(event, handler);
-      }
-    },
-    getInputValue: function(el) {
-      var o, _i, _len, _results;
-      if (window.jQuery != null) {
-        el = jQuery(el);
-        switch (el[0].type) {
-          case 'checkbox':
-            return el.is(':checked');
-          default:
-            return el.val();
-        }
-      } else {
-        switch (el.type) {
-          case 'checkbox':
-            return el.checked;
-          case 'select-multiple':
-            _results = [];
-            for (_i = 0, _len = el.length; _i < _len; _i++) {
-              o = el[_i];
-              if (o.selected) {
-                _results.push(o.value);
-              }
-            }
-            return _results;
-            break;
-          default:
-            return el.value;
-        }
-      }
-    }
-  };
-
-  Rivets.binders = {
-    enabled: function(el, value) {
-      return el.disabled = !value;
-    },
-    disabled: function(el, value) {
-      return el.disabled = !!value;
-    },
-    checked: {
-      publishes: true,
-      bind: function(el) {
-        return Rivets.Util.bindEvent(el, 'change', this.publish);
-      },
-      unbind: function(el) {
-        return Rivets.Util.unbindEvent(el, 'change', this.publish);
-      },
-      routine: function(el, value) {
-        var _ref;
-        if (el.type === 'radio') {
-          return el.checked = ((_ref = el.value) != null ? _ref.toString() : void 0) === (value != null ? value.toString() : void 0);
-        } else {
-          return el.checked = !!value;
-        }
-      }
-    },
-    unchecked: {
-      publishes: true,
-      bind: function(el) {
-        return Rivets.Util.bindEvent(el, 'change', this.publish);
-      },
-      unbind: function(el) {
-        return Rivets.Util.unbindEvent(el, 'change', this.publish);
-      },
-      routine: function(el, value) {
-        var _ref;
-        if (el.type === 'radio') {
-          return el.checked = ((_ref = el.value) != null ? _ref.toString() : void 0) !== (value != null ? value.toString() : void 0);
-        } else {
-          return el.checked = !value;
-        }
-      }
-    },
-    show: function(el, value) {
-      return el.style.display = value ? '' : 'none';
-    },
-    hide: function(el, value) {
-      return el.style.display = value ? 'none' : '';
-    },
-    html: function(el, value) {
-      return el.innerHTML = value != null ? value : '';
-    },
-    value: {
-      publishes: true,
-      bind: function(el) {
-        return Rivets.Util.bindEvent(el, 'change', this.publish);
-      },
-      unbind: function(el) {
-        return Rivets.Util.unbindEvent(el, 'change', this.publish);
-      },
-      routine: function(el, value) {
-        var o, _i, _len, _ref, _ref1, _ref2, _results;
-        if (window.jQuery != null) {
-          el = jQuery(el);
-          if ((value != null ? value.toString() : void 0) !== ((_ref = el.val()) != null ? _ref.toString() : void 0)) {
-            return el.val(value != null ? value : '');
-          }
-        } else {
-          if (el.type === 'select-multiple') {
-            if (value != null) {
-              _results = [];
-              for (_i = 0, _len = el.length; _i < _len; _i++) {
-                o = el[_i];
-                _results.push(o.selected = (_ref1 = o.value, __indexOf.call(value, _ref1) >= 0));
-              }
-              return _results;
-            }
-          } else if ((value != null ? value.toString() : void 0) !== ((_ref2 = el.value) != null ? _ref2.toString() : void 0)) {
-            return el.value = value != null ? value : '';
-          }
-        }
-      }
-    },
-    text: function(el, value) {
-      if (el.innerText != null) {
-        return el.innerText = value != null ? value : '';
-      } else {
-        return el.textContent = value != null ? value : '';
-      }
-    },
-    "if": {
-      block: true,
-      bind: function(el) {
-        var attr, declaration;
-        if (this.marker == null) {
-          attr = ['data', this.view.config.prefix, this.type].join('-').replace('--', '-');
-          declaration = el.getAttribute(attr);
-          this.marker = document.createComment(" rivets: " + this.type + " " + declaration + " ");
-          el.removeAttribute(attr);
-          el.parentNode.insertBefore(this.marker, el);
-          return el.parentNode.removeChild(el);
-        }
-      },
-      unbind: function() {
-        var _ref;
-        return (_ref = this.nested) != null ? _ref.unbind() : void 0;
-      },
-      routine: function(el, value) {
-        var key, model, models, options, _ref;
-        if (!!value === (this.nested == null)) {
-          if (value) {
-            models = {};
-            _ref = this.view.models;
-            for (key in _ref) {
-              model = _ref[key];
-              models[key] = model;
-            }
-            options = {
-              binders: this.view.options.binders,
-              formatters: this.view.options.formatters,
-              config: this.view.options.config
-            };
-            (this.nested = new Rivets.View(el, models, options)).bind();
-            return this.marker.parentNode.insertBefore(el, this.marker.nextSibling);
-          } else {
-            el.parentNode.removeChild(el);
-            this.nested.unbind();
-            return delete this.nested;
-          }
-        }
-      },
-      update: function(models) {
-        var _ref;
-        return (_ref = this.nested) != null ? _ref.update(models) : void 0;
-      }
-    },
-    unless: {
-      block: true,
-      bind: function(el) {
-        return Rivets.binders["if"].bind.call(this, el);
-      },
-      unbind: function() {
-        return Rivets.binders["if"].unbind.call(this);
-      },
-      routine: function(el, value) {
-        return Rivets.binders["if"].routine.call(this, el, !value);
-      },
-      update: function(models) {
-        return Rivets.binders["if"].update.call(this, models);
-      }
-    },
-    "on-*": {
-      "function": true,
-      unbind: function(el) {
-        if (this.handler) {
-          return Rivets.Util.unbindEvent(el, this.args[0], this.handler);
-        }
-      },
-      routine: function(el, value) {
-        if (this.handler) {
-          Rivets.Util.unbindEvent(el, this.args[0], this.handler);
-        }
-        return Rivets.Util.bindEvent(el, this.args[0], this.handler = this.eventHandler(value));
-      }
-    },
-    "each-*": {
-      block: true,
-      bind: function(el) {
-        var attr;
-        if (this.marker == null) {
-          attr = ['data', this.view.config.prefix, this.type].join('-').replace('--', '-');
-          this.marker = document.createComment(" rivets: " + this.type + " ");
-          this.iterated = [];
-          el.removeAttribute(attr);
-          el.parentNode.insertBefore(this.marker, el);
-          return el.parentNode.removeChild(el);
-        }
-      },
-      unbind: function(el) {
-        var view, _i, _len, _ref, _results;
-        if (this.iterated != null) {
-          _ref = this.iterated;
-          _results = [];
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            view = _ref[_i];
-            _results.push(view.unbind());
-          }
-          return _results;
-        }
-      },
-      routine: function(el, collection) {
-        var data, i, index, k, key, model, modelName, options, previous, template, v, view, _i, _j, _len, _len1, _ref, _ref1, _ref2, _results;
-        modelName = this.args[0];
-        collection = collection || [];
-        if (this.iterated.length > collection.length) {
-          _ref = Array(this.iterated.length - collection.length);
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            i = _ref[_i];
-            view = this.iterated.pop();
-            view.unbind();
-            this.marker.parentNode.removeChild(view.els[0]);
-          }
-        }
-        _results = [];
-        for (index = _j = 0, _len1 = collection.length; _j < _len1; index = ++_j) {
-          model = collection[index];
-          data = {};
-          data[modelName] = model;
-          if (this.iterated[index] == null) {
-            _ref1 = this.view.models;
-            for (key in _ref1) {
-              model = _ref1[key];
-              if (data[key] == null) {
-                data[key] = model;
-              }
-            }
-            previous = this.iterated.length ? this.iterated[this.iterated.length - 1].els[0] : this.marker;
-            options = {
-              binders: this.view.options.binders,
-              formatters: this.view.options.formatters,
-              config: {}
-            };
-            _ref2 = this.view.options.config;
-            for (k in _ref2) {
-              v = _ref2[k];
-              options.config[k] = v;
-            }
-            options.config.preloadData = true;
-            template = el.cloneNode(true);
-            view = new Rivets.View(template, data, options);
-            view.bind();
-            this.iterated.push(view);
-            _results.push(this.marker.parentNode.insertBefore(template, previous.nextSibling));
-          } else if (this.iterated[index].models[modelName] !== model) {
-            _results.push(this.iterated[index].update(data));
-          } else {
-            _results.push(void 0);
-          }
-        }
-        return _results;
-      },
-      update: function(models) {
-        var data, key, model, view, _i, _len, _ref, _results;
-        data = {};
-        for (key in models) {
-          model = models[key];
-          if (key !== this.args[0]) {
-            data[key] = model;
-          }
-        }
-        _ref = this.iterated;
-        _results = [];
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          view = _ref[_i];
-          _results.push(view.update(data));
-        }
-        return _results;
-      }
-    },
-    "class-*": function(el, value) {
-      var elClass;
-      elClass = " " + el.className + " ";
-      if (!value === (elClass.indexOf(" " + this.args[0] + " ") !== -1)) {
-        return el.className = value ? "" + el.className + " " + this.args[0] : elClass.replace(" " + this.args[0] + " ", ' ').trim();
-      }
-    },
-    "*": function(el, value) {
-      if (value) {
-        return el.setAttribute(this.type, value);
-      } else {
-        return el.removeAttribute(this.type);
-      }
-    }
-  };
-
-  Rivets.components = {};
-
-  Rivets.config = {
-    preloadData: true,
-    handler: function(context, ev, binding) {
-      return this.call(context, ev, binding.view.models);
-    }
-  };
-
-  Rivets.formatters = {};
-
-  Rivets.factory = function(exports) {
-    exports._ = Rivets;
-    exports.binders = Rivets.binders;
-    exports.components = Rivets.components;
-    exports.formatters = Rivets.formatters;
-    exports.config = Rivets.config;
-    exports.configure = function(options) {
-      var property, value;
-      if (options == null) {
-        options = {};
-      }
-      for (property in options) {
-        value = options[property];
-        Rivets.config[property] = value;
-      }
-    };
-    return exports.bind = function(el, models, options) {
-      var view;
-      if (models == null) {
-        models = {};
-      }
-      if (options == null) {
-        options = {};
-      }
-      view = new Rivets.View(el, models, options);
-      view.bind();
-      return view;
-    };
-  };
-
-  if (typeof exports === 'object') {
-    Rivets.factory(exports);
-  } else if (typeof define === 'function' && define.amd) {
-    define(['exports'], function(exports) {
-      Rivets.factory(this.rivets = exports);
-      return exports;
-    });
-  } else {
-    Rivets.factory(this.rivets = {});
-  }
-
-}).call(this);
-
-});
-
 require.register("component~trim@0.0.1", function (exports, module) {
 
 exports = module.exports = trim;
@@ -14978,8 +15061,8 @@ require.register("component~querystring@1.3.0", function (exports, module) {
 
 var encode = encodeURIComponent;
 var decode = decodeURIComponent;
-var trim = require("component~trim@0.0.1");
-var type = require("component~type@1.0.0");
+var trim = require('component~trim@0.0.1');
+var type = require('component~type@1.0.0');
 
 /**
  * Parse the given query `str`.
@@ -15048,7 +15131,7 @@ exports.stringify = function(obj){
 });
 
 require.register("indefinido~observable@es6-modules", function (exports, module) {
-module.exports = require("indefinido~observable@es6-modules/lib/observable.js");
+module.exports = require('indefinido~observable@es6-modules/lib/observable.js');
 
 });
 
@@ -15097,7 +15180,7 @@ module.exports = adapter;
 });
 
 require.register("indefinido~observable@es6-modules/lib/legacy/notifierable.js", function (exports, module) {
-var jQuery = require("component~jquery@1.0.0");
+var jQuery = require('component~jquery@1.0.0');
 var mutations, notifierable, subscribed_getter;
 
 notifierable = {
@@ -15246,8 +15329,8 @@ module.exports = notifierable;
 });
 
 require.register("indefinido~observable@es6-modules/lib/legacy/schedulerable.js", function (exports, module) {
-var lookup = require("indefinido~observable@es6-modules/lib/lookup.js");
-var jQuery = require("component~jquery@1.0.0");
+var lookup = require('indefinido~observable@es6-modules/lib/lookup.js');
+var jQuery = require('component~jquery@1.0.0');
 var scheduler, schedulerable;
 
 scheduler = function(options) {
@@ -15349,7 +15432,7 @@ schedulerable = function(observable) {
 schedulerable.storage_for = function(observable) {};
 
 schedulerable.schedulable_observers = function() {
-  var Path = require("indefinido~observable@es6-modules/vendor/observe-js/observe.js").Path;
+  var Path = require('indefinido~observable@es6-modules/vendor/observe-js/observe.js').Path;
   var original;
 
   original = Path.prototype.setValueFrom;
@@ -15443,17 +15526,17 @@ var observable;
 
 Number.isNaN || (Number.isNaN = isNaN);
 
-require("indefinido~observable@es6-modules/lib/platform.js");
+require('indefinido~observable@es6-modules/lib/platform.js');
 
-var jQuery = require("component~jquery@1.0.0");
+var jQuery = require('component~jquery@1.0.0');
 
-var observation = require("indefinido~observable@es6-modules/lib/observable/observation.js");
+var observation = require('indefinido~observable@es6-modules/lib/observable/observation.js');
 
-var selection = require("indefinido~observable@es6-modules/lib/observable/selection.js");
+var selection = require('indefinido~observable@es6-modules/lib/observable/selection.js');
 
-var KeypathObserver = require("indefinido~observable@es6-modules/lib/observable/keypath_observer.js");
+var KeypathObserver = require('indefinido~observable@es6-modules/lib/observable/keypath_observer.js');
 
-var SelfObserver = require("indefinido~observable@es6-modules/lib/observable/self_observer.js");
+var SelfObserver = require('indefinido~observable@es6-modules/lib/observable/self_observer.js');
 
 observable = function() {
   var object;
@@ -15529,7 +15612,7 @@ jQuery.extend(observable, {
 });
 
 if (!Object.observe) {
-  var schedulerable = require("indefinido~observable@es6-modules/lib/legacy/schedulerable.js");
+  var schedulerable = require('indefinido~observable@es6-modules/lib/legacy/schedulerable.js');
   observable = schedulerable(observable);
 }
 
@@ -15540,8 +15623,8 @@ module.exports = observable;
 });
 
 require.register("indefinido~observable@es6-modules/lib/observable/keypath_observer.js", function (exports, module) {
-var PathObserver = require("indefinido~observable@es6-modules/vendor/observe-js/observe.js").PathObserver;
-var Callbacks = require("component~jquery@1.0.0").Callbacks;
+var PathObserver = require('indefinido~observable@es6-modules/vendor/observe-js/observe.js').PathObserver;
+var Callbacks = require('component~jquery@1.0.0').Callbacks;
 var KeypathObserver,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -15631,7 +15714,7 @@ module.exports = observationable;
 });
 
 require.register("indefinido~observable@es6-modules/lib/observable/selection.js", function (exports, module) {
-var jQuery = require("component~jquery@1.0.0");
+var jQuery = require('component~jquery@1.0.0');
 var requiresDomElement, selection;
 
 requiresDomElement = Object.defineProperty.requiresDomElement;
@@ -15692,8 +15775,8 @@ module.exports = selection;
 });
 
 require.register("indefinido~observable@es6-modules/lib/observable/self_observer.js", function (exports, module) {
-var ObjectObserver = require("indefinido~observable@es6-modules/vendor/observe-js/observe.js").ObjectObserver;
-var Callbacks = require("component~jquery@1.0.0").Callbacks;
+var ObjectObserver = require('indefinido~observable@es6-modules/vendor/observe-js/observe.js').ObjectObserver;
+var Callbacks = require('component~jquery@1.0.0').Callbacks;
 var SelfObserver,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -17826,7 +17909,7 @@ if (!Object.create) {
 });
 
 require.register("indefinido~indemma@master", function (exports, module) {
-module.exports = require("indefinido~indemma@master/lib/record.js");
+module.exports = require('indefinido~indemma@master/lib/record.js');
 
 });
 
@@ -17861,19 +17944,19 @@ require.register("indefinido~indemma@master/lib/record.js", function (exports, m
 var $, advisable, bind, extend, merge, observable, type,
   __slice = [].slice;
 
-$ = require("component~jquery@1.0.0");
+$ = require('component~jquery@1.0.0');
 
-type = require("component~type@1.0.0");
+type = require('component~type@1.0.0');
 
-bind = require("component~bind@1.0.0");
+bind = require('component~bind@1.0.0');
 
-observable = require("indefinido~observable@es6-modules");
+observable = require('indefinido~observable@es6-modules');
 
-advisable = require("indefinido~advisable@master").mixin;
+advisable = require('indefinido~advisable@master').mixin;
 
-extend = require("pluma~assimilate@0.4.0");
+extend = require('pluma~assimilate@0.4.0');
 
-merge = require("pluma~assimilate@0.4.0").withStrategy('deep');
+merge = require('pluma~assimilate@0.4.0').withStrategy('deep');
 
 this.model = (function() {
   var initialize_record, mixer, modelable;
@@ -18034,11 +18117,11 @@ var $, associable, callbacks, descriptors, extend, model, plural, root, singular
 
 root = window;
 
-$ = require("component~jquery@1.0.0");
+$ = require('component~jquery@1.0.0');
 
-extend = require("pluma~assimilate@0.4.0");
+extend = require('pluma~assimilate@0.4.0');
 
-require("indefinido~indemma@master/lib/record/resource.js");
+require('indefinido~indemma@master/lib/record/resource.js');
 
 plural = {
   add: function() {
@@ -18130,8 +18213,10 @@ descriptors = {
 
         association_name = this.resource.toString();
         if (resource_id == null) {
-          this.dirty = true;
-          this.owner[association_name] = null;
+          if (this.owner[association_name] || this.owner[association_name + '_id']) {
+            this.dirty = true;
+            this.owner[association_name] = null;
+          }
           return resource_id;
         }
         current_resource_id = (_ref = this.owner.observed[association_name]) != null ? _ref._id : void 0;
@@ -18453,7 +18538,7 @@ require.register("indefinido~indemma@master/lib/record/dirtyable.js", function (
 var dirtyable, model, record;
 
 dirtyable = {
-  ignores: ['dirty', 'resource', 'route', 'initial_route', 'after_initialize', 'before_initialize', 'parent_resource', 'nested_attributes', 'reloading', 'ready', 'saving', 'salvation', 'sustained', 'element', 'default', 'lock', 'validated', 'validation', 'errors', 'dirty'],
+  ignores: ['dirty', 'resource', 'route', 'initial_route', 'after_initialize', 'before_initialize', 'parent_resource', 'nested_attributes', 'reloading', 'ready', 'saving', 'saved', 'failed', 'salvation', 'sustained', 'element', 'default', 'lock', 'validate', 'validated', 'validation', 'errors', 'dirty', 'json'],
   reserved_filter: function(name) {
     return this.ignores.indexOf(name) === -1;
   },
@@ -18542,7 +18627,7 @@ model.mix(function(modelable) {
 require.register("indefinido~indemma@master/lib/record/persistable.js", function (exports, module) {
 var handlers, model, persistable, record;
 
-require("indefinido~indemma@master/lib/record/queryable.js");
+require('indefinido~indemma@master/lib/record/queryable.js');
 
 handlers = {
   store_after_saved: function() {
@@ -18585,11 +18670,11 @@ model.mix(function(modelable) {
 require.register("indefinido~indemma@master/lib/record/queryable.js", function (exports, module) {
 var extend, model, queryable, record, stampit, storable;
 
-extend = require("pluma~assimilate@0.4.0");
+extend = require('pluma~assimilate@0.4.0');
 
-storable = require("indefinido~indemma@master/lib/record/storable.js");
+storable = require('indefinido~indemma@master/lib/record/storable.js');
 
-stampit = require("indefinido~indemma@master/vendor/stampit.js");
+stampit = require('indefinido~indemma@master/vendor/stampit.js');
 
 queryable = {
   storage: storable(),
@@ -18624,9 +18709,9 @@ model.mix(function(modelable) {
 require.register("indefinido~indemma@master/lib/record/resource.js", function (exports, module) {
 var descriptors, model, resource, resourceable, stampit;
 
-stampit = require("indefinido~indemma@master/vendor/stampit.js");
+stampit = require('indefinido~indemma@master/vendor/stampit.js');
 
-require("indefinido~indemma@master/vendor/owl/pluralize.js");
+require('indefinido~indemma@master/vendor/owl/pluralize.js');
 
 resource = stampit({
   toString: function() {
@@ -18729,7 +18814,7 @@ model.pluralize = resourceable.pluralize;
 require.register("indefinido~indemma@master/lib/record/rest.js", function (exports, module) {
 var $, data_for, request;
 
-$ = require("component~jquery@1.0.0");
+$ = require('component~jquery@1.0.0');
 
 module.exports = {
   get: function(data) {
@@ -18778,19 +18863,19 @@ require.register("indefinido~indemma@master/lib/record/restfulable.js", function
 var $, merge, model, observable, record, rest, restful, root, type, util,
   __slice = [].slice;
 
-merge = require("pluma~assimilate@0.4.0").withStrategy('deep');
+merge = require('pluma~assimilate@0.4.0').withStrategy('deep');
 
-type = require("component~type@1.0.0");
+type = require('component~type@1.0.0');
 
-observable = require("indefinido~observable@es6-modules").mixin;
+observable = require('indefinido~observable@es6-modules').mixin;
 
-$ = require("component~jquery@1.0.0");
+$ = require('component~jquery@1.0.0');
 
-rest = require("indefinido~indemma@master/lib/record/rest.js");
+rest = require('indefinido~indemma@master/lib/record/rest.js');
 
 root = typeof exports !== "undefined" && exports !== null ? exports : this;
 
-require("indefinido~indemma@master/lib/record/dirtyable.js");
+require('indefinido~indemma@master/lib/record/dirtyable.js');
 
 util = {
   model: {
@@ -19260,21 +19345,21 @@ require.register("indefinido~indemma@master/lib/record/scopable.js", function (e
 var $, builders, defaults, extend, merge, model, observable, record, rest, scopable, stampit, util,
   __slice = [].slice;
 
-require("indefinido~indemma@master/lib/record/restfulable.js");
+require('indefinido~indemma@master/lib/record/restfulable.js');
 
-require("indefinido~indemma@master/lib/record/resource.js");
+require('indefinido~indemma@master/lib/record/resource.js');
 
-stampit = require("indefinido~indemma@master/vendor/stampit.js");
+stampit = require('indefinido~indemma@master/vendor/stampit.js');
 
-extend = require("pluma~assimilate@0.4.0");
+extend = require('pluma~assimilate@0.4.0');
 
-observable = require("indefinido~observable@es6-modules").mixin;
+observable = require('indefinido~observable@es6-modules').mixin;
 
 merge = extend.withStrategy('deep');
 
-$ = require("component~jquery@1.0.0");
+$ = require('component~jquery@1.0.0');
 
-rest = require("indefinido~indemma@master/lib/record/rest.js");
+rest = require('indefinido~indemma@master/lib/record/rest.js');
 
 util = {
   model: {
@@ -19567,11 +19652,11 @@ if (model.associable) {
 require.register("indefinido~indemma@master/lib/record/storable.js", function (exports, module) {
 var extend, merge, model, record, stampit, storable;
 
-extend = require("pluma~assimilate@0.4.0");
+extend = require('pluma~assimilate@0.4.0');
 
 merge = extend.withStrategy('deep');
 
-stampit = require("indefinido~indemma@master/vendor/stampit.js");
+stampit = require('indefinido~indemma@master/vendor/stampit.js');
 
 Object.values || (Object.values = (typeof _ !== "undefined" && _ !== null ? _.values : void 0) || function(object) {
   var key, value, _results;
@@ -19632,7 +19717,7 @@ var extend, extensions, root;
 
 root = typeof exports !== "undefined" && exports !== null ? exports : window;
 
-extend = require("pluma~assimilate@0.4.0");
+extend = require('pluma~assimilate@0.4.0');
 
 extensions = {
   model: {
@@ -19653,15 +19738,15 @@ model.mix(function(modelable) {
 require.register("indefinido~indemma@master/lib/record/validatable.js", function (exports, module) {
 var errorsable, extensions, initializers, manager, messages, observable, root, stampit, type;
 
-require("indefinido~indemma@master/lib/record/translationable.js");
+require('indefinido~indemma@master/lib/record/translationable.js');
 
 root = typeof exports !== "undefined" && exports !== null ? exports : this;
 
-stampit = require("indefinido~indemma@master/vendor/stampit.js");
+stampit = require('indefinido~indemma@master/vendor/stampit.js');
 
-observable = require("indefinido~observable@es6-modules");
+observable = require('indefinido~observable@es6-modules');
 
-type = require("component~type@1.0.0");
+type = require('component~type@1.0.0');
 
 messages = {
   blank: function(attribute_name) {
@@ -19887,24 +19972,24 @@ model.mix(function(modelable) {
   return model.validators = manager.validators;
 });
 
-manager.validators.confirmation = require("indefinido~indemma@master/lib/record/validations/confirmation.js");
+manager.validators.confirmation = require('indefinido~indemma@master/lib/record/validations/confirmation.js');
 
-manager.validators.associated = require("indefinido~indemma@master/lib/record/validations/associated.js");
+manager.validators.associated = require('indefinido~indemma@master/lib/record/validations/associated.js');
 
-manager.validators.presence = require("indefinido~indemma@master/lib/record/validations/presence.js");
+manager.validators.presence = require('indefinido~indemma@master/lib/record/validations/presence.js');
 
-manager.validators.remote = require("indefinido~indemma@master/lib/record/validations/remote.js");
+manager.validators.remote = require('indefinido~indemma@master/lib/record/validations/remote.js');
 
-manager.validators.type = require("indefinido~indemma@master/lib/record/validations/type.js");
+manager.validators.type = require('indefinido~indemma@master/lib/record/validations/type.js');
 
-manager.validators.cpf = require("indefinido~indemma@master/lib/record/validations/cpf.js");
+manager.validators.cpf = require('indefinido~indemma@master/lib/record/validations/cpf.js');
 
 });
 
 require.register("indefinido~indemma@master/lib/record/validations/associated.js", function (exports, module) {
 var associationable, composed, stampit;
 
-stampit = require("indefinido~indemma@master/vendor/stampit.js");
+stampit = require('indefinido~indemma@master/vendor/stampit.js');
 
 associationable = stampit({
   validate_each: function(record, attribute, value) {
@@ -19926,7 +20011,7 @@ associationable = stampit({
   }
 });
 
-composed = stampit.compose(require("indefinido~indemma@master/lib/record/validations/validatorable.js"), associationable);
+composed = stampit.compose(require('indefinido~indemma@master/lib/record/validations/validatorable.js'), associationable);
 
 composed.definition_key = 'validates_associated';
 
@@ -19937,7 +20022,7 @@ module.exports = composed;
 require.register("indefinido~indemma@master/lib/record/validations/confirmation.js", function (exports, module) {
 var composed, confirmationable, stampit;
 
-stampit = require("indefinido~indemma@master/vendor/stampit.js");
+stampit = require('indefinido~indemma@master/vendor/stampit.js');
 
 confirmationable = stampit({
   validate_each: function(record, attribute, value) {
@@ -19947,7 +20032,7 @@ confirmationable = stampit({
   }
 });
 
-composed = stampit.compose(require("indefinido~indemma@master/lib/record/validations/validatorable.js"), confirmationable);
+composed = stampit.compose(require('indefinido~indemma@master/lib/record/validations/validatorable.js'), confirmationable);
 
 composed.definition_key = 'validates_confirmation_of';
 
@@ -19958,7 +20043,7 @@ module.exports = composed;
 require.register("indefinido~indemma@master/lib/record/validations/cpf.js", function (exports, module) {
 var composed, cpfable, stampit;
 
-stampit = require("indefinido~indemma@master/vendor/stampit.js");
+stampit = require('indefinido~indemma@master/vendor/stampit.js');
 
 cpfable = stampit({
   validate_format: function(value) {
@@ -20009,7 +20094,7 @@ cpfable = stampit({
   }
 });
 
-composed = stampit.compose(require("indefinido~indemma@master/lib/record/validations/validatorable.js"), cpfable);
+composed = stampit.compose(require('indefinido~indemma@master/lib/record/validations/validatorable.js'), cpfable);
 
 composed.definition_key = 'validates_cpf_format';
 
@@ -20020,7 +20105,7 @@ module.exports = composed;
 require.register("indefinido~indemma@master/lib/record/validations/presence.js", function (exports, module) {
 var composed, presenceable, stampit;
 
-stampit = require("indefinido~indemma@master/vendor/stampit.js");
+stampit = require('indefinido~indemma@master/vendor/stampit.js');
 
 presenceable = stampit({
   validate_each: function(record, attribute, value) {
@@ -20030,7 +20115,7 @@ presenceable = stampit({
   }
 });
 
-composed = stampit.compose(require("indefinido~indemma@master/lib/record/validations/validatorable.js"), presenceable);
+composed = stampit.compose(require('indefinido~indemma@master/lib/record/validations/validatorable.js'), presenceable);
 
 composed.definition_key = 'validates_presence_of';
 
@@ -20041,9 +20126,9 @@ module.exports = composed;
 require.register("indefinido~indemma@master/lib/record/validations/remote.js", function (exports, module) {
 var composed, remoteable, rest, stampit;
 
-rest = require("indefinido~indemma@master/lib/record/rest.js");
+rest = require('indefinido~indemma@master/lib/record/rest.js');
 
-stampit = require("indefinido~indemma@master/vendor/stampit.js");
+stampit = require('indefinido~indemma@master/vendor/stampit.js');
 
 remoteable = stampit({
   validate_each: function(record, attribute, value) {
@@ -20102,7 +20187,7 @@ remoteable = stampit({
   return this;
 });
 
-composed = stampit.compose(require("indefinido~indemma@master/lib/record/validations/validatorable.js"), remoteable);
+composed = stampit.compose(require('indefinido~indemma@master/lib/record/validations/validatorable.js'), remoteable);
 
 composed.definition_key = 'validates_remotely';
 
@@ -20113,9 +20198,9 @@ module.exports = composed;
 require.register("indefinido~indemma@master/lib/record/validations/type.js", function (exports, module) {
 var composed, stampit, typeable, validations;
 
-validations = require("indefinido~indemma@master/lib/record/validatable.js");
+validations = require('indefinido~indemma@master/lib/record/validatable.js');
 
-stampit = require("indefinido~indemma@master/vendor/stampit.js");
+stampit = require('indefinido~indemma@master/vendor/stampit.js');
 
 typeable = stampit({
   validate_each: function(record, attribute, value) {
@@ -20135,7 +20220,7 @@ typeable = stampit({
   }
 });
 
-composed = stampit.compose(require("indefinido~indemma@master/lib/record/validations/validatorable.js"), typeable);
+composed = stampit.compose(require('indefinido~indemma@master/lib/record/validations/validatorable.js'), typeable);
 
 composed.definition_key = 'validates_type_of';
 
@@ -20146,7 +20231,7 @@ module.exports = composed;
 require.register("indefinido~indemma@master/lib/record/validations/validatorable.js", function (exports, module) {
 var stampit;
 
-stampit = require("indefinido~indemma@master/vendor/stampit.js");
+stampit = require('indefinido~indemma@master/vendor/stampit.js');
 
 module.exports = stampit({
   validate: function() {
@@ -21212,7 +21297,7 @@ require.register("component~classes@1.1.2", function (exports, module) {
  * Module dependencies.
  */
 
-var index = require("component~indexof@0.0.1");
+var index = require('component~indexof@0.0.1');
 
 /**
  * Whitespace regexp.
@@ -21565,7 +21650,7 @@ require.register("component~matches-selector@0.1.5", function (exports, module) 
  * Module dependencies.
  */
 
-var query = require("component~query@0.0.1");
+var query = require('component~query@0.0.1');
 
 /**
  * Element prototype.
@@ -21616,8 +21701,8 @@ require.register("component~delegate@0.1.0", function (exports, module) {
  * Module dependencies.
  */
 
-var matches = require("component~matches-selector@0.1.5")
-  , event = require("component~event@0.1.0");
+var matches = require('component~matches-selector@0.1.5')
+  , event = require('component~event@0.1.0');
 
 /**
  * Delegate event `type` to `selector`
@@ -21747,7 +21832,7 @@ require.register("component~value@1.1.0", function (exports, module) {
  * Module dependencies.
  */
 
-var typeOf = require("component~type@1.0.0");
+var typeOf = require('component~type@1.0.0');
 
 /**
  * Set or get `el`'s' value.
@@ -21845,15 +21930,15 @@ require.register("component~dom@0.7.1", function (exports, module) {
  * Module dependencies.
  */
 
-var delegate = require("component~delegate@0.1.0");
-var classes = require("component~classes@1.1.2");
-var indexof = require("component~indexof@0.0.1");
-var domify = require("component~domify@1.0.0");
-var events = require("component~event@0.1.0");
-var value = require("component~value@1.1.0");
-var query = require("component~query@0.0.1");
-var type = require("component~type@1.0.0");
-var css = require("component~css@0.0.2");
+var delegate = require('component~delegate@0.1.0');
+var classes = require('component~classes@1.1.2');
+var indexof = require('component~indexof@0.0.1');
+var domify = require('component~domify@1.0.0');
+var events = require('component~event@0.1.0');
+var value = require('component~value@1.1.0');
+var query = require('component~query@0.0.1');
+var type = require('component~type@1.0.0');
+var css = require('component~css@0.0.2');
 
 /**
  * Attributes supported.
@@ -22575,9 +22660,9 @@ require.register("component~overlay@0.1.1", function (exports, module) {
  * Module dependencies.
  */
 
-var Emitter = require("component~emitter@1.0.0");
-var tmpl = require("component~overlay@0.1.1/template.js");
-var o = require("component~dom@0.7.1");
+var Emitter = require('component~emitter@1.0.0');
+var tmpl = require('component~overlay@0.1.1/template.js');
+var o = require('component~dom@0.7.1');
 
 /**
  * Expose `overlay()`.
@@ -22694,12 +22779,12 @@ require.register("component~dialog@0.2.0", function (exports, module) {
  * Module dependencies.
  */
 
-var Emitter = require("component~emitter@1.0.0")
-  , overlay = require("component~overlay@0.1.1")
-  , domify = require("component~domify@1.0.0")
-  , events = require("component~event@0.1.0")
-  , classes = require("component~classes@1.1.2")
-  , query = require("component~query@0.0.1");
+var Emitter = require('component~emitter@1.0.0')
+  , overlay = require('component~overlay@0.1.1')
+  , domify = require('component~domify@1.0.0')
+  , events = require('component~event@0.1.0')
+  , classes = require('component~classes@1.1.2')
+  , query = require('component~query@0.0.1');
 
 /**
  * Active dialog.
@@ -22758,7 +22843,7 @@ function dialog(title, msg){
 function Dialog(options) {
   Emitter.call(this);
   options = options || {};
-  this.template = require("component~dialog@0.2.0/template.html");
+  this.template = require('component~dialog@0.2.0/template.html');
   this.el = domify(this.template);
   this._classes = classes(this.el);
   this.render(options);
@@ -27672,4 +27757,4 @@ require.register("ende/vendor/assets/javascripts/spin/spin.js", function (export
 
 });
 
-require("ende")
+require("ende");

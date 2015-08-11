@@ -1,0 +1,9 @@
+{
+  "name": "indemma",
+  "version": "0.2.12",
+  "devDependencies": {
+    "mocha": "*",
+    "karma": "~0.10",
+    "karma-mocha": "~0.1"
+  }
+}

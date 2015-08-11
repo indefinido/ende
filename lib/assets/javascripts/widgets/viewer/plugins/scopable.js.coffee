@@ -39,7 +39,11 @@ define ['stampit/stampit', 'observable'], (stampit, observable) ->
 
   scopable = stampit
     forward_scope_data: (scope_name, data) ->
-      switch @scope['$' + scope_name].constructor
+      scope = @scope['$' + scope_name]
+
+      throw new TypeError "viewer.scopable: Scope '#{scope_name}' not found for resource '#{@scope.resource}'." unless scope
+
+      switch scope.constructor
         when Array
           data = [data] unless $.type(data) == 'array'
           @scope[scope_name] data...
@@ -98,7 +102,3 @@ define ['stampit/stampit', 'observable'], (stampit, observable) ->
 
 
   (widget) -> scopable widget: widget
-
-
-
-

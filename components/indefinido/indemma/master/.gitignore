@@ -1,0 +1,17 @@
+# Coverage reports
+
+# Emacs Temporary Files
+*~
+*#
+.#*
+
+# Eclipse
+.directory
+.project
+.loadpath
+
+# Node installed modules
+node_modules
+
+# Mac OS X Files
+.DS_*
